@@ -1,0 +1,235 @@
+/* ערכת העיצוב של מצגות הקורס – כל שקף הוא עמוד 16:9 (1334x750) ב-PDF. */
+:root {
+  --navy: #142b5c;
+  --blue: #2563eb;
+  --teal: #0ea5a4;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --line: #e3e8f2;
+  --panel: #f6f8fc;
+  --code-ink: #24292f;
+  --inline-code: #c2185b;
+  --note-bg: #fff8e6;
+  --note-bar: #f0b429;
+  --tip-bg: #e9f8ef;
+  --tip-bar: #22a05a;
+  --warn-bg: #fdecec;
+  --warn-bar: #dc2626;
+}
+
+@page { size: 1334px 750px; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; }
+body {
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  color: var(--ink);
+  direction: rtl;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---------- שקף ---------- */
+.slide {
+  position: relative;
+  width: 1334px;
+  height: 750px;
+  padding: 44px 67px 50px; /* 50px תחתונים = מקום לכותרת התחתונה */
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.slide::before { /* פס הצבע העליון */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 9px;
+  background: linear-gradient(90deg, var(--teal), var(--blue));
+}
+.slide > h2 {
+  margin: 0 0 4px;
+  padding-bottom: 14px;
+  border-bottom: 4px solid var(--line);
+  color: var(--navy);
+  font-size: 38px;
+  line-height: 1.2;
+}
+.slide .body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+/* תוכן לעולם לא "מתכווץ" כדי להיכנס – אם הוא ארוך מדי, הוא גולש ו-deck.js מסמן את השקף */
+.slide > *, .slide .body > *, .stack > * { flex-shrink: 0; }
+.slide-footer {
+  position: absolute;
+  left: 67px; right: 67px; bottom: 18px;
+  display: flex; justify-content: space-between;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  font-size: 15px; color: var(--muted);
+}
+
+/* ---------- שקף פתיחה / שקף מעבר ---------- */
+.slide.title, .slide.section {
+  gap: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #102a5c 0%, #1e4aa0 50%, #0f9aa0 100%);
+  justify-content: center;
+}
+.slide.title::before, .slide.section::before { display: none; }
+.slide.title .badge, .slide.section .badge {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 8px 22px;
+  font-size: 26px;
+  margin-bottom: 30px;
+}
+.slide.title h1 { font-size: 64px; margin: 0 0 18px; line-height: 1.15; }
+.slide.section h1 { font-size: 56px; margin: 0 0 18px; }
+.slide.title .subtitle, .slide.section .subtitle { font-size: 30px; opacity: 0.9; margin: 0 0 40px; }
+.chips { display: flex; flex-wrap: wrap; gap: 12px; }
+.chips span {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 22px;
+}
+.slide.title .meta { position: absolute; bottom: 44px; right: 67px; font-size: 20px; opacity: 0.85; }
+.slide.title .slide-footer, .slide.section .slide-footer { display: none; }
+
+/* ---------- טקסט ורשימות ---------- */
+.slide p { margin: 0; font-size: 24px; line-height: 1.5; }
+.slide ul, .slide ol { margin: 0; padding-right: 30px; font-size: 24px; line-height: 1.5; }
+.slide li { margin-bottom: 8px; }
+.slide ul > li::marker { color: var(--blue); }
+.slide ul ul { margin-top: 6px; font-size: 21px; list-style: circle; }
+.slide ol > li::marker { color: var(--blue); font-weight: bold; }
+.slide strong, .slide b { color: var(--navy); }
+.small { font-size: 20px !important; }
+.muted { color: var(--muted); }
+
+code {
+  font-family: Menlo, Monaco, "DejaVu Sans Mono", Consolas, monospace;
+  font-size: 0.86em;
+  color: var(--inline-code);
+  background: #eef1f6;
+  border-radius: 6px;
+  padding: 2px 7px;
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap; /* קוד קצר בתוך משפט לא נשבר בין שורות */
+}
+td code, code.wrap { white-space: normal; } /* הודעות שגיאה ארוכות בטבלה / עם המחלקה wrap – כן נשברות */
+
+/* ---------- בלוק קוד ---------- */
+pre {
+  margin: 0;
+  direction: ltr;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--blue);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-family: Menlo, Monaco, "DejaVu Sans Mono", Consolas, monospace;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--code-ink);
+  white-space: pre;
+  overflow: hidden;
+}
+pre code { all: unset; font: inherit; color: inherit; }
+pre.sm { font-size: 15px; }
+pre.lg { font-size: 19px; }
+pre .tk-c { color: #6a737d; font-style: italic; }    /* הערה */
+pre .tk-s { color: #0a3069; }                        /* מחרוזת */
+pre .tk-k { color: #cf222e; }                        /* מילת מפתח */
+pre .tk-t { color: #d4610b; }                        /* טיפוס בסיסי */
+pre .tk-n { color: #0550ae; }                        /* מספר / ליטרל */
+pre .tk-C { color: #8250df; }                        /* שם מחלקה / טיפוס */
+pre .tk-p { color: #0550ae; }                        /* מפתח (JSON/YAML) */
+pre .rtl { direction: rtl; unicode-bidi: isolate; }   /* הערה בעברית בתוך קוד */
+
+/* פלט טרמינל */
+pre.out {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #0f172a;
+  border-left-color: var(--teal);
+}
+pre.out::before {
+  content: "פלט";
+  display: block;
+  direction: rtl;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+/* ---------- פריסות ---------- */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; min-height: 0; }
+.cols.wide-code { grid-template-columns: 0.8fr 1.2fr; }
+.cols.wide-text { grid-template-columns: 1.2fr 0.8fr; }
+.cols > * { min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+
+/* כרטיס */
+.card {
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 20px;
+  background: #fff;
+}
+.card h3 { margin: 0 0 8px; color: var(--navy); font-size: 24px; }
+.card p, .card li { font-size: 20px; }
+.card.good { border-color: var(--tip-bar); background: var(--tip-bg); }
+.card.bad { border-color: var(--warn-bar); background: var(--warn-bg); }
+
+/* תרשים זרימה – תיבות עם חיצים */
+.flow { display: flex; align-items: stretch; gap: 12px; }
+.flow .step {
+  flex: 1;
+  border: 2px solid var(--blue);
+  background: #eef4ff;
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 19px;
+}
+.flow .step b { display: block; font-size: 22px; margin-bottom: 6px; }
+.flow .step.y { border-color: #d4a017; background: #fff7e0; }
+.flow .step.g { border-color: var(--tip-bar); background: var(--tip-bg); }
+.flow .step.r { border-color: var(--warn-bar); background: var(--warn-bg); }
+.flow .arrow { align-self: center; color: var(--blue); font-size: 30px; }
+
+/* טבלה */
+table { width: 100%; border-collapse: collapse; font-size: 21px; }
+th { background: var(--navy); color: #fff; text-align: right; padding: 11px 14px; }
+td { padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:nth-child(even) td { background: #f7f9fc; }
+
+/* הערות צד */
+.note, .tip, .warn {
+  border-radius: 10px;
+  padding: 13px 20px;
+  font-size: 22px;
+  line-height: 1.45;
+  border-right: 6px solid var(--note-bar);
+  background: var(--note-bg);
+}
+.tip { border-right-color: var(--tip-bar); background: var(--tip-bg); }
+.warn { border-right-color: var(--warn-bar); background: var(--warn-bg); }
+.note::before { content: "💡 "; }
+.tip::before { content: "✅ "; }
+.warn::before { content: "⚠️ "; }
+
+/* שקף תרגול */
+.slide.practice > h2::before { content: "✍️ "; }
+
+/* סימון שקף שגולש – מוצג רק בזמן פיתוח (deck.js מוסיף את המחלקה) */
+.slide.overflow { outline: 6px solid red; outline-offset: -6px; }
+.overflow-x { outline: 4px dashed red !important; }

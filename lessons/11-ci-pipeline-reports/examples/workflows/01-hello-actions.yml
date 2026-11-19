@@ -1,0 +1,41 @@
+# שיעור 11 – Workflow 1: "Hello GitHub Actions" – המבנה הבסיסי
+# כדי להפעיל: העתיקו ל-.github/workflows/hello.yml ב-repository שלכם ודחפו (push).
+#
+# מונחים:
+#   workflow – קובץ YAML שמתאר תהליך אוטומטי
+#   on       – מתי הוא רץ (triggers)
+#   job      – קבוצת צעדים שרצה על מכונה (runner) אחת
+#   step     – פקודה (run) או פעולה מוכנה (uses)
+name: Hello Actions
+
+on:
+  push: # בכל push לכל ענף
+  workflow_dispatch: # כפתור "Run workflow" ידני
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest # מכונה וירטואלית נקייה שגיטהאב מספק
+    steps:
+      - name: Say hello
+        run: echo "Hello from GitHub Actions 👋"
+
+      - name: Who and what triggered me?
+        run: |
+          echo "Event:   ${{ github.event_name }}"
+          echo "Branch:  ${{ github.ref_name }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo "Actor:   ${{ github.actor }}"
+
+      - name: The runner starts EMPTY – there is no code yet
+        run: ls -la
+
+      - name: Checkout the repository code
+        uses: actions/checkout@v6 # פעולה מוכנה מה-Marketplace
+
+      - name: Now the code is here
+        run: ls -la
+
+      - name: A failing command fails the job (exit code ≠ 0)
+        run: |
+          echo "Uncomment the next line to see a red ❌ job"
+          # exit 1

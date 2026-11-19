@@ -1,0 +1,43 @@
+# Lesson 11 – Exercise 1: Write a CI Workflow
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/ci-workflow.yml
+#
+# Requirements:
+#  1. name: "QA CI"
+#  2. Runs on push to the main branch and on every pull_request
+#  3. A job named test that runs on ubuntu-latest
+#  4. A matrix of node versions: 22 and 24
+#  5. Steps: checkout (actions/checkout@v6) → setup-node (actions/setup-node@v6) with the version from the matrix
+#     and with cache: npm → npm ci → npm run typecheck → npm run solutions → npm run report
+#  6. Upload the reports/ folder as an artifact (actions/upload-artifact@v7) – even when the tests failed!
+#     The artifact name must include the node version from the matrix
+
+name: TODO
+
+on:
+  # TODO: push to main + pull_request
+
+jobs:
+  test:
+    runs-on: TODO
+    # TODO: strategy + matrix
+
+    steps:
+      # TODO: the steps
+      - run: echo "TODO"
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] name: "QA CI" at the top level
+# [ ] on: push with  branches: [main],  and also pull_request
+# [ ] A job named test with  runs-on: ubuntu-latest
+# [ ] strategy → matrix with  node: [22, 24]
+# [ ] An actions/checkout@v6 step and an actions/setup-node@v6 step with  node-version: ${{ matrix.node }}  and  cache: npm
+# [ ] The commands appear in this order:  npm ci → npm run typecheck → npm run solutions → npm run report
+# [ ] An actions/upload-artifact@v7 step with  if: always()  and  path: reports/
+# [ ] The artifact name includes ${{ matrix.node }}  (e.g.  reports-node-${{ matrix.node }})
+#
+# Compare with the solution: solutions/ci-workflow.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/ci-workflow.yml

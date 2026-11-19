@@ -1,0 +1,136 @@
+<!doctype html>
+<!-- דף עזר: כל רכיבי העיצוב של המצגות. להעתקה כשכותבים הרצאה חדשה (לא נבנה ל-PDF). -->
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>רכיבי מצגת</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="0">
+
+<!-- שקף פתיחה -->
+<section class="slide title">
+  <div class="badge">שיעור 0</div>
+  <h1>כותרת ההרצאה</h1>
+  <p class="subtitle">תת-כותרת קצרה</p>
+  <div class="chips"><span>נושא א</span><span>נושא ב</span><span>נושא ג</span></div>
+  <div class="meta">13.11 · ZOOM · תיקייה בפרויקט: lessons/00-example</div>
+</section>
+
+<!-- שקף מעבר בין חלקים -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>שם החלק</h1>
+  <p class="subtitle">מה נלמד בחלק הזה</p>
+</section>
+
+<!-- שקף טקסט + קוד -->
+<section class="slide">
+  <h2>טקסט מימין, קוד משמאל</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>מושג</b> – הסבר קצר עם <code>inline code</code> (לא נשבר בין שורות; לטקסט ארוך: <code class="wrap">...</code>)</li>
+        <li>נקודה שנייה
+          <ul><li>תת-נקודה</li></ul>
+        </li>
+      </ul>
+      <div class="note">הערה חשובה / טיפ</div>
+    </div>
+    <pre class="lang-ts">
+      const retries: number = 3; // comment
+      function greet(name: string): string {
+        return `Hello ${name}`;
+      }
+      // הערה בעברית בתוך קוד
+      class LoginPage extends BasePage {}
+    </pre>
+  </div>
+</section>
+
+<!-- קוד + פלט -->
+<section class="slide">
+  <h2>קוד ופלט</h2>
+  <div class="cols wide-code">
+    <pre class="lang-ts">
+      console.log(classifyStatus(404));
+    </pre>
+    <pre class="out">
+      client-error
+    </pre>
+  </div>
+  <div class="tip">כך נראית הערת "עשו כך"</div>
+  <div class="warn">וכך נראית אזהרה / טעות נפוצה</div>
+</section>
+
+<!-- נכון מול לא נכון -->
+<section class="slide">
+  <h2>השוואה: נכון ולא נכון</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ לא כך</h3><pre class="lang-ts">let x: any = 5;</pre></div>
+    <div class="card good"><h3>✅ כך</h3><pre class="lang-ts">const x: number = 5;</pre></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>כרטיס</h3><p>טקסט</p></div>
+    <div class="card"><h3>כרטיס</h3><p>טקסט</p></div>
+    <div class="card"><h3>כרטיס</h3><p>טקסט</p></div>
+  </div>
+</section>
+
+<!-- תרשים זרימה + טבלה -->
+<section class="slide">
+  <h2>תרשים זרימה וטבלה</h2>
+  <div class="flow">
+    <div class="step"><b>שלב 1</b>הסבר</div><div class="arrow">←</div>
+    <div class="step y"><b>שלב 2</b>הסבר</div><div class="arrow">←</div>
+    <div class="step g"><b>שלב 3</b>הסבר</div>
+  </div>
+  <table>
+    <tr><th>עמודה</th><th>עמודה</th></tr>
+    <tr><td>ערך</td><td><code>code</code></td></tr>
+  </table>
+</section>
+
+<!-- שקף תרגול (מקבל אייקון ✍️) -->
+<section class="slide practice">
+  <h2>תרגול</h2>
+  <ul>
+    <li>פתחו את <code>lessons/00-example/exercises/01-topic.ts</code></li>
+    <li>הריצו <code>npm run exercise -- 00 01</code></li>
+  </ul>
+</section>
+
+<!-- yaml / bash / json -->
+<section class="slide">
+  <h2>שפות נוספות</h2>
+  <div class="grid2">
+    <pre class="lang-yaml sm">
+      on:
+        push:
+          branches: [main] # comment
+      jobs:
+        test:
+          runs-on: ubuntu-latest
+          steps:
+            - run: echo "${{ github.ref }}"
+    </pre>
+    <pre class="lang-bash sm">
+      git switch -c feature/login
+      git commit -m "Add login test" # comment
+      echo $HOME
+    </pre>
+  </div>
+  <div class="grid2">
+    <pre class="lang-json sm">
+      {
+        "name": "qa-course",
+        "private": true,
+        "version": 1
+      }
+    </pre>
+  </div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

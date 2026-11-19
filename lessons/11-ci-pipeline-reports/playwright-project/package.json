@@ -1,0 +1,24 @@
+{
+  "name": "playwright-ci-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "פרויקט Playwright קטן להדגמת הרצה ב-CI, דוחות HTML/JUnit ו-Allure 2",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --project=chromium",
+    "test:smoke": "playwright test --grep @smoke",
+    "report:html": "playwright show-report",
+    "report:allure": "allure generate allure-results --clean -o allure-report && allure open allure-report",
+    "allure:serve": "allure serve allure-results"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.10.0",
+    "allure-commandline": "^2.34.0",
+    "allure-playwright": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0"
+  }
+}

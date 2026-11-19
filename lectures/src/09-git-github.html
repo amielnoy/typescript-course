@@ -1,0 +1,1352 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 9 – Git ו-GitHub</title>
+  <link rel="stylesheet" href="theme.css" />
+  <style>code { white-space: nowrap; }</style>
+</head>
+<body data-lesson="9">
+
+<!-- ======================= פתיחה ======================= -->
+<section class="slide title">
+  <div class="badge">שיעור 9</div>
+  <h1>קונפיגורציה וניהול גרסאות: Git ו-GitHub</h1>
+  <p class="subtitle">Repository, Commit, Branch, Merge, Pull Request</p>
+  <div class="chips"><span>Repository</span><span>Commit</span><span>Branch</span><span>Merge</span><span>Conflicts</span><span>Pull Request</span><span>Undo &amp; Stash</span></div>
+  <div class="meta">מועד ייקבע · ZOOM · תיקייה בפרויקט: lessons/09-git-github</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום</h2>
+  <table>
+    <tr><th>חלק</th><th>נושא</th><th>דוגמה להרצה (examples/)</th></tr>
+    <tr><td>1</td><td>Repository ו-Commit, <bdi>.gitignore</bdi>, הודעות commit</td><td><code>01-first-repository.sh</code></td></tr>
+    <tr><td>2</td><td>Branches ו-Merge (fast-forward ו-merge commit)</td><td><code>02-branches-and-merge.sh</code></td></tr>
+    <tr><td>3</td><td>Merge Conflicts – יצירה ופתרון</td><td><code>03-merge-conflict.sh</code></td></tr>
+    <tr><td>4</td><td>Remote: clone, push, pull, fetch ו-Pull Request ב-GitHub</td><td><code>04-remote-push-pull.sh</code></td></tr>
+    <tr><td>5</td><td>תיקון טעויות: restore, amend, revert, reset, reflog, stash</td><td><code>05-undo-and-stash.sh</code></td></tr>
+  </table>
+  <div class="note">אחרי כל חלק – תרגול קצר עם בודק אוטומטי. הדוגמאות רצות בתיקייה זמנית ולא נוגעות בפרויקט:</div>
+  <pre class="lang-bash">
+    bash lessons/09-git-github/examples/01-first-repository.sh
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>למה ניהול גרסאות? Git מול GitHub</h2>
+  <ul>
+    <li>"tests_final_v3_REALLY_FINAL.zip" – לא עוד 🙂 <b>היסטוריה מלאה</b>: מי שינה מה, מתי ולמה – ואפשר לחזור לכל נקודה</li>
+    <li><b>עבודת צוות</b> במקביל בלי לדרוס · <b>Code Review</b> לכל שינוי · <b>הבסיס ל-CI/CD</b>: כל push / PR מפעיל בדיקות</li>
+  </ul>
+  <div class="grid2">
+    <div class="card">
+      <h3>Git – הכלי המקומי</h3>
+      <ul>
+        <li>מותקן אצלכם, עובד גם בלי אינטרנט (<code>git --version</code>)</li>
+        <li>שומר את כל ההיסטוריה בתיקייה הנסתרת <code>.git</code></li>
+        <li><code>init</code>, <code>add</code>, <code>commit</code>, <code>branch</code>, <code>merge</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>GitHub – השרת המשותף</h3>
+      <ul>
+        <li>עותק של ה-repository בענן – מקום המפגש של הצוות</li>
+        <li><code>push</code> / <code>pull</code> · Pull Requests, Code Review, Issues</li>
+        <li>GitHub Actions – ה-CI שנפגוש בשיעורים 10–11</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tip">לבודקים: "הבדיקה עברה אתמול ונכשלת היום" – <code>git log</code> ו-<code>git diff</code> מראים בדיוק מה השתנה ומי שינה.</div>
+</section>
+
+<!-- ======================= חלק 1 ======================= -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>Repository ו-Commit</h1>
+  <p class="subtitle">שומרים "תמונות מצב" של קוד הבדיקות</p>
+</section>
+
+<section class="slide">
+  <h2>מושגי יסוד ושלושת האזורים של Git</h2>
+  <div class="grid2">
+    <div class="card"><h3>Repository (repo)</h3><p>תיקיית פרויקט שגיט עוקב אחריה. ההיסטוריה בתיקייה הנסתרת <code>.git</code>.</p></div>
+    <div class="card"><h3>Commit</h3><p>"תמונת מצב" של הקבצים, עם מחבר, תאריך והודעה – נקודה שאפשר לחזור אליה.</p></div>
+    <div class="card"><h3>Hash</h3><p>מזהה ייחודי של commit, למשל <code>503e1a9</code> (קיצור של 40 תווים).</p></div>
+    <div class="card"><h3>HEAD</h3><p>"אתם נמצאים כאן" – ה-commit הנוכחי. <code>HEAD~1</code> = זה שלפניו.</p></div>
+  </div>
+  <div class="flow">
+    <div class="step"><b>Working Directory</b>הקבצים שאתם עורכים</div><div class="arrow">←</div>
+    <div class="step y"><b>Staging Area</b><code>git add</code> – מה ייכנס ל-commit הבא</div><div class="arrow">←</div>
+    <div class="step g"><b>Repository</b><code>git commit</code> – ההיסטוריה</div>
+  </div>
+  <div class="note">למה צריך Staging? כדי לבחור <b>מה</b> נכנס ל-commit. שיניתם בדיקה וגם קובץ הגדרות? אפשר לשמור כל אחד ב-commit נפרד.</div>
+</section>
+
+<section class="slide">
+  <h2>Repository ראשון: init, add, commit, log</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>git config --global</code> – פעם אחת במחשב: שם ומייל</li>
+        <li><code>git init -b main</code> – יוצר repository (<code>.git</code>)</li>
+        <li>קובץ חדש = <b>Untracked</b> · <code>git add</code> ← Staging</li>
+        <li><code>503e1a9</code> = hash מקוצר · <code>git log</code> – מהחדש לישן</li>
+      </ul>
+      <pre class="lang-bash sm">
+        git config --global user.name "Dana Levi"
+        git config --global user.email "dana@example.com"
+        git init -b main qa-project
+        cd qa-project
+        # כותבים את tests/login.spec.ts
+        git status
+        git add tests/login.spec.ts
+        git status
+        git commit -m "Add login test"
+        git log --oneline
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="out sm">
+        Initialized empty Git repository in /…/qa-project/.git/
+        …
+        Untracked files:
+                tests/
+        …
+        Changes to be committed:
+                new file:   tests/login.spec.ts
+
+        [main (root-commit) 503e1a9] Add login test
+         1 file changed, 3 insertions(+)
+         create mode 100644 tests/login.spec.ts
+
+        503e1a9 Add login test
+      </pre>
+      <div class="tip"><code>git status</code> – "מה המצב עכשיו?" – הפקודה הכי שימושית, והיא גם אומרת מה הצעד הבא.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>קריאת git status --short</h2>
+  <div class="cols wide-text">
+    <table>
+      <tr><th>קוד</th><th>משמעות</th><th>הצעד הבא</th></tr>
+      <tr><td><code>??</code></td><td>Untracked – קובץ חדש</td><td><code>git add</code> או <bdi>.gitignore</bdi></td></tr>
+      <tr><td><code>A&nbsp;</code></td><td>Added – קובץ חדש ב-Staging</td><td><code>git commit</code></td></tr>
+      <tr><td><code>&nbsp;M</code></td><td>שונה, <b>לא</b> ב-Staging</td><td><code>git add</code> / <code>git restore</code></td></tr>
+      <tr><td><code>M&nbsp;</code></td><td>שונה ונמצא ב-Staging</td><td><code>git commit</code></td></tr>
+      <tr><td><code>D&nbsp;</code></td><td>נמחק (ב-Staging)</td><td><code>git commit</code></td></tr>
+      <tr><td><code>UU</code></td><td>קונפליקט (חלק 3)</td><td>לפתור ואז <code>git add</code></td></tr>
+    </table>
+    <div class="stack">
+      <p>שתי עמודות: <b>שמאלית</b> = Staging, <b>ימנית</b> = Working Directory.</p>
+      <pre class="lang-bash">
+        git add tests/login.spec.ts
+        git status --short
+      </pre>
+      <pre class="out">
+         M playwright.config.ts
+        M  tests/login.spec.ts
+      </pre>
+      <p class="small">שינינו שני קבצים, אבל רק קובץ הבדיקה נכנס ל-Staging.</p>
+      <p class="small"><code>git restore &lt;file&gt;</code> – ביטול שינוי שלא נשמר<br><code>git restore --staged &lt;file&gt;</code> – הוצאה מ-Staging</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>git diff מול git diff --staged</h2>
+  <div class="cols">
+    <ul>
+      <li><code>git diff</code> – שינויים שעוד <b>לא</b> ב-Staging</li>
+      <li><code>git diff --staged</code> – מה שייכנס ל-commit</li>
+      <li><code>-</code> שורה שנמחקה · <code>+</code> שורה שנוספה</li>
+      <li class="small">התרחיש: שינינו את <code>retries</code> וגם הוספנו בדיקה</li>
+    </ul>
+    <pre class="lang-bash sm">
+      git add tests/login.spec.ts
+      git diff
+      git diff --staged
+    </pre>
+  </div>
+  <div class="grid2">
+    <div class="stack">
+    <p class="small"><code>git diff</code> – לא ב-Staging:</p>
+    <pre class="out sm">
+      diff --git a/playwright.config.ts b/playwright.config.ts
+      index b666241..fe5c035 100644
+      --- a/playwright.config.ts
+      +++ b/playwright.config.ts
+      @@ -1,4 +1,4 @@
+       export default {
+         timeout: 30000,
+      -  retries: 1,
+      +  retries: 2,
+       };
+    </pre>
+    </div>
+    <div class="stack">
+    <p class="small"><code>git diff --staged</code> – ייכנס ל-commit:</p>
+    <pre class="out sm">
+      diff --git a/tests/login.spec.ts b/tests/login.spec.ts
+      index c066b92..6698e1c 100644
+      --- a/tests/login.spec.ts
+      +++ b/tests/login.spec.ts
+      @@ -1,3 +1,7 @@
+       test("login with valid user", async () =&gt; {
+         // ...
+       });
+      +
+      +test("login with wrong password", async () =&gt; {
+      +  // ...
+      +});
+    </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>היסטוריה: log ו-show</h2>
+  <div class="grid2">
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git log --oneline
+      </pre>
+      <pre class="out sm">
+        831af3f Ignore test artifacts and secrets
+        c4d5d68 Add wrong password test
+        4c3d16a Add Playwright config
+        503e1a9 Add login test
+      </pre>
+      <pre class="lang-bash sm">
+        # אילו commits נגעו בקובץ הזה?
+        git log --oneline -- tests/login.spec.ts
+      </pre>
+      <pre class="out sm">
+        c4d5d68 Add wrong password test
+        503e1a9 Add login test
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        # פרטי ה-commit האחרון + אילו קבצים השתנו
+        git show --stat HEAD
+      </pre>
+      <pre class="out sm">
+        commit 831af3f75808056a4ecd31617ebab5fbb8bedf08
+        Author: Dana Levi &lt;dana@example.com&gt;
+        Date:   Tue Nov 10 10:18:48 2026 +0200
+
+            Ignore test artifacts and secrets
+
+         .env.example |  1 +
+         .gitignore   | 10 ++++++++++
+         2 files changed, 11 insertions(+)
+      </pre>
+      <div class="tip">"מתי הבדיקה הזו השתנתה?" – <code>git log -- &lt;file&gt;</code></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><bdi>.gitignore</bdi> – מה לא נכנס לגיט</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>תלויות – מותקנות מחדש עם <code>npm install</code></li>
+        <li>דוחות – נוצרים בכל ריצה (וב-CI נשמרים כ-artifacts)</li>
+        <li><b>סיסמאות וטוקנים</b> – אף פעם לא ב-commit</li>
+        <li><code>!.env.example</code> – "חריג": קובץ דוגמה בלי ערכים אמיתיים <b>כן</b> נכנס</li>
+        <li>תבנית מלאה: <code>templates/gitignore-node-ts.txt</code></li>
+      </ul>
+      <pre class="lang-bash sm">
+        # dependencies
+        node_modules/
+
+        # test artifacts
+        reports/
+        test-results/
+        *.log
+
+        # secrets
+        .env
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git status --short   # אחרי יצירת הקובץ
+      </pre>
+      <pre class="out sm">
+        ?? .env.example
+        ?? .gitignore
+      </pre>
+      <pre class="lang-bash sm">
+        # למה קובץ מוחרג? (קובץ:שורה:כלל)
+        git check-ignore -v .env debug.log reports/index.html
+      </pre>
+      <pre class="out sm">
+        .gitignore:10:.env      .env
+        .gitignore:7:*.log      debug.log
+        .gitignore:5:reports/   reports/index.html
+      </pre>
+      <div class="tip">יוצרים <bdi>.gitignore</bdi> <b>לפני</b> ה-<code>git add .</code> הראשון – אחרת <code>node_modules</code>, <code>.env</code> ודוחות נכנסים ל-Staging.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הודעות commit טובות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>שורה ראשונה קצרה</b> (עד ~50 תווים), בלשון ציווי: <code>Add login tests</code></li>
+        <li><b>commit אחד = שינוי לוגי אחד</b> – לא לערבב תיקון באג + רפקטור + פיצ'ר</li>
+        <li><b>מתי?</b> בכל פעם שהגעתם למצב יציב שעובד (הבדיקות עוברות)</li>
+        <li><b>אף פעם</b> לא commit לסיסמאות, טוקנים או <bdi>.env</bdi></li>
+      </ul>
+      <p class="small">הכללים המלאים: <code>templates/commit-conventions.md</code></p>
+    </div>
+    <div class="stack">
+      <div class="card bad"><h3>❌ לא כך</h3>
+        <pre class="lang-bash sm">
+          git commit -m "fix"
+          git commit -m "added some stuff"
+          git commit -m "wip"
+        </pre>
+      </div>
+      <div class="card good"><h3>✅ כך (Conventional Commits)</h3>
+        <pre class="lang-bash sm">
+          git commit -m "feat: add cart API tests"
+          git commit -m "fix: wait for spinner before checkout"
+          git commit -m "test: cover negative login scenarios"
+          git commit -m "ci: run tests on pull requests"
+        </pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – Repository ו-Commit</h2>
+  <table>
+    <tr><th>מה קרה</th><th>מה רואים</th><th>תיקון</th></tr>
+    <tr><td>הרצתם git מחוץ לתיקיית הפרויקט</td><td><code>fatal: not a git repository</code></td><td><code>cd</code> לתיקייה הנכונה (או <code>git init</code>)</td></tr>
+    <tr><td>commit בלי <code>git add</code></td><td><code>no changes added to commit</code></td><td><code>git add</code> קודם, ואז commit</td></tr>
+    <tr><td><code>git add .</code> לפני <bdi>.gitignore</bdi></td><td>אלפי קבצים מ-<code>node_modules</code> ב-Staging</td><td><code>git restore --staged .</code> ← <bdi>.gitignore</bdi> ← add</td></tr>
+    <tr><td><bdi>.env</bdi> כבר נכנס ל-commit</td><td><bdi>.gitignore</bdi> לא עוזר: <code>&nbsp;M .env</code></td><td><code>git rm --cached .env</code> (נשאר בדיסק) + commit</td></tr>
+    <tr><td>commit לא נכנס למקום הנכון</td><td>עבדתם ישר על <code>main</code></td><td>לפני שמתחילים: <code>git switch -c ...</code> (חלק 2)</td></tr>
+  </table>
+  <div class="warn"><bdi>.gitignore</bdi> משפיע רק על קבצים שגיט <b>עוד לא</b> עוקב אחריהם. סוד שנכנס – עדיין בהיסטוריה; אם נדחף, מחליפים את הסיסמה / הטוקן מיד.</div>
+  <div class="tip">כלל אצבע: <code>git status</code> לפני ואחרי כל פקודה – הוא גם אומר מה הצעד הבא.</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 01: Repository ו-Commit</h2>
+  <ul>
+    <li>דף התרגילים: <code>lessons/09-git-github/exercises/01-first-repository.md</code></li>
+    <li>עובדים <b>מחוץ</b> לפרויקט הקורס: <code>~/git-practice/01-first-repository</code></li>
+    <li>commit "בררני" · היסטוריה · diff לפני/אחרי staging · <bdi>.gitignore</bdi> לתוצרי בדיקות · restore · בונוס: Conventional Commits</li>
+    <li>Windows: מריצים ב-<b>Git Bash</b></li>
+  </ul>
+  <pre class="lang-bash">
+    # בדיקה אוטומטית (מתיקיית הקורס)
+    bash lessons/09-git-github/exercises/verify-01-first-repository.sh ~/git-practice/01-first-repository
+
+    # פתרון לבדיקה עצמית – רק אחרי שניסיתם!
+    bash lessons/09-git-github/solutions/01-first-repository.sh
+  </pre>
+</section>
+
+<!-- ======================= חלק 2 ======================= -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>Branches ו-Merge</h1>
+  <p class="subtitle">עבודה במקביל בלי לשבור את main</p>
+</section>
+
+<section class="slide">
+  <h2>Branch – קו פיתוח נפרד (מצביע ל-commit)</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>Branch</b> = תווית שמצביעה על commit. commit חדש ← התווית זזה קדימה</li>
+        <li><b>HEAD</b> = הענף הנוכחי · ענף חדש לא מעתיק קבצים – זול ומהיר</li>
+        <li><b>main</b> – הקוד היציב; כל משימה בענף משלו: <code>feature/...</code>, <code>fix/...</code></li>
+        <li><code>git branch</code> – רשימה (<code>*</code> = הנוכחי)</li>
+        <li><code>git switch -c</code> – יצירה + מעבר (בעבר: <code>checkout -b</code>)</li>
+        <li>במעבר ענף <b>הקבצים מתחלפים</b>: ב-main עוד אין <code>checkout.spec.ts</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git branch
+        git switch -c feature/checkout-tests
+        # כאן: קובץ בדיקה חדש ושני commits
+        git log --oneline --graph --all
+        git switch main
+        ls
+      </pre>
+      <pre class="out sm">
+        * main
+        Switched to a new branch 'feature/checkout-tests'
+        * 28870dd (HEAD -&gt; feature/checkout-tests) Add coupon test
+        * b11a5ec Add checkout tests
+        * e7e1fbe (main) Initial commit
+        Switched to branch 'main'
+        README.md
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Fast-forward merge – כש-main לא התקדם</h2>
+  <p class="small"><b>לפני:</b> main עדיין על ה-commit הראשון · <b>אחרי:</b> git פשוט "מקדם" את main קדימה – בלי commit חדש</p>
+  <div class="flow">
+    <div class="step"><b>Initial commit</b>&nbsp;</div><div class="arrow">←</div>
+    <div class="step"><b>Add checkout tests</b>&nbsp;</div><div class="arrow">←</div>
+    <div class="step g"><b>Add coupon test</b><code>main</code> + <code>feature/checkout-tests</code></div>
+  </div>
+  <div class="cols wide-code">
+    <ul>
+      <li>ממזגים <b>לתוך</b> הענף שעומדים עליו: קודם <code>switch main</code></li>
+      <li>המילה <code>Fast-forward</code> בפלט = לא נוצר merge commit</li>
+      <li>היסטוריה בקו ישר</li>
+    </ul>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git switch main
+        git merge feature/checkout-tests
+        git log --oneline --graph --all
+      </pre>
+      <pre class="out sm">
+        Updating e7e1fbe..28870dd
+        Fast-forward
+         checkout.spec.ts | 2 ++
+         1 file changed, 2 insertions(+)
+         create mode 100644 checkout.spec.ts
+
+        * 28870dd (HEAD -&gt; main, feature/checkout-tests) Add coupon test
+        * b11a5ec Add checkout tests
+        * e7e1fbe Initial commit
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>כשהענפים התפצלו – merge commit עם שני הורים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>תיקנתם באג בענף, ובינתיים <b>גם main התקדם</b> – אי אפשר "לקדם"</li>
+        <li>Git מבצע <b>מיזוג תלת-כיווני</b> (<bdi>3-way</bdi>) ויוצר <b>merge commit</b></li>
+        <li>שורות שונות שונו – המיזוג אוטומטי · <code>%p</code> = שני ההורים</li>
+        <li><code>--no-edit</code> – בלי לפתוח עורך להודעה</li>
+      </ul>
+      <div class="note"><code>git merge --no-ff</code> יוצר merge commit <b>תמיד</b> – גם כשאפשר fast-forward. כך ממזג GitHub Pull Request.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git switch -c bugfix/flaky-search
+        git commit -m "Fix flaky search test"   # אחרי add
+        git switch main
+        git commit -m "Add test data fixtures"  # אחרי add
+        git merge --no-edit bugfix/flaky-search
+        git log --oneline --graph --all
+        git log -1 --format="%h %p %s"
+      </pre>
+      <pre class="out sm">
+        Merge made by the 'ort' strategy.
+        …
+        *   d00e342 (HEAD -&gt; main) Merge branch 'bugfix/flaky-search'
+        |\
+        | * 156147a (bugfix/flaky-search) Fix flaky search test
+        * | d894645 Add test data fixtures
+        |/
+        * 28870dd Add coupon test
+        …
+        d00e342 d894645 156147a Merge branch 'bugfix/flaky-search'
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ניקוי ענפים וטעויות נפוצות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>ענף שמוזג – <code>git branch -d</code>: ה-commits <b>נשארים</b> ב-main</li>
+        <li>ענף שלא מוזג – <code>-d</code> מסרב: הגנה מאיבוד עבודה</li>
+        <li><code>--merged</code> / <code>--no-merged</code> – מה כבר מוזג ל-HEAD</li>
+        <li>ענף קיים? בלי <code>-c</code> · עבדתם ישר על main? פתחו ענף ובקשו PR</li>
+        <li>שינוי לא שמור חוסם מעבר ענף ← commit, או <code>git stash</code> (חלק 5)</li>
+      </ul>
+      <div class="warn"><code>git branch -D</code> (גדולה) מוחק בכוח – רק אם בטוחים.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git branch -d bugfix/flaky-search
+        git branch --no-merged
+        git branch -d feature/reports
+        git switch -c feature/reports
+      </pre>
+      <pre class="out sm">
+        Deleted branch bugfix/flaky-search (was 156147a).
+          feature/reports
+        error: the branch 'feature/reports' is not fully merged
+        hint: …
+        fatal: a branch named 'feature/reports' already exists
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 02: Branch ו-Merge</h2>
+  <ul>
+    <li>דף התרגילים: <code>lessons/09-git-github/exercises/02-branches-and-merge.md</code></li>
+    <li>עובדים ב-<code>~/git-practice/02-branches-and-merge</code></li>
+    <li>ענף פיצ'ר עם שני commits · fast-forward ומחיקת ענף · ענף bugfix שהתפצל ← merge commit</li>
+    <li>ענף שעוד לא מוזג (<code>not fully merged</code>) · בונוס: <code>--no-ff</code> כמו ב-PR</li>
+  </ul>
+  <pre class="lang-bash">
+    # בדיקה אוטומטית (Windows: Git Bash)
+    bash lessons/09-git-github/exercises/verify-02-branches-and-merge.sh ~/git-practice/02-branches-and-merge
+
+    # פתרון לבדיקה עצמית
+    bash lessons/09-git-github/solutions/02-branches-and-merge.sh
+  </pre>
+</section>
+
+<!-- ======================= חלק 3 ======================= -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>Merge Conflicts</h1>
+  <p class="subtitle">כששני ענפים שינו את אותה שורה</p>
+</section>
+
+<section class="slide">
+  <h2>מתי יש קונפליקט – ומתי לא?</h2>
+  <div class="cols">
+    <div class="stack">
+      <p class="small"><code>settings.ts</code> – נקודת ההתחלה ב-main:</p>
+      <pre class="lang-ts sm">
+        export const settings = {
+          baseUrl: "http://localhost:3000",
+          browser: "chromium",
+          retries: 0,
+          workers: 4,
+        };
+      </pre>
+      <div class="card good"><h3>שורות שונות ← מיזוג אוטומטי</h3>
+        <p>ענף <code>feature/firefox</code> שינה <code>browser</code>, ו-main שינה <code>workers</code></p></div>
+      <div class="card bad"><h3>אותה שורה ← קונפליקט</h3>
+        <p>ענף אחד: <code>retries: 2</code>, ו-main: <code>retries: 1</code>. Git לא יודע מי צודק.</p></div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git merge --no-edit feature/firefox
+      </pre>
+      <pre class="out sm">
+        Auto-merging settings.ts
+        Merge made by the 'ort' strategy.
+         settings.ts | 2 +-
+         1 file changed, 1 insertion(+), 1 deletion(-)
+      </pre>
+      <pre class="lang-bash sm">
+        cat settings.ts
+      </pre>
+      <pre class="out sm">
+        export const settings = {
+          baseUrl: "http://localhost:3000",
+          browser: "firefox",
+          retries: 0,
+          workers: 2,
+        };
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>יוצרים קונפליקט – ואנטומיה שלו</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git switch -c feature/ci-retries
+        git commit -am "Use 2 retries"   # retries: 0 → 2
+        git switch main
+        git commit -am "Use 1 retry"     # retries: 0 → 1
+        git merge feature/ci-retries
+      </pre>
+      <pre class="out sm">
+        Auto-merging settings.ts
+        CONFLICT (content): Merge conflict in settings.ts
+        Automatic merge failed; fix conflicts and then commit the result.
+      </pre>
+      <ul>
+        <li><code>-a</code> = add אוטומטי לכל קובץ מוכר ששונה</li>
+        <li>המיזוג "באמצע": <code>git status</code> מציג <code>both modified: settings.ts</code> (בקצר: <code>UU</code>)</li>
+        <li>VS Code מציג כפתורים: Accept Current / Incoming / Both</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <p class="small"><code>cat settings.ts</code>:</p>
+      <pre class="out sm">
+        export const settings = {
+          baseUrl: "http://localhost:3000",
+          browser: "firefox",
+        &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+          retries: 1,
+        =======
+          retries: 2,
+        &gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/ci-retries
+          workers: 2,
+        };
+      </pre>
+      <ul>
+        <li><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> – הגרסה שלכם</li>
+        <li><code>=======</code> – מפריד</li>
+        <li><code>&gt;&gt;&gt;&gt;&gt;&gt;&gt; branch</code> – הגרסה שממזגים</li>
+        <li>מחוץ לסימונים – כבר מוזג</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>פתרון קונפליקט – צעד אחר צעד</h2>
+  <div class="flow">
+    <div class="step"><b>1. פותחים</b>את הקובץ</div><div class="arrow">←</div>
+    <div class="step"><b>2. מחליטים</b>שלנו / שלהם / שילוב</div><div class="arrow">←</div>
+    <div class="step y"><b>3. מוחקים</b>את שורות הסימון</div><div class="arrow">←</div>
+    <div class="step y"><b>4. git add</b>"נפתר"</div><div class="arrow">←</div>
+    <div class="step g"><b>5. git commit</b>משלים merge</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <p class="small">שילוב של שני הצדדים: 2 ב-CI, 0 מקומית</p>
+      <pre class="lang-ts sm">
+        export const settings = {
+          baseUrl: "http://localhost:3000",
+          browser: "firefox",
+          retries: process.env.CI ? 2 : 0,
+          workers: 2,
+        };
+      </pre>
+      <pre class="lang-bash sm">
+        git add settings.ts
+        git commit --no-edit
+      </pre>
+      <pre class="out sm">
+        [main 866e79a] Merge branch 'feature/ci-retries'
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        # נשארו סימונים בקובץ? בודקים לפני commit
+        git diff --cached --check
+      </pre>
+      <pre class="out sm">
+        settings.ts:4: leftover conflict marker
+        settings.ts:6: leftover conflict marker
+        settings.ts:8: leftover conflict marker
+      </pre>
+      <div class="tip">אחרי פתרון – הריצו את הבדיקות! קוד שמתקמפל אחרי merge עדיין יכול להיות שגוי.</div>
+      <div class="note"><b>מניעה:</b> ענפים קצרי-חיים, PR קטנים, <code>git pull</code> ל-main לעתים קרובות.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>בחירת צד שלם, או ביטול המיזוג</h2>
+  <div class="grid2">
+    <div class="stack">
+      <p><b>ours / theirs</b> – לוקחים גרסה שלמה של צד אחד:</p>
+      <pre class="lang-bash sm">
+        git merge feature/new-users        # CONFLICT
+        git checkout --theirs test-data/users.csv
+        git add test-data/users.csv
+        git commit --no-edit
+        cat test-data/users.csv
+      </pre>
+      <pre class="out sm">
+        Updated 1 path from the index
+        [main 25b57c6] Merge branch 'feature/new-users'
+        username,password
+        admin,NewPass2026
+        viewer,View123
+      </pre>
+      <p class="small">בזמן merge: <b>ours</b> = הענף שעומדים עליו (main) · <b>theirs</b> = הענף שממזגים</p>
+    </div>
+    <div class="stack">
+      <p><b>התחרטתם?</b> חוזרים למצב שלפני ה-merge:</p>
+      <pre class="lang-bash sm">
+        git merge experiment/long-timeout  # CONFLICT
+        git merge --abort
+        git status
+        git branch --no-merged
+      </pre>
+      <pre class="out sm">
+        On branch main
+        nothing to commit, working tree clean
+          experiment/long-timeout
+      </pre>
+      <p class="small">שום דבר לא אבד: הענף עדיין קיים ואפשר למזג אותו מאוחר יותר.</p>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="slide practice">
+  <h2>תרגול – נושא 03: Merge Conflict</h2>
+  <ul>
+    <li>דף התרגילים: <code>lessons/09-git-github/exercises/03-merge-conflict.md</code></li>
+    <li>עובדים ב-<code>~/git-practice/03-merge-conflict</code> עם קובץ <code>settings.ts</code></li>
+    <li>שורות שונות = בלי קונפליקט · אותה שורה = פתרון ידני · <code>--theirs</code> לנתוני בדיקה</li>
+    <li><code>git merge --abort</code> · בונוס: קונפליקט modify/delete</li>
+  </ul>
+  <pre class="lang-bash">
+    # בדיקה אוטומטית (Windows: Git Bash)
+    bash lessons/09-git-github/exercises/verify-03-merge-conflict.sh ~/git-practice/03-merge-conflict
+
+    # פתרון לבדיקה עצמית
+    bash lessons/09-git-github/solutions/03-merge-conflict.sh
+  </pre>
+</section>
+
+<!-- ======================= חלק 4 ======================= -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>GitHub ו-Pull Requests</h1>
+  <p class="subtitle">Remote, push, pull ותהליך Code Review</p>
+</section>
+
+<section class="slide">
+  <h2>עבודה מול Remote: חיבור לשרת ו-push ראשון</h2>
+  <div class="flow">
+    <div class="step"><b>main המקומי</b>ה-commits שלכם</div><div class="arrow">⇄</div>
+    <div class="step y"><b>origin/main</b>מה שראיתם בשרת בפעם האחרונה</div><div class="arrow">⇄</div>
+    <div class="step g"><b>GitHub (origin)</b>העותק המשותף</div>
+  </div>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>origin</b> – השם המקובל לשרת המרוחק</li>
+        <li><code>push</code> – שליחת commits לשרת · <code>-u</code> – "לזכור את הקישור": מעכשיו מספיק <code>git push</code> / <code>git pull</code></li>
+        <li><code>[origin/main]</code> = הענף עוקב אחרי השרת</li>
+        <li>מול GitHub אמיתי – אותן פקודות, עם כתובת <code>https://github.com/…</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git init --bare -b main ~/git-practice/04-remote.git
+        git remote add origin ~/git-practice/04-remote.git
+        git push -u origin main
+        git branch -vv
+      </pre>
+      <pre class="out sm">
+        To /…/git-practice/04-remote.git
+         * [new branch]      main -&gt; main
+        branch 'main' set up to track 'origin/main'.
+
+        * main 7e6f35d [origin/main] Initial commit
+      </pre>
+    </div>
+  </div>
+  <div class="note">בדוגמאות ובתרגיל 04 ה-"GitHub" הוא repository מקומי מסוג <b>bare</b> (בלי קבצי עבודה, כמו בשרת) – בלי חשבון ובלי אינטרנט. הפקודות זהות; רק הכתובת שונה.</div>
+</section>
+
+<section class="slide">
+  <h2>clone – חבר/ת צוות מצטרף/ת</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>clone</code> מוריד את <b>כל</b> ההיסטוריה ומגדיר <code>origin</code> אוטומטית</li>
+        <li><code>remotes/origin/*</code> – ענפי השרת, כפי שהורדו</li>
+        <li>שם שונה ל-repo הזה בלבד: <code>git config user.name</code> (בלי <code>--global</code>)</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git clone ~/git-practice/04-remote.git ~/git-practice/04-teammate
+        cd ~/git-practice/04-teammate
+        git config user.name "Yossi Cohen"
+        git log --oneline
+        git branch -a
+      </pre>
+      <pre class="out sm">
+        Cloning into '/…/git-practice/04-teammate'...
+        done.
+
+        7e6f35d (HEAD -&gt; main, origin/main, origin/HEAD) Initial commit
+
+        * main
+          remotes/origin/HEAD -&gt; origin/main
+          remotes/origin/main
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>fetch מול pull (pull = fetch + merge)</h2>
+  <div class="grid2">
+    <div class="stack">
+      <p><b>fetch</b> – רק מוריד ומעדכן את <code>origin/main</code>, בלי לגעת בקבצים:</p>
+      <pre class="lang-bash sm">
+        git fetch
+        git status
+        git log --oneline main..origin/main
+      </pre>
+      <pre class="out sm">
+        From /…/git-practice/04-remote
+           7e6f35d..d57ef57  main       -&gt; origin/main
+        On branch main
+        Your branch is behind 'origin/main' by 1 commit, …
+          (use "git pull" to update your local branch)
+        …
+        d57ef57 (origin/main, origin/HEAD) Add API health test
+      </pre>
+    </div>
+    <div class="stack">
+      <p><b>pull</b> – מוריד <b>וממזג</b>: הקבצים משתנים (ויכול להיות קונפליקט):</p>
+      <pre class="lang-bash sm">
+        git pull
+        git log --format="%h %an %s"
+      </pre>
+      <pre class="out sm">
+        Updating 7e6f35d..d57ef57
+        Fast-forward
+         tests/api.spec.ts | 1 +
+         1 file changed, 1 insertion(+)
+         create mode 100644 tests/api.spec.ts
+
+        d57ef57 Yossi Cohen Add API health test
+        7e6f35d Dana Levi Initial commit
+      </pre>
+    </div>
+  </div>
+  <div class="tip">יוסי דחף commit ודנה בודקת מה חדש. בתחילת כל יום / לפני ענף חדש: <code>git switch main &amp;&amp; git pull</code></div>
+</section>
+
+<section class="slide">
+  <h2>push נדחה (rejected) – ומה עושים</h2>
+  <p>יוסי עשה commit בלי <code>pull</code>, ובינתיים דנה דחפה commit אחר ל-main:</p>
+  <pre class="lang-bash sm">
+    git commit -m "Add login test"   # אחרי add
+    git push
+  </pre>
+  <pre class="out sm">
+    To /…/git-practice/04-remote.git
+     ! [rejected]        main -&gt; main (fetch first)
+    error: failed to push some refs to '/…/git-practice/04-remote.git'
+    hint: Updates were rejected because the remote contains work that you do not
+    hint: have locally. This is usually caused by another repository pushing to
+    hint: the same ref. If you want to integrate the remote changes, use
+    hint: 'git pull' before pushing again.
+  </pre>
+  <div class="cols">
+    <pre class="lang-bash sm">
+      git pull --no-rebase --no-edit   # מושך וממזג
+      git push                         # עכשיו מצליח
+    </pre>
+    <pre class="out sm">
+      To /…/git-practice/04-remote.git
+         39fc152..889664c  main -&gt; main
+    </pre>
+  </div>
+  <div class="note">pull שנכשל עם <code>divergent branches</code>? הגדירו פעם אחת: <code>git config --global pull.rebase false</code></div>
+</section>
+
+<section class="slide">
+  <h2>דוחפים ענף – הבסיס ל-Pull Request</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>לא דוחפים ישר ל-main – דוחפים <b>ענף</b></li>
+        <li>אחרי ה-push, GitHub מציג באנר <b>Compare &amp; pull request</b></li>
+        <li><code>git branch -r</code> – הענפים שבשרת</li>
+        <li>כל push נוסף לענף מעדכן את ה-PR אוטומטית</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git switch -c feature/cart-tests
+        git add tests/cart.spec.ts
+        git commit -m "Add cart tests"
+        git push -u origin feature/cart-tests
+        git branch -r
+      </pre>
+      <pre class="out sm">
+        Switched to a new branch 'feature/cart-tests'
+        [feature/cart-tests 11961be] Add cart tests
+         1 file changed, 1 insertion(+)
+         create mode 100644 tests/cart.spec.ts
+        To /…/git-practice/04-remote.git
+         * [new branch]      feature/cart-tests -&gt; feature/cart-tests
+        branch 'feature/cart-tests' set up to track 'origin/feature/cart-tests'.
+          origin/HEAD -&gt; origin/main
+          origin/feature/cart-tests
+          origin/main
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תהליך Pull Request (GitHub Flow) ופתיחת PR</h2>
+  <div class="flow">
+    <div class="step"><b>Branch</b><code>feature/cart-tests</code></div><div class="arrow">←</div>
+    <div class="step"><b>Commits + Push</b>עבודה בענף</div><div class="arrow">←</div>
+    <div class="step y"><b>Pull Request</b>תיאור + Reviewer</div><div class="arrow">←</div>
+    <div class="step y"><b>CI + Review</b>בדיקות + הערות</div><div class="arrow">←</div>
+    <div class="step g"><b>Merge</b>ל-main + מחיקת הענף</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>PR</b> = בקשה למזג ענף ל-main, עם דיון והערות על שורות</li>
+        <li>ב-GitHub: <b>Compare &amp; pull request</b> · base = <code>main</code>, compare = הענף שלכם</li>
+        <li>Reviewer יכול: <b>Comment</b> · <b>Approve</b> · <b>Request changes</b></li>
+        <li>commit נוסף לאותו ענף מעדכן את ה-PR אוטומטית</li>
+        <li>או מהטרמינל, עם GitHub CLI: <code>gh pr create</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>📝 pull_request_template.md</h3>
+        <ul>
+          <li><b>מה השתנה?</b> · <b>למה?</b> קישור לבאג/משימה: Jira QA-123</li>
+          <li><b>איך נבדק?</b> ☐ <code>npm test</code> מקומית · ☐ בדיקות עודכנו · ☐ CI עבר</li>
+          <li><b>צילומי מסך / דוח</b> · <b>הערות ל-Reviewer</b></li>
+        </ul>
+      </div>
+      <p class="small">התבנית: <code>templates/pull_request_template.md</code> ← מעתיקים ל-<code>.github/pull_request_template.md</code> וכל PR חדש נפתח איתה.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Code Review, Merge וניקוי</h2>
+  <div class="cols">
+    <div class="stack">
+      <p><b>מה בודקים ב-PR של קוד בדיקות?</b></p>
+      <ul>
+        <li>שם הבדיקה מתאר מה נבדק ומה הציפייה · הבדיקה עצמאית</li>
+        <li>אין <code>sleep</code> קבועים / <code>test.skip</code> שנשכחו</li>
+        <li>אין סיסמאות, טוקנים או URL של Prod בקוד · ה-CI ירוק</li>
+      </ul>
+      <p><b>Branch protection</b> (<code>Settings → Branches</code>): חובה PR עם Approve ו-CI ירוק (שיעור 11) – <code>git push</code> ישיר ל-main נדחה.</p>
+      <p class="small">הכפתור <b>Merge pull request</b> יוצר merge commit (כמו <code>--no-ff</code>); אחריו – <b>Delete branch</b>. הדמיה מקומית:</p>
+      <pre class="lang-txt sm">
+        git switch main
+        git merge --no-ff feature/cart-tests \
+          -m "Merge pull request #1 from feature/cart-tests"
+        git push
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git log --oneline --graph -4
+        git push origin --delete feature/cart-tests
+        git branch -d feature/cart-tests
+        git fetch --prune
+        git branch -r
+      </pre>
+      <pre class="out sm">
+        *   39fc152 Merge pull request #1 from feature/cart-tests
+        |\
+        | * 11961be Add cart tests
+        |/
+        * d57ef57 Add API health test
+        * 7e6f35d Initial commit
+        To /…/git-practice/04-remote.git
+         - [deleted]         feature/cart-tests
+        Deleted branch feature/cart-tests (was 11961be).
+          origin/HEAD -&gt; origin/main
+          origin/main
+      </pre>
+      <pre class="lang-bash sm">
+        git tag -a v1.0 -m "Regression suite v1.0"   # תגית גרסה
+        git push origin v1.0
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – Remote ו-GitHub</h2>
+  <table>
+    <tr><th>מה קרה</th><th>מה רואים</th><th>תיקון</th></tr>
+    <tr><td>דחפתם בלי <code>pull</code></td><td><code>! [rejected] ... (fetch first)</code></td><td><code>git pull</code> ← (פתרון קונפליקט) ← <code>git push</code></td></tr>
+    <tr><td><code>git push</code> בענף חדש</td><td><code>has no upstream branch</code></td><td><code>git push -u origin &lt;branch&gt;</code> בפעם הראשונה</td></tr>
+    <tr><td>חשבתם ש-<code>fetch</code> מעדכן קבצים</td><td>הקבצים לא השתנו</td><td><code>git pull</code> (או merge של <code>origin/main</code>)</td></tr>
+    <tr><td>ענף ישן מ-main</td><td>קונפליקטים גדולים ב-PR</td><td>למשוך main לעתים קרובות, PR קטנים</td></tr>
+    <tr><td>דחפתם סוד ל-GitHub</td><td>הסוד בהיסטוריה הציבורית</td><td>להחליף סיסמה/טוקן מיד + <bdi>.gitignore</bdi></td></tr>
+  </table>
+  <div class="tip">GitHub מבקש סיסמה ונכשל? משתמשים ב-<b>Personal Access Token</b> או SSH key – סיסמת החשבון לא עובדת ב-git.</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 04: Remote, push, pull ו-PR</h2>
+  <ul>
+    <li>דף התרגילים: <code>lessons/09-git-github/exercises/04-remote-push-pull.md</code></li>
+    <li>"שרת" bare מקומי: <code>~/git-practice/04-remote.git</code> + שני עותקים: שלכם ושל "חבר צוות"</li>
+    <li>push ראשון · clone + fetch + pull · ענף פיצ'ר ו-"PR" · push נדחה · בונוס: tag ו-prune</li>
+    <li>רשות בסוף הקובץ: אותו דבר מול GitHub אמיתי</li>
+  </ul>
+  <pre class="lang-bash">
+    # בדיקה אוטומטית (Windows: Git Bash)
+    bash lessons/09-git-github/exercises/verify-04-remote-push-pull.sh ~/git-practice/04-remote-push-pull
+
+    # פתרון לבדיקה עצמית
+    bash lessons/09-git-github/solutions/04-remote-push-pull.sh
+  </pre>
+</section>
+
+<!-- ======================= חלק 5 ======================= -->
+<section class="slide section">
+  <div class="badge">חלק 5</div>
+  <h1>תיקון טעויות ו-stash</h1>
+  <p class="subtitle">restore, amend, revert, reset, reflog – ואיך להחביא עבודה באמצע</p>
+</section>
+
+<section class="slide">
+  <h2>תיקון טעויות – איזו פקודה מתי?</h2>
+  <table>
+    <tr><th>מצב</th><th>פקודה</th><th>בטוח אחרי push?</th></tr>
+    <tr><td>ביטול שינוי בקובץ שלא נשמר</td><td><code>git restore &lt;file&gt;</code></td><td>—</td></tr>
+    <tr><td>הוצאה מ-Staging</td><td><code>git restore --staged &lt;file&gt;</code></td><td>—</td></tr>
+    <tr><td>תיקון ה-commit האחרון (הודעה/קבצים)</td><td><code>git commit --amend</code></td><td>❌ רק לפני push</td></tr>
+    <tr><td>ביטול commit ע"י commit הפוך</td><td><code>git revert &lt;hash&gt;</code></td><td>✅</td></tr>
+    <tr><td>החזרת הענף אחורה</td><td><code>git reset --hard HEAD~1</code></td><td>❌ מוחק עבודה!</td></tr>
+    <tr><td>החבאת עבודה באמצע</td><td><code>git stash</code> / <code>git stash pop</code></td><td>—</td></tr>
+  </table>
+  <div class="note">דוגמה: <code>examples/05-undo-and-stash.sh</code>. כלל זהב: לא משכתבים היסטוריה שכבר נדחפה לענף משותף</div>
+</section>
+
+<section class="slide">
+  <h2>restore ו-restore --staged</h2>
+  <div class="grid2">
+    <div class="stack">
+      <p><b>הוצאה מ-Staging</b> – הקובץ נשאר בדיסק:</p>
+      <pre class="lang-bash sm">
+        git add .
+        git status --short
+        git restore --staged local-notes.txt
+        git status --short
+      </pre>
+      <pre class="out sm">
+        A  local-notes.txt
+        A  tests/cart.spec.ts
+
+        A  tests/cart.spec.ts
+        ?? local-notes.txt
+      </pre>
+      <p class="small">הערות פרטיות לא נכנסו ל-commit, אבל לא נמחקו.</p>
+    </div>
+    <div class="stack">
+      <p><b>ביטול שינוי</b> שלא נשמר – חזרה ל-commit האחרון:</p>
+      <pre class="lang-bash sm">
+        echo BROKEN &gt;&gt; tests/cart.spec.ts
+        git status --short
+        git restore tests/cart.spec.ts
+        git status --short
+        cat tests/cart.spec.ts
+      </pre>
+      <pre class="out sm">
+         M tests/cart.spec.ts
+
+        test('add item to cart', () =&gt; {});
+      </pre>
+      <div class="warn"><code>git restore &lt;file&gt;</code> מוחק את השינוי לתמיד – אין "undo".</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>commit --amend – תיקון ה-commit האחרון</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>שגיאת כתיב בהודעה, או קובץ שנשכח</li>
+        <li><code>--amend</code> מחליף את ה-commit האחרון בחדש (hash חדש!)</li>
+        <li>מה שב-Staging נכנס יחד איתו</li>
+      </ul>
+      <div class="warn"><b>רק לפני push.</b> אחרי push, amend יוצר commit <b>אחר</b> – ההיסטוריה שלכם והשרת נפרדו (<code>diverged</code>) וה-push נדחה (<code>non-fast-forward</code>).
+        <code>push --force</code> ידרוס עבודה של אחרים – משתמשים ב-<code>revert</code> או ב-commit תיקון חדש.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git commit -m "Add logn test"        # אופס – שגיאת כתיב
+        # ...ושכחנו את קובץ ה-Page Object
+        git add pages/login.page.ts
+        git commit --amend -m "Add login test"
+        git log --oneline
+      </pre>
+      <pre class="out sm">
+        [main 47a0624] Add logn test
+         1 file changed, 1 insertion(+)
+         create mode 100644 tests/login.spec.ts
+        [main f327334] Add login test
+         Date: Tue Nov 10 10:20:48 2026 +0200
+         2 files changed, 2 insertions(+)
+         create mode 100644 pages/login.page.ts
+         create mode 100644 tests/login.spec.ts
+
+        f327334 (HEAD -&gt; main) Add login test
+        11cf348 Initial commit
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>revert – ביטול בטוח של commit</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מישהו "השתיק" בדיקה עם <code>test.skip</code> וזה כבר ב-GitHub</li>
+        <li><code>revert</code> יוצר commit <b>חדש</b> שעושה את ההפך</li>
+        <li>ההיסטוריה לא נמחקת – רואים גם את הטעות וגם את התיקון</li>
+        <li>בטוח לענף משותף ✅</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        # test('checkout') → test.skip('checkout')
+        git commit -am "Skip checkout test"
+        git revert --no-edit HEAD
+        git log --oneline -4
+        cat tests/checkout.spec.ts
+      </pre>
+      <pre class="out sm">
+        [main da0d753] Skip checkout test
+         1 file changed, 1 insertion(+), 1 deletion(-)
+        [main d557199] Revert "Skip checkout test"
+         Date: Tue Nov 10 10:20:53 2026 +0200
+         1 file changed, 1 insertion(+), 1 deletion(-)
+
+        d557199 (HEAD -&gt; main) Revert "Skip checkout test"
+        da0d753 Skip checkout test
+        4599bba Add checkout test
+        aaff7a1 Ignore local notes
+
+        test('checkout', () =&gt; {});
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>reset – הזזת הענף אחורה (שלושה מצבים)</h2>
+  <table>
+    <tr><th>פקודה</th><th>ה-commit</th><th>השינויים שלו</th><th>מתי</th></tr>
+    <tr><td><code>git reset --soft HEAD~1</code></td><td>מבוטל</td><td>נשארים ב-Staging</td><td>"לאחד" או לכתוב מחדש commit</td></tr>
+    <tr><td><code>git reset HEAD~1</code> (mixed)</td><td>מבוטל</td><td>נשארים בקבצים, מחוץ ל-Staging</td><td>לסדר מחדש מה נכנס</td></tr>
+    <tr><td><code>git reset --hard HEAD~1</code></td><td>מבוטל</td><td><b>נמחקים</b> ⚠️</td><td>לזרוק ניסוי מקומי</td></tr>
+  </table>
+  <div class="grid3">
+    <div class="stack">
+      <pre class="lang-bash sm">git reset --soft HEAD~1
+git status --short</pre>
+      <pre class="out sm">A  tests/a.spec.ts</pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">git reset HEAD~1
+git status --short</pre>
+      <pre class="out sm">?? tests/a.spec.ts</pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">git reset --hard HEAD~2</pre>
+      <pre class="out sm">HEAD is now at d557199 …</pre>
+    </div>
+  </div>
+  <div class="warn"><b>revert מול reset:</b> <code>revert</code> מוסיף commit ומשאיר היסטוריה – בטוח אחרי push. <code>reset</code> כותב היסטוריה מחדש – רק לניסוי מקומי שלא נדחף (אחרת <code>push --force</code>, שחסום ל-main). לפני <code>reset --hard</code> הריצו <code>git status</code>.</div>
+</section>
+
+<section class="slide">
+  <h2>reflog – רשת הביטחון</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>"זרקנו" שני commits של ניסוי:<br><code>git reset --hard HEAD~2</code></li>
+        <li><code>git log</code> כבר לא מציג אותם…</li>
+        <li><code>git reflog</code> = יומן של כל מקום ש-HEAD היה בו (מקומי, ~90 יום)</li>
+        <li>מוצאים את ה-hash ויוצרים ממנו ענף – העבודה חזרה</li>
+      </ul>
+      <div class="tip">reflog מציל רק מה שנכנס ל-commit. שינוי שלא נשמר ונמחק – אבד.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git reset --hard HEAD~2
+        git reflog -4
+      </pre>
+      <pre class="out sm">
+        HEAD is now at d557199 Revert "Skip checkout test"
+        d557199 (HEAD -&gt; main) HEAD@{0}: reset: moving to HEAD~2
+        03a7763 HEAD@{1}: commit: WIP experiment 2
+        7079159 HEAD@{2}: commit: WIP experiment 1
+        d557199 (HEAD -&gt; main) HEAD@{3}: revert: Revert "Skip checkout test"
+      </pre>
+      <pre class="lang-bash sm">
+        git branch rescue/experiment HEAD@{1}
+        git log --oneline -3 rescue/experiment
+      </pre>
+      <pre class="out sm">
+        03a7763 (rescue/experiment) WIP experiment 2
+        7079159 WIP experiment 1
+        d557199 (HEAD -&gt; main) Revert "Skip checkout test"
+      </pre>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="slide">
+  <h2>stash – להחביא עבודה באמצע</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <p><b>התרחיש:</b> באמצע בדיקה חדשה מגיע באג דחוף. מחביאים (<code>stash push</code>), מתקנים בענף נפרד, ומחזירים (<code>stash pop</code>).</p>
+      <ul>
+        <li>תמיד עם <code>-m "..."</code> – כדי לזכור מה החבאתם</li>
+        <li><code>git stash</code> רגיל <b>לא</b> לוקח קבצים חדשים (<code>??</code>) · <code>-u</code> – כולל untracked</li>
+        <li><code>stash list</code> – הרשימה · <code>stash show</code> – מה בפנים</li>
+        <li><code>pop</code> = מחזיר ומוחק · <code>apply</code> = מחזיר ומשאיר · <code>drop</code> = מחיקה</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        git stash push -m "WIP: login edge cases"
+        # ...מתקנים בענף נפרד, חוזרים – ואז
+        git stash pop
+      </pre>
+      <pre class="out sm">
+        Saved working directory and index state On main: WIP: login edge cases
+        …
+        Dropped refs/stash@{0} (940588391fa24f0b12dc86adeb579bb8ccf21cc0)
+      </pre>
+      <pre class="lang-bash sm">
+        git stash push -u -m "WIP: slack reporter"
+        git stash list
+        git stash show -u --stat stash@{0}
+      </pre>
+      <pre class="out sm">
+        Saved working directory and index state On main: WIP: slack reporter
+        stash@{0}: On main: WIP: slack reporter
+         README.md                   | 1 +
+         reporters/slack-reporter.ts | 1 +
+         2 files changed, 2 insertions(+)
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – תיקון טעויות ו-stash</h2>
+  <table>
+    <tr><th>טעות</th><th>למה זה כואב</th><th>במקום זה</th></tr>
+    <tr><td><code>amend</code> / <code>reset</code> ל-commit שנדחף</td><td>push נדחה, ו-force דורס אחרים</td><td><code>git revert</code></td></tr>
+    <tr><td><code>reset --hard</code> כשיש שינויים לא שמורים</td><td>נמחקים לתמיד</td><td><code>git stash</code> או commit לפני</td></tr>
+    <tr><td><code>git restore</code> במקום <code>restore --staged</code></td><td>השינוי נמחק במקום לצאת מ-Staging</td><td>לקרוא את ההצעה ב-<code>git status</code></td></tr>
+    <tr><td><code>git stash</code> בלי <code>-u</code></td><td>קבצים חדשים נשארו בתיקייה</td><td><code>git stash push -u -m "..."</code></td></tr>
+    <tr><td>שוכחים stash ישנים</td><td>עבודה "אבודה" ברשימה</td><td><code>git stash list</code> מדי פעם</td></tr>
+  </table>
+  <div class="tip">בהלה? עצרו, הריצו <code>git status</code> ו-<code>git reflog</code>. כמעט כל דבר שנכנס ל-commit אפשר להחזיר.</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 05: תיקון טעויות ו-stash</h2>
+  <ul>
+    <li>דף התרגילים: <code>lessons/09-git-github/exercises/05-undo-and-stash.md</code></li>
+    <li>עובדים ב-<code>~/git-practice/05-undo-and-stash</code></li>
+    <li>amend: הודעה + קובץ שנשכח · unstage ו-restore · revert ל-<code>test.skip</code></li>
+    <li><code>reset --hard</code> והצלה עם reflog · stash לבאג דחוף · <code>stash -u</code> לקבצים חדשים</li>
+  </ul>
+  <pre class="lang-bash">
+    # בדיקה אוטומטית (Windows: Git Bash)
+    bash lessons/09-git-github/exercises/verify-05-undo-and-stash.sh ~/git-practice/05-undo-and-stash
+
+    # פתרון לבדיקה עצמית
+    bash lessons/09-git-github/solutions/05-undo-and-stash.sh
+  </pre>
+</section>
+
+<!-- ======================= סיכום ======================= -->
+<section class="slide">
+  <h2>דף עזר (1/2) – עבודה מקומית</h2>
+  <table>
+    <tr><th>פקודה</th><th>מה עושה</th><th>פקודה</th><th>מה עושה</th></tr>
+    <tr><td><code>git init -b main</code></td><td>repository חדש</td><td><code>git branch</code></td><td>רשימת ענפים</td></tr>
+    <tr><td><code>git status</code> / <code>-s</code></td><td>מה המצב עכשיו</td><td><code>git switch -c &lt;b&gt;</code></td><td>ענף חדש + מעבר</td></tr>
+    <tr><td><code>git add &lt;file&gt;</code></td><td>ל-Staging</td><td><code>git switch &lt;b&gt;</code></td><td>מעבר לענף</td></tr>
+    <tr><td><code>git commit -m "..."</code></td><td>שמירת תמונת מצב</td><td><code>git merge &lt;b&gt;</code></td><td>מיזוג לענף הנוכחי</td></tr>
+    <tr><td><code>git log --oneline</code></td><td>היסטוריה</td><td><code>git merge --abort</code></td><td>ביטול מיזוג באמצע</td></tr>
+    <tr><td><code>git diff</code></td><td>שינויים מחוץ ל-Staging</td><td><code>git branch -d &lt;b&gt;</code></td><td>מחיקת ענף שמוזג</td></tr>
+    <tr><td><code>git diff --staged</code></td><td>מה ייכנס ל-commit</td><td><code>git log --graph --all</code></td><td>גרף הענפים</td></tr>
+    <tr><td><code>git show --stat HEAD</code></td><td>פרטי commit</td><td><code>git check-ignore -v</code></td><td>למה קובץ מוחרג</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>דף עזר (2/2) – שרת ותיקונים</h2>
+  <table>
+    <tr><th>פקודה</th><th>מה עושה</th><th>פקודה</th><th>מה עושה</th></tr>
+    <tr><td><code>git clone &lt;url&gt;</code></td><td>העתק מלא מהשרת</td><td><code>git restore &lt;file&gt;</code></td><td>ביטול שינוי לא שמור</td></tr>
+    <tr><td><code>git remote add origin &lt;url&gt;</code></td><td>חיבור לשרת</td><td><code>git restore --staged</code></td><td>הוצאה מ-Staging</td></tr>
+    <tr><td><code>git push -u origin &lt;b&gt;</code></td><td>push ראשון של ענף</td><td><code>git commit --amend</code></td><td>תיקון commit אחרון</td></tr>
+    <tr><td><code>git fetch</code></td><td>הורדת מידע בלבד</td><td><code>git revert &lt;hash&gt;</code></td><td>ביטול בטוח</td></tr>
+    <tr><td><code>git pull</code></td><td>fetch + merge</td><td><code>git reset --hard HEAD~1</code></td><td>⚠️ זריקת commit מקומי</td></tr>
+    <tr><td><code>git branch -r</code></td><td>ענפי השרת</td><td><code>git reflog</code></td><td>רשת ביטחון</td></tr>
+    <tr><td><code>git push origin --delete &lt;b&gt;</code></td><td>מחיקת ענף בשרת</td><td><code>git stash push -u -m</code></td><td>החבאת עבודה</td></tr>
+    <tr><td><code>gh pr create</code></td><td>פתיחת PR מהטרמינל</td><td><code>git stash pop</code></td><td>החזרת עבודה</td></tr>
+  </table>
+</section>
+
+
+
+<section class="slide practice">
+  <h2>תרגול – שיעור 9</h2>
+  <ul>
+    <li>תרגילים 1–3 (מקומי): repository + <bdi>.gitignore</bdi> · branches ו-merge · פתרון קונפליקט</li>
+    <li>בדיקה אוטומטית של ה-repository שלכם:</li>
+    <li>תרגיל 4 (בזוגות ב-GitHub): push, Collaborator, ענף, <b>Pull Request עם תבנית</b>, Review, תיקון, Merge</li>
+    <li>בונוס: Branch protection על main</li>
+    <li>ההוראות המלאות: <code>lessons/09-git-github/exercises/README.md</code></li>
+  </ul>
+  <pre class="lang-bash">
+    bash lessons/09-git-github/exercises/verify-repo.sh ~/git-practice/qa-practice
+
+    # פתרון לדוגמה (רץ בתיקייה זמנית)
+    bash lessons/09-git-github/solutions/solution.sh
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>סיכום: יום עבודה טיפוסי עם Git</h2>
+  <ul>
+    <li><code>git add</code> ל-Staging, <code>git commit</code> להיסטוריה · <bdi>.gitignore</bdi>: בלי <code>node_modules</code>, דוחות וסודות</li>
+    <li>Branch לכל משימה · Merge (fast-forward / merge commit) · פתרון קונפליקטים · Pull Request + Code Review</li>
+    <li>תיקונים: <code>restore</code> · <code>amend</code> (לפני push) · <code>revert</code> (אחרי push) · <code>reflog</code> · <code>stash</code></li>
+  </ul>
+  <pre class="lang-bash sm">
+    git switch main &amp;&amp; git pull                    # 1. מתחילים מ-main עדכני
+    git switch -c fix/QA-123-flaky-login            # 2. ענף לבאג / למשימה
+    git status &amp;&amp; git diff                          # 3. מה שיניתי?
+    git add tests/login.spec.ts
+    git commit -m "fix: wait for login redirect"    # 4. commit קטן וברור
+    git push -u origin fix/QA-123-flaky-login       # 5. דוחפים ← פותחים PR ב-GitHub
+    git switch main &amp;&amp; git pull                    # 6. אחרי Merge: מעדכנים
+    git branch -d fix/QA-123-flaky-login            #    ומנקים
+  </pre>
+  <div class="note">שיעור 10: GitHub Actions, לוגים ודוחות – כל push יפעיל <b>Pipeline</b> אוטומטי, וה-PR שלכם יריץ את הבדיקות לבד.</div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+# Lesson 11 – Topic 03 Solution: Hello Actions
+name: Hello QA
+
+on:
+  push:
+    branches: [main, "release/**"]
+  workflow_dispatch:
+
+env:
+  APP_NAME: qa-course # available to all jobs and all steps
+
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.info.outputs.branch }} # "exports" the output of the info step to other jobs
+    steps:
+      - name: Checkout the repository code
+        uses: actions/checkout@v6
+
+      - name: Now the code is here
+        run: ls -la
+
+      - name: Who and what triggered me?
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "App:   $APP_NAME"
+
+      - name: Save the branch as a step output
+        id: info
+        run: echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+  report:
+    needs: greet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the output of greet
+        run: echo "greet ran on branch ${{ needs.greet.outputs.branch }}"

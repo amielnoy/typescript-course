@@ -1,0 +1,53 @@
+# Lesson 11 – Topic 03: Hello Actions – The Basic Structure of a Workflow (Exercises)
+# Topic: examples/workflows/01-hello-actions.yml
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/03-hello-actions.yml
+#
+# Tasks:
+#  1. name: "Hello QA"
+#     Runs on push to the branches main and "release/**" (a list under branches) and also on manual trigger (workflow_dispatch).
+#  2. An environment variable for the whole Workflow (top-level env: – not inside a job):  APP_NAME: qa-course
+#  3. In a job named greet (runs-on: ubuntu-latest): a checkout step (actions/checkout@v6)
+#     and only after it, a step that runs  ls -la   (the runner starts empty – no checkout, no code!)
+#  4. One step with a multi-line run (run: |) that prints, using three echo commands:
+#     ${{ github.event_name }}, ${{ github.actor }} and the environment variable $APP_NAME
+#  5. "Output" of a step and of a job:
+#     a. A step with id: info that runs:  echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+#     b. Add outputs to the greet job with the key branch:  ${{ steps.info.outputs.branch }}
+#  6. (Bonus) A second job named report (runs-on: ubuntu-latest) that runs after greet (needs)
+#     and prints ${{ needs.greet.outputs.branch }}
+
+name: TODO
+
+on:
+  # TODO: push (main + release/**) + workflow_dispatch
+
+# TODO: Workflow-level env
+
+jobs:
+  greet:
+    runs-on: TODO
+    # TODO: outputs
+    steps:
+      # TODO: the steps
+      - run: echo "TODO"
+
+  # TODO (Bonus): a job named report
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] name: "Hello QA" at the top level
+# [ ] on → push → branches includes both main and "release/**"
+# [ ] There is also a workflow_dispatch trigger (manual run)
+# [ ] Top-level env (not inside a job) with  APP_NAME: qa-course
+# [ ] The greet job runs on  runs-on: ubuntu-latest
+# [ ] greet has an actions/checkout@v6 step – and only after it, a step that runs  ls -la
+# [ ] One step with  run: |  that echoes ${{ github.event_name }}, ${{ github.actor }} and $APP_NAME
+# [ ] A step with  id: info  that runs  echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+# [ ] The greet job has outputs with  branch: ${{ steps.info.outputs.branch }}
+# [ ] (Bonus) A job named report with  needs: greet  and runs-on: ubuntu-latest, that prints ${{ needs.greet.outputs.branch }}
+#
+# Compare with the solution: solutions/03-hello-actions.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/03-hello-actions.yml

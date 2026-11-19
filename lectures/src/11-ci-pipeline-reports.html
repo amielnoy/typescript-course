@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 11 – הרצה אוטומטית ודוחות</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="11">
+
+<!-- ===================================================== פתיחה -->
+<section class="slide title">
+  <div class="badge">שיעור 11</div>
+  <h1>הרצה אוטומטית ודוחות</h1>
+  <p class="subtitle"><bdi>GitHub Actions</bdi> · <bdi>Playwright ב-CI</bdi> · <bdi>Allure 2</bdi></p>
+  <div class="chips"><span>Workflow YAML</span><span>Triggers</span><span>Matrix</span><span>Artifacts</span><span>Secrets</span><span>Schedule</span><span>Allure</span><span>Quality Gate</span></div>
+  <div class="meta">5.1 · פרונטלי · תיקייה בפרויקט: lessons/11-ci-pipeline-reports</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום</h2>
+  <table>
+    <tr><th>#</th><th>חלק</th><th>מה נלמד</th><th>תרגיל</th></tr>
+    <tr><td>1</td><td><b>Pipeline מקומי</b></td><td>מה שרת CI עושה בפועל: שלבים, exit code, fail fast</td><td><code>01</code></td></tr>
+    <tr><td>2</td><td><b>קריאת קובצי Workflow</b></td><td>YAML, מבנה הקובץ, טעויות נפוצות</td><td><code>02</code></td></tr>
+    <tr><td>3</td><td><b>Hello Actions</b></td><td>triggers, run/uses, env, ביטויים <code>${{ }}</code>, outputs</td><td><code>03</code></td></tr>
+    <tr><td>4</td><td><b>Matrix ובדיקות Node</b></td><td>jobs במקביל, needs, matrix, cache, artifacts, תנאי if</td><td><code>04</code></td></tr>
+    <tr><td>5</td><td><b>Playwright + Allure + Pages</b></td><td>דוחות, ראיות לכישלון, secrets, permissions</td><td><code>05</code></td></tr>
+    <tr><td>6</td><td><b>רגרסיה לילית</b></td><td>cron, הפעלה ידנית עם inputs, concurrency</td><td><code>06</code></td></tr>
+    <tr><td>7</td><td><b>Quality Gate ל-PR</b></td><td>paths, sharding, branch protection, לוגים, גרסאות</td><td><code>07</code></td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>מה זה CI, ומה זה GitHub Actions?</h2>
+  <div class="flow">
+    <div class="step"><b>push / PR</b>מישהו משנה קוד</div><div class="arrow">←</div>
+    <div class="step"><b>GitHub Actions</b>מזהה את האירוע וקורא את קובץ ה-YAML</div><div class="arrow">←</div>
+    <div class="step y"><b>Runner</b>מכונה נקייה מריצה את הבדיקות</div><div class="arrow">←</div>
+    <div class="step g"><b>תוצאה</b>✅ / ❌ + דוחות להורדה</div>
+  </div>
+  <ul>
+    <li><b>CI (Continuous Integration)</b> – כל שינוי בקוד נבדק אוטומטית, מיד, על מכונה נקייה – לא "אצלי זה עובד"</li>
+    <li><b>GitHub Actions</b> – שירות ה-CI המובנה ב-GitHub: קובץ YAML בתוך ה-repo מגדיר <b>מה</b> להריץ ו<b>מתי</b></li>
+    <li><b>Runner</b> – מכונה וירטואלית זמנית (Ubuntu / Windows / macOS) שנוצרת לריצה ונמחקת בסופה</li>
+    <li><b>לבודקים:</b> הבדיקות שכתבתם רצות לבד – על כל PR, כל לילה ובלחיצת כפתור – והדוחות נשמרים</li>
+  </ul>
+  <div class="note">ב-repo ציבורי הדקות חינמיות; ב-repo פרטי יש מכסת דקות חודשית – לכן חשוב שה-Pipeline יהיה מהיר וחכם</div>
+</section>
+
+<!-- ===================================================== חלק 1 -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>Pipeline מקומי</h1>
+  <p class="subtitle">מה שרת CI עושה בפועל – ונריץ את אותם שלבים על המחשב שלנו</p>
+</section>
+
+<section class="slide">
+  <h2>CI = חמש פעולות פשוטות</h2>
+  <div class="flow">
+    <div class="step"><b>1. מריץ</b>פקודות לפי סדר שלבים</div><div class="arrow">←</div>
+    <div class="step"><b>2. בודק</b>exit code של כל פקודה</div><div class="arrow">←</div>
+    <div class="step r"><b>3. עוצר</b>בכישלון הראשון (fail fast)</div><div class="arrow">←</div>
+    <div class="step y"><b>4. שומר</b>תוצרים (artifacts)</div><div class="arrow">←</div>
+    <div class="step g"><b>5. מדווח</b>ירוק / אדום</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>exit code</b> – המספר שכל תוכנית מחזירה כשהיא מסתיימת</li>
+        <li><code>0</code> = הצלחה · <b>כל מספר אחר</b> = כישלון</li>
+        <li><code>$?</code> ב-bash מחזיק את ה-exit code של הפקודה האחרונה</li>
+        <li>כך GitHub Actions מחליט אם step עבר: כל קוד שאינו <code>0</code> ← ❌</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        node -e "console.log('ok')"
+        echo $?      # 0 = success
+        node -e "process.exit(1)"
+        echo $?      # 1 = failure
+      </pre>
+      <pre class="out">
+        ok
+        0
+        1
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>examples/01-local-pipeline.ts – הקוד</h2>
+  <pre class="lang-ts sm">
+    interface Stage {
+      name: string;
+      command: string[];
+      continueOnError?: boolean;   // כמו continue-on-error ב-YAML
+    }
+
+    const stages: Stage[] = [
+      { name: "Typecheck", command: [process.execPath, "node_modules/typescript/bin/tsc", "--noEmit"] },
+      { name: "Solutions (smoke run)", command: [...tsx, "scripts/run-all-examples.ts", "solutions"] },
+      { name: "API tests + reports", command: [...tsx, "lessons/10-ci-cd-logs-reports/examples/04-mini-runner-with-reports.ts"] },
+    ];
+
+    for (const stage of stages) {
+      const r = spawnSync(stage.command[0], stage.command.slice(1), { encoding: "utf8" });
+      const ok = r.status === 0;                       // status = exit code
+      results.push({ name: stage.name, ok, seconds });
+      if (!ok &amp;&amp; !stage.continueOnError) {
+        console.log("\n⛔ Fail fast: the next stages will not run");
+        break;
+      }
+    }
+  </pre>
+  <div class="note">אותם שלבים כמו ב-<code>.github/workflows/ci.yml</code>: typecheck ← <code>npm run solutions</code> ← <code>npm run report</code></div>
+</section>
+
+<section class="slide">
+  <h2>הרצה מקומית – פלט אמיתי</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>לכל שלב: הפקודה, 3 השורות האחרונות של הפלט, וזמן</li>
+        <li>בסוף: טבלת סיכום ו-<b>GREEN / RED</b></li>
+        <li>הסקריפט עצמו מסתיים ב-exit code <code>0</code> רק אם הכול עבר – בדיוק כמו job ב-CI</li>
+        <li><b>נסו:</b> הכניסו שגיאת טיפוס לקובץ כלשהו והריצו שוב – Typecheck ייכשל והשלבים הבאים לא ירוצו</li>
+      </ul>
+    </div>
+    <pre class="out sm">
+      $ npx tsx lessons/11-ci-pipeline-reports/examples/01-local-pipeline.ts
+
+      ▶ Stage: Typecheck
+        $ node node_modules/typescript/bin/tsc --noEmit
+        ✅ passed in 0.8s
+
+      ▶ Stage: Solutions (smoke run)
+        $ node --import tsx scripts/run-all-examples.ts solutions
+          42/42 solutions ran successfully
+        ✅ passed in 3.8s
+
+      ▶ Stage: API tests + reports
+          Reports written to reports/mini-runner/ (index.html, …)
+        ✅ passed in 0.1s
+
+      ========== Pipeline summary ==========
+      ✅ Typecheck                    0.8s
+      ✅ Solutions (smoke run)        3.8s
+      ✅ API tests + reports          0.1s
+      Total: 4.7s → PIPELINE GREEN ✅
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 01: Pipeline מקומי</h2>
+  <div class="cols">
+    <div class="stack">
+      <p>ב-<code>exercises/01-local-pipeline.ts</code> ה"פקודות" הן פונקציות שמחזירות exit code – הכול דטרמיניסטי ובדיק:</p>
+      <ul class="small">
+        <li><code>runPipeline</code> – מריץ שלבים עד הכישלון הראשון</li>
+        <li><code>skippedStages</code> – אילו שלבים לא רצו בגלל fail fast</li>
+        <li><code>pipelineVerdict</code> – <code>"GREEN"</code> או <code>"RED"</code></li>
+        <li><code>formatStageLine</code> · <code>tailLines</code> – שורת סיכום ו-n שורות אחרונות</li>
+        <li>(בונוס) <code>summarizePipeline</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 11 01
+      </pre>
+      <pre class="out">
+        --- Exercise 3: pipelineVerdict ---
+          ✋ TODO
+      </pre>
+      <pre class="out">
+        --- Exercise 3: pipelineVerdict ---
+        GREEN => expected: GREEN
+      </pre>
+      <div class="tip">שני הצדדים של <code>=&gt; expected:</code> זהים בכל השורות = סיימתם</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== חלק 2 -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>קריאת קובצי Workflow</h1>
+  <p class="subtitle">YAML, מבנה הקובץ, ואיך מוצאים טעויות לפני שדוחפים</p>
+</section>
+
+<section class="slide">
+  <h2>YAML בשתי דקות – והאנטומיה של Workflow</h2>
+  <div class="flow">
+    <div class="step"><b>Event</b>push · pull_request · schedule · ידני</div><div class="arrow">←</div>
+    <div class="step"><b>Workflow</b>קובץ <code>.yml</code> ב-<code>.github/workflows/</code></div><div class="arrow">←</div>
+    <div class="step y"><b>Jobs</b>כל job על runner משלו, במקביל</div><div class="arrow">←</div>
+    <div class="step g"><b>Steps</b>run / uses – לפי הסדר</div>
+  </div>
+  <ul class="small">
+    <li><code>key: value</code> – חובה <b>רווח</b> אחרי הנקודתיים · הזחה = <b>2 רווחים</b> לכל רמה – אף פעם לא Tab</li>
+    <li><code>- </code> בתחילת שורה = פריט ברשימה · <code>[a, b]</code> = רשימה בשורה אחת · <code>#</code> = הערה · <code>|</code> = טקסט רב-שורתי</li>
+    <li>בדיקת תחביר: <code>npx --yes js-yaml hello.yml</code> – מדפיס את הקובץ כ-JSON, או שגיאה עם מספר שורה</li>
+  </ul>
+  <div class="grid3">
+    <div class="card"><h3>רמת Workflow</h3>
+      <p><code>name</code> · <code>on</code> · <code>env</code><br><code>permissions</code> · <code>concurrency</code><br><code>jobs</code></p></div>
+    <div class="card"><h3>רמת Job</h3>
+      <p><code>runs-on</code> · <code>needs</code> · <code>if</code><br><code>strategy</code> · <code>timeout-minutes</code><br><code>env</code> · <code>outputs</code> · <code>steps</code></p></div>
+    <div class="card"><h3>רמת Step</h3>
+      <p><code>name</code> · <code>id</code> · <code>if</code><br><code>uses</code> + <code>with</code> · או <code>run</code><br><code>env</code> · <code>continue-on-error</code></p></div>
+  </div>
+  <div class="warn">אותו מפתח ברמה אחרת משנה משמעות: <code>if:</code> ברמת job מדלג על כל ה-job, ברמת step – רק על הצעד</div>
+</section>
+
+<section class="slide">
+  <h2>טעויות YAML נפוצות – והשגיאה שתקבלו</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ הזחה שבורה</h3>
+      <pre class="lang-yaml sm">
+        steps:
+          - run: echo hi
+         - run: echo bye   # רווח אחד חסר
+        # bad indentation of a mapping entry (7:6)
+      </pre></div>
+    <div class="card good"><h3>✅ כל הפריטים באותה עמודה</h3>
+      <pre class="lang-yaml sm">
+        steps:
+          - run: echo hi
+          - run: echo bye
+      </pre></div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ cron בלי מירכאות</h3>
+      <pre class="lang-yaml sm">
+        - cron: * * * * *
+        # name of an alias node must contain
+        # at least one character (3:14)
+      </pre></div>
+    <div class="card good"><h3>✅ תמיד במירכאות</h3>
+      <pre class="lang-yaml sm">
+        - cron: "0 0 * * 0-4"
+      </pre></div>
+  </div>
+  <div class="note small">עוד: תיקייה <code>.github/workflow</code> (בלי s) · Tab במקום רווחים · <code>runs-on:ubuntu-latest</code> בלי רווח</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 02: קריאת קובצי Workflow</h2>
+  <div class="cols">
+    <div class="stack">
+      <p>ב-<code>exercises/02-workflow-inspector.ts</code> כל פונקציה מקבלת את תוכן ה-YAML כמחרוזת:</p>
+      <ul class="small">
+        <li><code>getWorkflowName</code> · <code>listActions</code></li>
+        <li><code>findUnpinnedActions</code> – actions בלי גרסה, או עם <code>@main</code></li>
+        <li><code>parseJobNeeds</code> – מי תלוי במי</li>
+        <li><code>jobWaves</code> – אילו jobs ירוצו יחד, בכל "גל"</li>
+        <li><code>findUploadsWithoutAlways</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 11 02
+      </pre>
+      <pre class="out sm">
+        --- Exercise 3: findUnpinnedActions ---
+        [ 'actions/setup-node@main', 'some-org/slack-notify' ]
+          => expected: [ 'actions/setup-node@main', … ]
+
+        --- Exercise 5: jobWaves ---
+        [ [ 'lint' ], [ 'api', 'ui' ], [ 'gate' ] ]
+          => expected: [ [ 'lint' ], [ 'api', 'ui' ], [ 'gate' ] ]
+      </pre>
+      <div class="note small">פונקציה שעוד לא השלמתם מדפיסה <code>✋ TODO</code></div>
+      <div class="tip small">לדוגמה מלאה: <code>examples/02-workflow-inspector.ts</code> קורא את כל ה-workflows בפרויקט ומזהיר על בעיות. בפרויקט אמיתי: <b>actionlint</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== חלק 3 -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>Hello Actions</h1>
+  <p class="subtitle"><bdi>triggers</bdi> · <bdi>run / uses</bdi> · <bdi>env</bdi> · ביטויים <bdi dir="ltr">${{ }}</bdi> · <bdi>outputs</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>Workflow ראשון ב-GitHub Actions</h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>הקובץ חייב להיות ב-<code>.github/workflows/</code> · <code>on</code> – מתי רץ · <code>jobs</code> ← <code>steps</code></li>
+      <li><code>run</code> – פקודת shell, כמו בטרמינל; <code>|</code> = כמה שורות</li>
+      <li><code>uses: owner/repo@version</code> – Action מוכנה מה-Marketplace, פרמטרים ב-<code>with</code></li>
+      <li><b>ה-runner מתחיל ריק:</b> <code>ls -la</code> לפני <code>actions/checkout</code> מראה תיקייה ריקה – אין קוד!</li>
+      <li>גם <code>node_modules</code> לא קיים – כל job מריץ <code>npm ci</code> מחדש</li>
+      <li>התוצאה: לשונית <b>Actions</b> ב-GitHub</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      # .github/workflows/hello.yml
+      name: Hello Actions
+
+      on:
+        push:                    # בכל push לכל ענף
+        workflow_dispatch:       # כפתור "Run workflow"
+
+      jobs:
+        hello:
+          runs-on: ubuntu-latest   # מכונה נקייה שגיטהאב מספק
+          steps:
+            - name: Say hello
+              run: echo "Hello from GitHub Actions 👋"
+
+            - name: Who and what triggered me?
+              run: |
+                echo "Event:  ${{ github.event_name }}"
+                echo "Branch: ${{ github.ref_name }}"
+
+            - name: Checkout the code
+              uses: actions/checkout@v6   # פעולה מוכנה
+            - run: ls -la
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Triggers – מתי ה-Workflow רץ</h2>
+  <table>
+    <tr><th>Trigger</th><th>מתי</th><th>שימוש טיפוסי</th></tr>
+    <tr><td><code>push</code></td><td>דחיפה לענף (אפשר לסנן <code>branches</code>)</td><td>בדיקות על main</td></tr>
+    <tr><td><code>pull_request</code></td><td>פתיחה/עדכון של PR</td><td>Smoke + Quality gate לפני מיזוג</td></tr>
+    <tr><td><code>schedule</code></td><td><code>cron</code> בזמן UTC</td><td>רגרסיה לילית</td></tr>
+    <tr><td><code>workflow_dispatch</code></td><td>ידני, עם <code>inputs</code></td><td>הרצה על סביבה נבחרת</td></tr>
+    <tr><td><code>workflow_run</code></td><td>אחרי Workflow אחר</td><td>בדיקות אחרי Deploy</td></tr>
+  </table>
+  <div class="warn">cron: <code>"0 0 * * 0-4"</code> = כל לילה בחצות UTC, ראשון–חמישי (02:00/03:00 בישראל)</div>
+  <div class="note">אפשר לשלב כמה triggers באותו קובץ – למשל <code>ci.yml</code> של הפרויקט: <code>push</code> ל-main, כל <code>pull_request</code>, ו-<code>workflow_dispatch</code></div>
+  <div class="tip">סינון לפי ענף: <code>push: { branches: [main, "release/**"] }</code> · <code>*</code> = שם ברמה אחת · <code>**</code> = כל עומק</div>
+</section>
+
+<section class="slide">
+  <h2><code>env</code> וביטויים <code>${{ }}</code></h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li><code>env</code> ב-3 רמות: workflow → job → step; <b>הקרוב גובר</b></li>
+      <li><code>${{ ... }}</code> – GitHub מחשב ומחליף <b>לפני</b> שה-step רץ</li>
+      <li><code>$NAME</code> – משתנה סביבה שה-shell קורא בזמן ריצה</li>
+      <li><code>||</code> = ברירת מחדל · <code>==</code>, <code>&amp;&amp;</code>, <code>!</code> · <code>contains()</code>, <code>startsWith()</code></li>
+      <li>בקוד TS: <code>process.env.BASE_URL</code></li>
+    </ul>
+    <pre class="lang-yaml sm">
+      env:
+        APP_NAME: qa-course            # כל ה-jobs
+      jobs:
+        greet:
+          runs-on: ubuntu-latest
+          env:
+            BASE_URL: https://qa.example.com   # ה-job הזה
+          steps:
+            - run: echo "$APP_NAME → $BASE_URL"
+            - env:
+                GREETING: Hi                   # ה-step הזה
+              run: echo "$GREETING ${{ github.actor }}"
+            - if: startsWith(github.ref_name, 'release/')
+              run: echo "Release branch!"
+            - run: echo "Env = ${{ inputs.environment || 'qa' }}"
+    </pre>
+  </div>
+  <div class="note small"><b>Contexts</b> – המידע הזמין בתוך <code>${{ }}</code>: <code>github</code> · <code>env</code> · <code>vars</code> · <code>secrets</code> · <code>inputs</code> · <code>matrix</code> · <code>steps</code> · <code>needs</code> · <code>job</code> · <code>runner</code></div>
+</section>
+
+<section class="slide">
+  <h2>העברת מידע: <code>$GITHUB_OUTPUT</code>, <code>$GITHUB_ENV</code>, <code>$GITHUB_STEP_SUMMARY</code></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li><code>$GITHUB_OUTPUT</code> ← <code>key=value</code> ← נקרא דרך <code>steps.&lt;id&gt;.outputs</code></li>
+        <li><code>$GITHUB_ENV</code> ← <code>KEY=value</code> ← משתנה סביבה ל-steps הבאים</li>
+        <li><code>$GITHUB_STEP_SUMMARY</code> ← Markdown ← מוצג בעמוד הריצה</li>
+      </ul>
+      <div class="note small">המסלול של output: step עם <code>id</code> ← <code>outputs</code> של ה-job ← job אחר דרך <code>needs</code></div>
+      <div class="warn small">❌ <code>export SUITE=smoke</code> לא שורד ל-step הבא – כותבים ל-<code>$GITHUB_ENV</code><br>❌ output בלי <code>id</code> או בלי <code>outputs</code> ברמת ה-job ← <code>needs.greet.outputs.branch</code> ריק</div>
+    </div>
+    <pre class="lang-yaml sm">
+      greet:
+        runs-on: ubuntu-latest
+        outputs:
+          branch: ${{ steps.info.outputs.branch }}
+        steps:
+          - id: info
+            run: echo "branch=${{ github.ref_name }}" &gt;&gt; "$GITHUB_OUTPUT"
+          - run: echo "SUITE=smoke" &gt;&gt; "$GITHUB_ENV"
+          - run: echo "Suite is $SUITE"       # smoke
+          - run: echo "### ✅ Greeted" &gt;&gt; "$GITHUB_STEP_SUMMARY"
+      report:
+        needs: greet
+        runs-on: ubuntu-latest
+        steps:
+          - run: echo "greet ran on ${{ needs.greet.outputs.branch }}"
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 03: Hello Actions</h2>
+  <div class="cols">
+    <div class="stack">
+      <p>השלימו את <code>exercises/03-hello-actions.yml</code> (כל <code>TODO</code>):</p>
+      <ul class="small">
+        <li><code>name: "Hello QA"</code>; push ל-<code>main</code> ול-<code>"release/**"</code> + <code>workflow_dispatch</code></li>
+        <li><code>env</code> ברמת ה-Workflow: <code>APP_NAME: qa-course</code></li>
+        <li>job בשם <code>greet</code>: checkout ורק אחריו <code>ls -la</code></li>
+        <li><code>run: |</code> שמדפיס event, actor ו-<code>$APP_NAME</code></li>
+        <li>step עם <code>id: info</code> ← <code>$GITHUB_OUTPUT</code> ← <code>outputs</code> של ה-job</li>
+        <li>(בונוס) job בשם <code>report</code> עם <code>needs: greet</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="note small">בדיקה עצמית: <b>רשימת התיוג</b> (<code>[ ]</code>) בסוף הקובץ, ואז השוואה ל-<code>solutions/03-hello-actions.yml</code></div>
+      <pre class="lang-bash sm">
+        # בדיקת תחביר YAML (הזחה, נקודתיים...)
+        cd lessons/11-ci-pipeline-reports
+        npx --yes js-yaml exercises/03-hello-actions.yml
+      </pre>
+      <div class="tip small">הבדיקה האמיתית: ריצה ירוקה ב-GitHub – העתיקו ל-<code>.github/workflows/</code> ב-repo שלכם</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== חלק 4 -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>Matrix ובדיקות Node</h1>
+  <p class="subtitle"><bdi>jobs במקביל</bdi> · <bdi>needs</bdi> · <bdi>matrix</bdi> · <bdi>cache</bdi> · <bdi>artifacts</bdi> · <bdi>תנאי if</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>jobs במקביל מול <code>needs</code> – ה-Pipeline של הקורס</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li>ברירת מחדל: <b>כל ה-jobs רצים במקביל</b>, כל אחד על מכונה נפרדת</li>
+        <li><code>needs</code> – "חכה ל-X ורוץ רק אם הצליח"; X נכשל ← התלויים בו <b>skipped</b></li>
+        <li>ב-<code>ci.yml</code> של הקורס: <code>tests</code> ו-<code>playwright</code> תלויים שניהם ב-<code>quality</code> ← רצים <b>במקביל</b> זה לזה</li>
+        <li>קבצים לא עוברים בין jobs – רק outputs ו-artifacts</li>
+      </ul>
+      <table class="small">
+        <tr><th><code>needs.X.result</code></th><th>מתי</th></tr>
+        <tr><td><code>success</code></td><td>עבר</td></tr>
+        <tr><td><code>failure</code></td><td>נכשל</td></tr>
+        <tr><td><code>cancelled</code></td><td>בוטל</td></tr>
+        <tr><td><code>skipped</code></td><td>לא רץ</td></tr>
+      </table>
+    </div>
+    <pre class="lang-yaml sm">
+      jobs:
+        quality:                     # גל 1
+          runs-on: ubuntu-latest
+          steps: [ ... ]
+        tests:                       # גל 2 (במקביל ל-playwright)
+          needs: quality
+          runs-on: ubuntu-latest
+          steps: [ ... ]
+        playwright:                  # גל 2
+          needs: quality
+          runs-on: ubuntu-latest
+          steps: [ ... ]
+        summary:                     # גל 3 – תמיד
+          needs: [tests, playwright]
+          if: always()
+          runs-on: ubuntu-latest
+          steps:
+            - run: echo "tests = ${{ needs.tests.result }}"
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Matrix ו-Cache – אותו job על כמה גרסאות, בהתקנה מהירה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li><code>strategy.matrix</code> – כל שילוב = job נפרד: 2 מערכות × 2 גרסאות = <b>4 jobs במקביל</b></li>
+        <li>הערך הנוכחי: <code>${{&#160;matrix.os&#160;}}</code> · ב-GitHub: <code>test (ubuntu-latest, 22)</code></li>
+        <li><code>cache: npm</code> – שומר את מטמון ההורדות של npm בין ריצות; המפתח = hash של <code>package-lock.json</code></li>
+        <li>דורש <code>package-lock.json</code> ב-git (או <code>cache-dependency-path</code>) – אחרת שגיאה</li>
+      </ul>
+      <table class="small">
+        <tr><th></th><th><code>npm ci</code></th><th><code>npm install</code></th></tr>
+        <tr><td>גרסאות</td><td>בדיוק לפי ה-lock</td><td>עלול לעדכן</td></tr>
+        <tr><td>lock חסר</td><td>נכשל</td><td>יוצר חדש</td></tr>
+        <tr><td>node_modules</td><td>מוחק ומתקין נקי</td><td>מעדכן קיים</td></tr>
+        <tr><td>מתאים ל-</td><td><b>CI</b></td><td>פיתוח מקומי</td></tr>
+      </table>
+    </div>
+    <pre class="lang-yaml sm">
+      name: Tests
+      on:
+        pull_request:
+          branches: [main]
+      jobs:
+        test:
+          runs-on: ${{ matrix.os }}
+          strategy:
+            fail-fast: false
+            matrix:
+              os: [ubuntu-latest, windows-latest]
+              node: [22, 24]
+          steps:
+            - uses: actions/checkout@v6
+            - uses: actions/setup-node@v6
+              with:
+                node-version: ${{ matrix.node }}
+                cache: npm
+                cache-dependency-path: package-lock.json
+            - run: npm ci
+            - run: npm run solutions
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Matrix מתקדם: exclude, include, fail-fast, max-parallel</h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li><code>exclude</code> – מוריד שילוב (חוסך דקות)</li>
+      <li><code>include</code> – מוסיף שילוב (או משתנה לשילוב קיים)</li>
+      <li><code>fail-fast</code> (ברירת מחדל <code>true</code>) – כישלון אחד מבטל את השאר; <code>false</code> = רואים את כל התמונה</li>
+      <li><code>max-parallel: 2</code> – לכל היותר 2 מכונות בו-זמנית</li>
+      <li><code>continue-on-error</code> – Node 25 ניסיוני לא יצבע את הריצה באדום</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      test:
+        runs-on: ${{ matrix.os }}
+        continue-on-error: ${{ matrix.experimental == true }}
+        strategy:
+          fail-fast: false
+          max-parallel: 2
+          matrix:
+            os: [ubuntu-latest, windows-latest]
+            node: [22, 24]
+            exclude:
+              - os: windows-latest
+                node: 22
+            include:
+              - os: ubuntu-latest
+                node: 25
+                experimental: true
+      # => ubuntu/22, ubuntu/24, windows/24
+      #    + ubuntu/25 (experimental) – 2 at a time
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Artifacts – לשמור את הדוחות</h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>המכונה נמחקת בסוף ← מה שלא הועלה – אבד</li>
+      <li><code>name</code> – <b>ייחודי</b> בכל ריצה (במטריצה: כוללים <code>matrix.node</code>, אחרת התנגשות)</li>
+      <li><code>path</code> – תיקייה, קובץ, או כמה שורות עם <code>|</code></li>
+      <li><code>retention-days</code> – כמה ימים לשמור (ברירת מחדל 90)</li>
+      <li>הורדה: עמוד הריצה ← Summary ← <b>Artifacts</b> (קובץ zip)</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      # ci.yml – job: tests
+      - name: Upload reports
+        if: always()   # גם (ובעיקר!) כשהבדיקות נכשלו
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-node-${{ matrix.node }}
+          path: reports/
+          retention-days: 14
+
+      # ci.yml – job: playwright
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-allure-reports
+          path: |
+            lessons/…/playwright-project/playwright-report/
+            lessons/…/playwright-project/allure-report/
+            lessons/…/playwright-project/test-results/
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תנאים: <code>if:</code> עם always / failure / !cancelled</h2>
+  <table>
+    <tr><th>תנאי</th><th>ה-step רץ כש...</th><th>שימוש</th></tr>
+    <tr><td><i>(בלי if)</i> = <code>success()</code></td><td>כל הצעדים הקודמים הצליחו</td><td>רוב הצעדים</td></tr>
+    <tr><td><code>always()</code></td><td>תמיד – גם בכישלון וגם בביטול</td><td>העלאת דוחות, סיכום</td></tr>
+    <tr><td><code>failure()</code></td><td>רק אם משהו קודם נכשל</td><td>traces / וידאו – כבדים</td></tr>
+    <tr><td><code>${{ !cancelled() }}</code></td><td>הצליח או נכשל – אבל לא בוטל</td><td>דוח, בלי לבזבז זמן על ביטול</td></tr>
+    <tr><td><code>github.event_name == 'schedule'</code></td><td>הביטוי אמת</td><td>צעד רק בריצה הלילית</td></tr>
+  </table>
+  <pre class="lang-yaml sm">
+    - if: failure()
+      uses: actions/upload-artifact@v7
+      with: { name: traces, path: test-results/ }
+    - if: ${{ !cancelled() }}    # "!" בתחילת ערך YAML – חובה לעטוף ב-${{ }}
+      uses: actions/upload-artifact@v7
+      with: { name: playwright-report, path: playwright-report/, retention-days: 7 }
+  </pre>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 04: Matrix, cache ו-needs</h2>
+  <div class="cols">
+    <div class="stack">
+      <p>השלימו את <code>exercises/04-node-tests-matrix.yml</code>:</p>
+      <ul class="small">
+        <li><code>runs-on: ${{&#160;matrix.os&#160;}}</code>, מטריצה של <code>os</code> × <code>node:&#160;[22,&#160;24]</code></li>
+        <li><code>fail-fast: false</code> ו-<code>max-parallel: 2</code></li>
+        <li><code>exclude</code> ל-windows + 22 · <code>include</code> ל-ubuntu + 25 ניסיוני</li>
+        <li><code>continue-on-error</code> ברמת ה-job (לא בתוך step!)</li>
+        <li>setup-node עם <code>cache: npm</code> ו-<code>cache-dependency-path</code></li>
+        <li>(בונוס) job בשם <code>summary</code> עם <code>needs: test</code> ו-<code>if: always()</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="note small">רשימת התיוג בסוף הקובץ ← השוואה לקובץ:<br><code>solutions/04-node-tests-matrix.yml</code></div>
+      <pre class="lang-bash sm">
+        cd lessons/11-ci-pipeline-reports
+        npx --yes js-yaml exercises/04-node-tests-matrix.yml
+      </pre>
+      <div class="tip small">שאלה לחשיבה: כמה jobs ירוצו בסוף, וכמה במקביל?</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== חלק 5 -->
+<section class="slide section">
+  <div class="badge">חלק 5</div>
+  <h1>Playwright ב-CI ודוחות Allure</h1>
+  <p class="subtitle">playwright-project/ – בדיקות API ו-UI מול שרת ה-Mock</p>
+</section>
+
+<section class="slide">
+  <h2>Job של Playwright – שלב אחר שלב</h2>
+  <div class="flow">
+    <div class="step"><b>checkout</b>קוד</div><div class="arrow">←</div>
+    <div class="step"><b>setup-node</b>ואז npm ci</div><div class="arrow">←</div>
+    <div class="step y"><b>install</b>דפדפן + ספריות</div><div class="arrow">←</div>
+    <div class="step y"><b>test</b>API + UI</div><div class="arrow">←</div>
+    <div class="step g"><b>reports</b><bdi>if: always()</bdi></div>
+  </div>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li><code>--with-deps</code> – מתקין גם ספריות מערכת שהדפדפן צריך</li>
+      <li>רק <code>chromium</code> – חוסך זמן ומקום</li>
+      <li><code>defaults.run.working-directory</code> – כשהפרויקט בתת-תיקייה</li>
+      <li><code>timeout-minutes</code> – ברירת המחדל היא 6 שעות(!)</li>
+      <li>GitHub מגדיר <code>CI=true</code> אוטומטית</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      playwright:
+        needs: quality
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        defaults:
+          run:
+            working-directory: lessons/10-…/playwright-project
+        steps:
+          - uses: actions/checkout@v6
+          # ... setup-node + npm ci
+          - run: npx playwright install --with-deps chromium
+          - run: npx playwright test
+          - if: always()
+            run: npx allure generate allure-results --clean -o allure-report
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>playwright.config.ts – מוכן ל-CI</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li>ראיות (screenshot, trace, video) רק בכישלון – חוסך מקום</li>
+        <li><code>webServer</code> – הסביבה עולה אוטומטית</li>
+        <li><code>BASE_URL</code> מה-CI ← אותה בדיקה, כל סביבה</li>
+        <li>4 reporters במקביל:</li>
+      </ul>
+      <table class="small">
+        <tr><th>Reporter</th><th>תוצר ← למי</th></tr>
+        <tr><td><code>list</code></td><td>הלוג של ה-CI</td></tr>
+        <tr><td><code>html</code></td><td><code>playwright-report/</code> ← מי שמנתח כישלון</td></tr>
+        <tr><td><code>junit</code></td><td><code>junit.xml</code> ← כלי CI וניהול בדיקות</td></tr>
+        <tr><td><code>allure-playwright</code></td><td><code>allure-results/</code> ← הצוות: מגמות</td></tr>
+      </table>
+    </div>
+    <pre class="lang-ts sm">
+      const isCI = !!process.env.CI;   // GitHub Actions מגדיר CI=true
+
+      export default defineConfig({
+        retries: isCI ? 2 : 0,         // ניסיון חוזר רק ב-CI
+        forbidOnly: isCI,              // test.only שנשכח → כישלון
+        workers: isCI ? 2 : undefined,
+        reporter: [
+          ["list"],
+          ["html", { open: "never" }],
+          ["junit", { outputFile: "test-results/junit.xml" }],
+          ["allure-playwright", { resultsDir: "allure-results" }],
+        ],
+        use: {
+          baseURL: process.env.BASE_URL ?? "http://127.0.0.1:3100",
+          screenshot: "only-on-failure",
+          trace: "retain-on-failure",
+          video: "retain-on-failure",
+        },
+        webServer: {                   // מפעיל את שרת ה-Mock
+          command: "node --import tsx ../../../shared/mock-api/start.ts",
+          url: "http://127.0.0.1:3100/health",
+          reuseExistingServer: !isCI,
+        },
+      });
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>פלט אמיתי: בדיקה שבורה עם <code>CI=true</code></h2>
+  <pre class="out sm">
+    $ CI=true npx playwright test
+    Running 10 tests using 2 workers
+      ✓   1 [api] › tests/api/users.spec.ts:5:3 › Users API › health check @smoke (35ms)
+      …
+      ✓   9 [chromium] › tests/ui/login.spec.ts:17:3 › Login page › invalid credentials show an error @regression (1.5s)
+      ✘  10 [chromium] › tests/ui/login.spec.ts:26:3 › Login page › page title @regression (5.4s)
+      ✘  11 [chromium] › tests/ui/login.spec.ts:26:3 › Login page › page title @regression (retry #1) (5.4s)
+      ✘  12 [chromium] › tests/ui/login.spec.ts:26:3 › Login page › page title @regression (retry #2) (5.4s)
+
+        Error: expect(locator).toHaveText(expected) failed
+        Locator:  getByRole('heading', { level: 1 })
+        Expected: "Welcome!"
+        Received: "Demo Login"
+
+        attachment #1: screenshot (image/png) ──────
+        test-results/login-Login-page-page-title-chromium-retry2/test-failed-1.png
+        attachment #2: video (video/webm) · attachment #4: trace (application/zip) …
+      1 failed
+      9 passed (21.2s)
+  </pre>
+  <div class="note small"><code>retries: 2</code> ← 3 ניסיונות. נכשלה ואז עברה = <b>flaky</b> (מסומנת כך גם ב-Allure). ב-CI הכול ב-<code>test-results/</code> ← artifact</div>
+</section>
+
+<section class="slide">
+  <h2>Secrets, Variables ו-Environments</h2>
+  <table class="small">
+    <tr><th></th><th>Secret</th><th>Variable</th><th>Environment</th></tr>
+    <tr><td>מה זה</td><td>ערך סודי: סיסמה, טוקן</td><td>הגדרה לא סודית: URL</td><td>secrets + vars לסביבה (qa / staging) + אישורים</td></tr>
+    <tr><td>ב-YAML</td><td><code>${{ secrets.API_TOKEN }}</code></td><td><code>${{ vars.BASE_URL }}</code></td><td><code>environment: qa</code></td></tr>
+    <tr><td>בלוג</td><td>מוסתר: <code>***</code> · אי אפשר לקרוא שוב, רק להחליף</td><td>גלוי</td><td>–</td></tr>
+  </table>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>Settings ← Secrets and variables ← Actions</li>
+      <li>Settings ← Environments</li>
+      <li>❌ לעולם לא סיסמה בקוד או ב-YAML</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      jobs:
+        regression:
+          runs-on: ubuntu-latest
+          environment: ${{ inputs.environment || 'qa' }}
+          env:
+            BASE_URL: ${{ vars.BASE_URL }}            # Variable – לא סודי
+            TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}  # Secret
+          steps:
+            - run: npx playwright test
+            # בקוד: process.env.BASE_URL, process.env.TEST_USER_PASSWORD
+    </pre>
+  </div>
+  <div class="warn small">סוד שנכנס פעם ל-git נשאר בהיסטוריה – מחליפים אותו (rotate), לא רק מוחקים את השורה · Secrets לא מועברים ל-PR שמגיע מ-fork</div>
+</section>
+
+<section class="slide">
+  <h2>Permissions – מינימום הרשאות</h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>כל ריצה מקבלת טוקן אוטומטי: <code>GITHUB_TOKEN</code></li>
+      <li><code>permissions</code> קובע מה הטוקן רשאי לעשות</li>
+      <li>ברגע שמגדירים <code>permissions</code> – כל מה שלא ברשימה = <b>אין גישה</b></li>
+      <li><b>Least privilege:</b> רק מה שה-Workflow באמת צריך – ❌ לא <code>write-all</code> "ליתר ביטחון"</li>
+      <li>אפשר גם ברמת job</li>
+    </ul>
+    <div class="stack">
+      <pre class="lang-yaml sm">
+        permissions:            # 03-playwright-allure-pages.yml
+          contents: read        # לקרוא את הקוד (checkout)
+          pages: write          # לפרסם ל-GitHub Pages
+          id-token: write       # נדרש ל-deploy-pages
+      </pre>
+      <table class="small">
+        <tr><th>הרשאה</th><th>למה</th></tr>
+        <tr><td><code>contents: read</code></td><td>checkout</td></tr>
+        <tr><td><code>pages: write</code> + <code>id-token: write</code></td><td>פרסום דוח Allure</td></tr>
+        <tr><td><code>pull-requests: write</code></td><td>תגובה על PR</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Allure 2: מתוצאות גולמיות לאתר ב-GitHub Pages</h2>
+  <div class="flow">
+    <div class="step"><b>allure-playwright</b>reporter</div><div class="arrow">←</div>
+    <div class="step"><b><bdi>allure-results/</bdi></b>JSON גולמי</div><div class="arrow">←</div>
+    <div class="step y"><b>allure generate</b>(דורש Java)</div><div class="arrow">←</div>
+    <div class="step y"><b><bdi>allure-report/</bdi></b>אתר HTML סטטי</div><div class="arrow">←</div>
+    <div class="step g"><b>GitHub Pages</b>קישור קבוע</div>
+  </div>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>ב-Allure: סטטוס לכל בדיקה, צעדים, צילומי מסך, וידאו, ניסיונות חוזרים (flaky), תגיות</li>
+      <li>Java כבר מותקן במכונות <code>ubuntu-latest</code></li>
+      <li>Pages – הגדרה חד-פעמית: Settings ← Pages ← Source: GitHub Actions</li>
+      <li>מקומית: <code>npm run allure:serve</code> (דורש <bdi>Java 8+</bdi>)</li>
+    </ul>
+    <pre class="lang-yaml sm">
+          - name: Generate Allure report   # Allure 2 דורש Java
+            if: always()
+            run: npx allure generate allure-results --clean -o allure-report
+          - name: Prepare Pages artifact
+            if: always()
+            uses: actions/upload-pages-artifact@v5
+            with:
+              path: allure-report
+      deploy-report:
+        needs: e2e
+        if: always()
+        runs-on: ubuntu-latest
+        environment:
+          name: github-pages
+          url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+          - id: deployment
+            uses: actions/deploy-pages@v5
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 05 + תרגיל מעשי Playwright</h2>
+  <div class="cols">
+    <div class="stack">
+      <p><b>05:</b> השלימו את<br><code>exercises/05-playwright-allure-pages.yml</code></p>
+      <ul class="small">
+        <li><code>permissions</code>: contents read, pages + id-token write</li>
+        <li><code>timeout-minutes: 20</code>; התקנת chromium <b>לפני</b> הבדיקות</li>
+        <li>traces עם <code>if: failure()</code>; Allure + Pages עם <code>if: always()</code></li>
+        <li>job בשם <code>deploy</code> עם <code>environment: github-pages</code></li>
+      </ul>
+      <div class="note small">רשימת תיוג ← השוואה לקובץ:<br><code>solutions/05-playwright-allure-pages.yml</code></div>
+    </div>
+    <div class="stack">
+      <p><b>מעשי:</b> שברו בכוונה את הבדיקה <code>page title</code> ומצאו את הראיות</p>
+      <pre class="lang-bash sm">
+        cd lessons/11-ci-pipeline-reports/playwright-project
+        npm install &amp;&amp; npx playwright install chromium
+        npx playwright test      # אחרי ששברתם
+        npm run report:html      # screenshot, video, Trace
+        npm run allure:serve     # דוח Allure
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== חלק 6 -->
+<section class="slide section">
+  <div class="badge">חלק 6</div>
+  <h1>רגרסיה לילית</h1>
+  <p class="subtitle"><bdi>schedule (cron)</bdi> · <bdi>הפעלה ידנית עם inputs</bdi> · <bdi>concurrency</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>תחביר cron – 5 שדות, בזמן UTC</h2>
+  <div class="cols wide-text">
+    <table class="small">
+      <tr><th>cron</th><th>משמעות</th></tr>
+      <tr><td><code>"0 0 * * 0-4"</code></td><td>חצות UTC, ראשון–חמישי (02:00/03:00 בישראל)</td></tr>
+      <tr><td><code>"30 1 * * *"</code></td><td>כל יום ב-01:30 UTC</td></tr>
+      <tr><td><code>"0 2 * * 1-5"</code></td><td>02:00, שני–שישי</td></tr>
+      <tr><td><code>"0 6 * * 6"</code></td><td>06:00 בשבת</td></tr>
+      <tr><td><code>"*/15 * * * *"</code></td><td>כל 15 דקות (מינימום: 5)</td></tr>
+    </table>
+    <pre class="lang-bash">
+      ┌──────── minute (0-59)
+      │ ┌────── hour (0-23, UTC!)
+      │ │ ┌──── day of month (1-31)
+      │ │ │ ┌── month (1-12)
+      │ │ │ │ ┌ day of week (0=Sun)
+      │ │ │ │ │
+      0 0 * * 0-4
+    </pre>
+  </div>
+  <ul class="small">
+    <li><code>*</code> = כל ערך · <code>1-5</code> = טווח · <code>*/15</code> = כל 15 · <code>1,3</code> = רשימה</li>
+    <li>schedule רץ רק מהענף הראשי (default branch), ועלול להתעכב בשעות עומס</li>
+    <li>ב-repo ציבורי בלי פעילות 60 יום – GitHub משבית את ה-schedule</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>רגרסיה לילית + הפעלה ידנית עם פרמטרים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li><code>schedule</code> – לפי cron, בזמן UTC</li>
+        <li><code>workflow_dispatch</code> – Actions ← בוחרים Workflow ← <b>Run workflow</b> ← טופס עם השדות</li>
+        <li>קוראים את הערך: <code>${{ inputs.browser }}</code> · בריצה מ-schedule השדות ריקים ← תמיד ברירת מחדל עם <code>||</code></li>
+        <li><code>--grep @regression</code> – הרצה לפי תגיות</li>
+        <li>קובץ: <code>examples/workflows/04-nightly-regression.yml</code></li>
+      </ul>
+      <table class="small">
+        <tr><th>type</th><th>בטופס</th></tr>
+        <tr><td><code>string</code> · <code>number</code></td><td>שדה טקסט / מספר</td></tr>
+        <tr><td><code>choice</code></td><td>רשימה נפתחת (<code>options</code>)</td></tr>
+        <tr><td><code>boolean</code></td><td>תיבת סימון</td></tr>
+        <tr><td><code>environment</code></td><td>בחירת Environment</td></tr>
+      </table>
+    </div>
+    <pre class="lang-yaml sm">
+      on:
+        schedule:
+          - cron: "0 0 * * 0-4"      # UTC
+        workflow_dispatch:
+          inputs:
+            browser:
+              type: choice
+              options: [chromium, firefox, webkit]
+              default: chromium
+            debug:
+              type: boolean
+              default: false
+      jobs:
+        regression:
+          runs-on: ubuntu-latest
+          steps:       # ... checkout, setup-node, npm ci
+            - run: |
+                npx playwright install --with-deps \
+                  ${{ inputs.browser || 'chromium' }}
+            - if: ${{ inputs.debug }}
+              run: echo "DEBUG=pw:api" &gt;&gt; "$GITHUB_ENV"
+            - run: |
+                npx playwright test --grep @regression \
+                  --project=${{ inputs.browser || 'chromium' }}
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Concurrency – לא להריץ פעמיים את אותו דבר</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li><code>group</code> – ריצות עם אותו שם קבוצה לא רצות יחד</li>
+        <li><code>cancel-in-progress: true</code> – הריצה החדשה <b>מבטלת</b> את הישנה</li>
+        <li><code>false</code> – הריצה החדשה <b>ממתינה</b> בתור</li>
+      </ul>
+      <table class="small">
+        <tr><th>מצב</th><th>מומלץ</th></tr>
+        <tr><td>CI על ענף – push אחרי push</td><td>לבטל ישנה</td></tr>
+        <tr><td>רגרסיה לילית ארוכה</td><td>לבטל כפילות</td></tr>
+        <tr><td>Deploy לסביבה</td><td>להמתין (<code>false</code>)</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-yaml sm">
+        # .github/workflows/ci.yml
+        concurrency:
+          group: ci-${{ github.ref }}
+          cancel-in-progress: true
+      </pre>
+      <pre class="lang-yaml sm">
+        # solutions/06-nightly-regression.yml
+        concurrency:
+          group: nightly-${{ github.ref }}
+          cancel-in-progress: true
+      </pre>
+      <div class="note small"><code>github.ref</code> = הענף ← כל ענף בקבוצה משלו</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סיכום ריצה והתראה על כישלון לילי</h2>
+  <pre class="lang-yaml sm">
+          - name: Write summary          # בסוף ה-job של regression
+            if: always()
+            run: |
+              echo "## 🌙 Nightly regression" &gt;&gt; $GITHUB_STEP_SUMMARY
+              echo "- Environment: **${{ inputs.environment || 'qa' }}**" &gt;&gt; $GITHUB_STEP_SUMMARY
+              echo "- Result: **${{ job.status }}**" &gt;&gt; $GITHUB_STEP_SUMMARY
+
+      notify:                              # job נפרד
+        needs: regression
+        if: ${{ failure() &amp;&amp; github.event_name == 'schedule' }}
+        runs-on: ubuntu-latest
+        steps:
+          - run: echo "Nightly regression failed – see the report of run ${{ github.run_number }}"
+  </pre>
+  <div class="cols">
+    <div class="card"><h3>🌙 Nightly regression</h3>
+      <ul class="small"><li>Environment: <b>qa</b></li><li>Result: <b>failure</b></li></ul></div>
+    <ul class="small">
+      <li>ה-Summary מוצג בראש עמוד הריצה (כמו הכרטיס מימין)</li>
+      <li><code>job.status</code> – success / failure / cancelled</li>
+      <li><code>notify</code> רץ רק אם הלילית נכשלה, לא בהרצה ידנית – בעולם האמיתי: Slack / Teams / מייל</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 06: רגרסיה לילית</h2>
+  <div class="cols">
+    <div class="stack">
+      <p>השלימו את <code>exercises/06-nightly-regression.yml</code>:</p>
+      <ul class="small">
+        <li>שני crons: <code>"0 2 * * 1-5"</code> ו-<code>"0 6 * * 6"</code></li>
+        <li>inputs: <code>browser</code> (choice) ו-<code>debug</code> (boolean)</li>
+        <li>התקנה והרצה לפי <code>${{ inputs.browser || 'chromium' }}</code></li>
+        <li><code>if: ${{ inputs.debug }}</code> ← <code>DEBUG=pw:api</code> ל-<code>$GITHUB_ENV</code></li>
+        <li><code>concurrency</code> עם <code>nightly-${{ github.ref }}</code></li>
+        <li>(בונוס) job בשם <code>notify</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="note small">רשימת תיוג בסוף הקובץ ← השוואה לקובץ:<br><code>solutions/06-nightly-regression.yml</code></div>
+      <pre class="lang-bash sm">
+        cd lessons/11-ci-pipeline-reports
+        npx --yes js-yaml exercises/06-nightly-regression.yml
+      </pre>
+      <div class="tip small">תרגמו כל cron לשעון ישראל – בחורף ובקיץ</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== חלק 7 -->
+<section class="slide section">
+  <div class="badge">חלק 7</div>
+  <h1>Quality Gate ל-Pull Request</h1>
+  <p class="subtitle">אי אפשר למזג קוד שבור · קריאת לוגים · נעילת גרסאות</p>
+</section>
+
+<section class="slide">
+  <h2>שער איכות לפני מיזוג: <bdi>05-pr-quality-gate.yml</bdi></h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>בדיקות מהירות ראשונות – אם הקוד לא מתקמפל, לא מבזבזים דקות על UI</li>
+      <li><code>api-tests</code> ו-<code>ui-tests</code> רצים במקביל – אחרי ה-typecheck</li>
+      <li><code>--shard=1/3</code> – Playwright מריץ רק שליש מהבדיקות</li>
+      <li>matrix של <code>shard</code> ← 3 מכונות, כל אחת שליש</li>
+      <li>artifact לכל shard עם שם ייחודי</li>
+      <li><code>with: { ... }</code> – אותו YAML בכתיב מקוצר</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      jobs:                # on: pull_request → branches: [main]
+        lint-and-types:
+          runs-on: ubuntu-latest
+          steps:
+            - uses: actions/checkout@v6
+            - uses: actions/setup-node@v6
+              with: { node-version: 22, cache: npm }
+            - run: npm ci
+            - run: npm run typecheck
+        ui-tests:
+          needs: lint-and-types
+          runs-on: ubuntu-latest
+          strategy:
+            matrix:
+              shard: [1, 2, 3]
+          steps:
+            # ... checkout, setup-node, npm ci, playwright install
+            - run: npx playwright test tests/ui --shard=${{ matrix.shard }}/3
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                name: ui-results-shard-${{ matrix.shard }}
+                path: test-results/
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>להדק את ה-trigger: types, paths, draft, timeout</h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li><code>branches</code> ב-pull_request = <b>ענף היעד</b> של ה-PR (ב-push: הענף שנדחף)</li>
+      <li><code>types</code> – אילו פעולות על ה-PR (ברירת מחדל: opened, synchronize, reopened)</li>
+      <li><code>paths</code> – רק אם השתנה קובץ תואם: PR שמשנה רק README לא מפעיל בדיקות</li>
+      <li><code>paths-ignore</code> – ההפך; לא שניהם יחד באותו אירוע</li>
+      <li>PR בטיוטה (draft) – לא מבזבזים דקות</li>
+      <li><code>permissions</code> מינימליות + כתיבה ל-PR · <code>timeout-minutes</code> לכל job</li>
+    </ul>
+    <pre class="lang-yaml sm">
+      name: PR Gate
+      on:
+        pull_request:
+          branches: [main]
+          types: [opened, synchronize, reopened]
+          paths:
+            - "lessons/**"
+            - package-lock.json
+      permissions:
+        contents: read
+        pull-requests: write
+      jobs:
+        lint:
+          if: github.event.pull_request.draft == false
+          runs-on: ubuntu-latest
+          timeout-minutes: 10
+          steps: [ ... ]
+        tests:
+          needs: lint
+          runs-on: ubuntu-latest
+          timeout-minutes: 15
+          steps: [ ... ]
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ה-job שמחליט: <code>quality-gate</code></h2>
+  <div class="grid2">
+    <ul class="small">
+      <li><code>needs: [lint, tests]</code> – מחכה לשניהם</li>
+      <li><code>if: always()</code> – חייב לרוץ גם כשמשהו נכשל; בלי זה הוא <b>skipped</b> – ו-skipped עלול להיחשב כ"עבר"!</li>
+    </ul>
+    <ul class="small">
+      <li><code>needs.*.result</code> – רשימת התוצאות של כל ה-needs</li>
+      <li><code>exit 1</code> ← ה-gate אדום ← המיזוג חסום</li>
+      <li><b>Branch protection</b> (Settings ← Rulesets): <code>quality-gate</code> = ה-check החובה היחיד</li>
+    </ul>
+  </div>
+  <div>
+    <pre class="lang-yaml sm">
+      quality-gate:
+        needs: [lint, tests]
+        if: always()
+        runs-on: ubuntu-latest
+        steps:
+          - name: Write summary
+            run: |
+              echo "### Quality gate" &gt;&gt; "$GITHUB_STEP_SUMMARY"
+              echo "- lint: ${{ needs.lint.result }}" &gt;&gt; "$GITHUB_STEP_SUMMARY"
+              echo "- tests: ${{ needs.tests.result }}" &gt;&gt; "$GITHUB_STEP_SUMMARY"
+
+          - name: Fail if a required job failed
+            if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+            run: |
+              echo "A required job failed or was cancelled"
+              exit 1
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>קריאת ריצה שנכשלה – סדר עבודה</h2>
+  <ol>
+    <li>לשונית <b>Actions</b> ← הריצה האדומה ← איזה <b>job</b> ואיזה <b>step</b> נכשל?</li>
+    <li>בלוג: השורה הראשונה עם <b>Error</b> – לא האחרונה (<code>exit code 1</code> הוא רק התוצאה). <b>Expected מול Received</b> = לב הבעיה</li>
+    <li><b>Summary</b> ← artifacts ← <b>playwright-report</b> / <b>allure-report</b> ← <b>Trace</b>, screenshot, video</li>
+    <li>השוואה לריצה קודמת שעברה: מה השתנה? (commit, סביבה, נתונים)</li>
+    <li>החלטה: <b>באג במוצר</b> ← Bug report עם הראיות · <b>באג בבדיקה</b> ← תיקון + PR · <b>סביבה</b> ← DevOps</li>
+    <li>Flaky? עבר ב-retry ← מסומן ב-Allure כ-flaky ← לטפל, לא להתעלם</li>
+  </ol>
+  <div class="tip small"><b>Re-run failed jobs</b> – מריץ שוב רק את מה שנכשל; עם "Enable debug logging" ← לוג מפורט · Trace מקומית: <code>npx playwright show-trace trace.zip</code></div>
+</section>
+
+<section class="slide">
+  <h2>נעילת גרסאות של Actions</h2>
+  <table>
+    <tr><th>כתיב</th><th>מה מקבלים</th><th>הערכה</th></tr>
+    <tr><td><code>actions/checkout@v6</code></td><td>הגרסה האחרונה של v6 (major tag)</td><td>✅ מקובל – כך בקורס</td></tr>
+    <tr><td><code>actions/checkout@&lt;commit-sha&gt;</code></td><td>בדיוק אותו קוד, תמיד</td><td>✅✅ הכי בטוח</td></tr>
+    <tr><td><code>actions/setup-node@main</code></td><td>מה שיש בענף עכשיו</td><td>❌ יכול להשתנות בכל רגע</td></tr>
+    <tr><td><code>some-org/slack-notify</code></td><td>בלי גרסה בכלל</td><td>❌ שגיאה / לא צפוי</td></tr>
+  </table>
+  <div class="grid2">
+    <div class="card"><h3>הגרסאות בפרויקט</h3>
+      <p><code>checkout@v6</code> · <code>setup-node@v6</code> · <code>upload-artifact@v7</code> · <code>upload-pages-artifact@v5</code> · <code>deploy-pages@v5</code></p></div>
+    <div class="card"><h3>עדכון אוטומטי</h3>
+      <p><b>Dependabot</b> עם <code>package-ecosystem: github-actions</code> פותח PR כשיש גרסה חדשה</p></div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 07: Quality Gate ל-PR</h2>
+  <div class="cols">
+    <div class="stack">
+      <p>השלימו את <code>exercises/07-pr-quality-gate.yml</code>:</p>
+      <ul class="small">
+        <li>pull_request ל-main עם <code>types</code> ו-<code>paths</code></li>
+        <li><code>permissions</code>: contents read, pull-requests write</li>
+        <li><code>timeout-minutes</code>: 10 ל-lint, 15 ל-tests</li>
+        <li><code>if: github.event.pull_request.draft == false</code> ב-lint</li>
+        <li><code>quality-gate</code> עם <code>needs: [lint, tests]</code> + <code>if: always()</code> + <code>exit 1</code></li>
+        <li>(בונוס) כתיבת התוצאות ל-<code>$GITHUB_STEP_SUMMARY</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="note small">רשימת תיוג בסוף הקובץ ← השוואה לקובץ:<br><code>solutions/07-pr-quality-gate.yml</code></div>
+      <pre class="lang-bash sm">
+        cd lessons/11-ci-pipeline-reports
+        npx --yes js-yaml exercises/07-pr-quality-gate.yml
+      </pre>
+      <div class="tip small">אתגר: הגדירו Branch protection ב-repo שלכם ונסו למזג PR אדום</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== סיום -->
+<section class="slide">
+  <h2>Best Practices</h2>
+  <table>
+    <tr><th>✅ לעשות</th><th>❌ לא לעשות</th></tr>
+    <tr><td><code>if: always()</code> על העלאת דוחות</td><td>לאבד את הדוח בדיוק כשהבדיקות נכשלו</td></tr>
+    <tr><td>Secrets ו-Variables</td><td>סיסמאות ב-YAML או בקוד</td></tr>
+    <tr><td>Smoke מהיר על PR, רגרסיה בלילה</td><td>רגרסיה של שעה על כל commit</td></tr>
+    <tr><td><code>npm ci</code> + package-lock.json ב-git</td><td><code>npm install</code> עם גרסאות משתנות</td></tr>
+    <tr><td>Branch protection + status checks</td><td>מיזוג ל-main כש-CI אדום</td></tr>
+    <tr><td><code>timeout-minutes</code> ל-job</td><td>job תקוע שרץ 6 שעות</td></tr>
+    <tr><td><code>permissions</code> מינימליות</td><td><code>write-all</code> "ליתר ביטחון"</td></tr>
+    <tr><td>Actions עם גרסה: <code>@v6</code></td><td><code>@main</code> או בלי גרסה</td></tr>
+  </table>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – שיעור 11</h2>
+  <ol class="small">
+    <li>נושאים 01–02 (TypeScript): <code>npm run exercise -- 11 01</code> ו-<code>npm run exercise -- 11 02</code></li>
+    <li>נושאים 03–07 (YAML): השלימו, עברו על רשימת התיוג, השוו ל-<code>solutions/</code>, ובדקו תחביר עם <code>npx --yes js-yaml</code></li>
+    <li>השלימו <code>exercises/ci-workflow.yml</code> – PR + matrix + cache + artifacts</li>
+    <li>השלימו <code>exercises/nightly.yml</code> – cron + inputs + secrets</li>
+    <li>דחפו את ה-workflow ל-repository שלכם ב-GitHub וצפו בריצה בלשונית Actions – הורידו את ה-artifact ופתחו את הדוח</li>
+    <li>ב-<code>playwright-project</code>: שברו בכוונה בדיקה, הריצו, ופתחו את דוח ה-HTML ואת Allure – מצאו screenshot, video ו-Trace</li>
+    <li>בונוס: פרסמו את דוח Allure ל-GitHub Pages</li>
+  </ol>
+  <pre class="lang-bash">
+    npm run solution -- 11 01     # הפתרון + הבדיקה העצמית שלו
+    npm run solutions             # כל הפתרונות בקורס – כך גם ה-CI בודק
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>סיכום – והדרך לפרויקט הגמר</h2>
+  <ul>
+    <li>Workflow = YAML ב-<code>.github/workflows/</code> · triggers · jobs · steps · <code>uses</code> / <code>run</code></li>
+    <li>artifacts · cache · <code>needs</code> · matrix עם <code>if: always()</code> · secrets ו-environments</li>
+    <li>schedule + workflow_dispatch ← רגרסיה לילית והרצה על סביבה נבחרת</li>
+    <li>Playwright ב-CI: retries · ראיות בכישלון · ארבעה reporters · <bdi>Allure 2 + GitHub Pages</bdi></li>
+    <li>Quality gate ל-PR + Branch protection ← קוד שבור לא נכנס ל-main</li>
+    <li><b>בפרויקט הגמר</b>: תציגו ריצת Pipeline מלאה ב-CI/CD ודוח Allure 2 👏</li>
+  </ul>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

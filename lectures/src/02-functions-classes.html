@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 2 – פונקציות ב-TypeScript</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="2">
+
+<!-- ===================== פתיחה ===================== -->
+<section class="slide title">
+  <div class="badge">שיעור 2</div>
+  <h1>פונקציות ב-TypeScript</h1>
+  <p class="subtitle">Functions, Arrow Functions, פרמטרים וערכי חזרה, Classes</p>
+  <div class="chips"><span>Functions</span><span>Arrow Functions</span><span>פרמטרים וערכי חזרה</span><span>Classes</span><span>Constructors</span></div>
+  <div class="meta">17.11 · יום ג' · 09:00–11:30 · ZOOM · תיקייה בפרויקט: lessons/02-functions-classes</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום?</h2>
+  <div class="grid3">
+    <div class="card"><h3>1. פונקציות</h3><p>פרמטרים עם טיפוסים, ערך חזרה, <code>void</code>, פרמטר אופציונלי, ברירת מחדל, rest, טיפוס של פונקציה</p></div>
+    <div class="card"><h3>2. Arrow Functions ומערכים</h3><p>תחביר מקוצר, callbacks, ו-<code>map</code> / <code>filter</code> / <code>find</code> / <code>some</code> / <code>every</code> / <code>reduce</code> / <code>sort</code></p></div>
+    <div class="card"><h3>3. מחלקות – מבוא ל-OOP</h3><p><code>class</code>, <code>constructor</code>, <code>this</code>, <code>new</code>, parameter properties, getter, Page Object</p></div>
+  </div>
+  <div class="note">אחרי כל חלק – תרגול קצר עם בדיקה עצמית. כל הדוגמאות בשקפים נמצאות (ורצות) בתיקייה <code>examples/</code></div>
+  <div class="tip">אובייקטים (destructuring, spread, JSON) – בתחילת שיעור 3, יחד עם עקרונות ה-OOP</div>
+</section>
+
+<!-- ===================== חלק 1: פונקציות ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>פונקציות</h1>
+  <p class="subtitle">פרמטרים, ערכי חזרה, void, אופציונלי, ברירת מחדל ו-rest</p>
+</section>
+
+<section class="slide">
+  <h2>למה צריך פונקציות? (DRY)</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ אותו חישוב שוב ושוב</h3>
+      <pre class="lang-ts sm">
+        // בדיקה 1
+        const rate1 = Math.round((45 / 50) * 100);
+        // בדיקה 2
+        const rate2 = Math.round((18 / 20) * 100);
+        // בדיקה 3 – שכחנו לעגל...
+        const rate3 = (7 / 9) * 100; // 77.777...
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ פונקציה אחת עם שם ברור</h3>
+      <pre class="lang-ts sm">
+        function rate(passed: number, total: number) {
+          return Math.round((passed / total) * 100);
+        }
+        const rate1 = rate(45, 50); // 90
+        const rate2 = rate(18, 20); // 90
+        const rate3 = rate(7, 9);   // 78
+      </pre>
+    </div>
+  </div>
+  <ul>
+    <li><b>פונקציה</b> = קטע קוד עם שם, שאפשר לקרוא לו שוב ושוב עם נתונים שונים</li>
+    <li><b>DRY – Don't Repeat Yourself</b>: מתקנים באג או משנים לוגיקה <b>במקום אחד</b></li>
+    <li>שם טוב (<code>calculatePassRate</code>) מסביר מה קורה – בלי לקרוא את החישוב</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>אנטומיה של פונקציה: פרמטרים וערך חזרה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>function</code> – מילת המפתח</li>
+        <li><code>calculatePassRate</code> – השם (פועל שמתאר מה היא עושה)</li>
+        <li><code>(passed: number, ...)</code> – פרמטרים, <b>לכל אחד טיפוס</b></li>
+        <li><code>: number</code> אחרי הסוגריים – <b>טיפוס החזרה</b></li>
+        <li><code>return</code> – מחזיר ערך ומסיים את הפונקציה</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        // function &lt;name&gt;(&lt;param&gt;: &lt;type&gt;, ...): &lt;return type&gt;
+        function calculatePassRate(passed: number, total: number): number {
+          if (total === 0) return 0; // לא מחלקים באפס
+          return Math.round((passed / total) * 100);
+        }
+
+        console.log(calculatePassRate(45, 50));
+        console.log(calculatePassRate(7, 9));
+        console.log(calculatePassRate(0, 0));
+      </pre>
+      <pre class="out">
+        90
+        78
+        0
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>פרמטרים מול ארגומנטים – ו-TypeScript ששומר עלינו</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>פרמטר</b> – המשתנה בהגדרה: <code>path</code></li>
+        <li><b>ארגומנט</b> – הערך בקריאה: <code>"/cart"</code></li>
+        <li>הסדר קובע: הארגומנט הראשון נכנס לפרמטר הראשון</li>
+        <li>TS בודק <b>כמות</b> ו<b>טיפוס</b> של הארגומנטים – עוד לפני שהקוד רץ</li>
+      </ul>
+      <pre class="out">
+        https://shop.test/cart
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      function buildPageUrl(baseUrl: string, path: string): string {
+        return baseUrl + path;
+      }
+      console.log(buildPageUrl("https://shop.test", "/cart"));
+
+      // ❌ Expected 2 arguments, but got 1
+      buildPageUrl("https://shop.test");
+
+      // ❌ Argument of type 'number' is not assignable...
+      buildPageUrl("https://shop.test", 404);
+
+      // ❌ Expected 2 arguments, but got 3
+      buildPageUrl("a", "/b", "/c");
+    </pre>
+  </div>
+  <div class="tip">שגיאה כזו מופיעה כקו אדום בעורך – זה באג שנתפס לפני שהטסט בכלל רץ</div>
+</section>
+
+<section class="slide">
+  <h2>return – מחזיר ערך ויוצא מהפונקציה</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>return</code> עושה שני דברים: מחזיר ערך <b>ו</b>מסיים את הפונקציה מיד</li>
+        <li>שורות שאחרי <code>return</code> שהתבצע – לא רצות</li>
+        <li><b>return מוקדם</b>: בודקים מקרה אחרי מקרה, ויוצאים ברגע שמצאנו תשובה</li>
+        <li>TS מוודא שכל <code>return</code> מחזיר את הטיפוס שהוגדר (כאן <code>string</code>)</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function classifyStatus(code: number): string {
+          if (code &gt;= 500) return "server-error";
+          if (code &gt;= 400) return "client-error";
+          if (code &gt;= 200 &amp;&amp; code &lt; 300) return "success";
+          return "other";
+        }
+
+        console.log(classifyStatus(201));
+        console.log(classifyStatus(404));
+        console.log(classifyStatus(503));
+        console.log(classifyStatus(302));
+      </pre>
+      <pre class="out">
+        success
+        client-error
+        server-error
+        other
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>void – ולמה "להדפיס" זה לא "להחזיר"</h2>
+  <p><code>void</code> = הפונקציה <b>עושה פעולה</b> (הדפסה, קליק, push) ולא מחזירה ערך. למשל: <code>logStep(step: string): void</code></p>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ מדפיסה במקום להחזיר</h3>
+      <pre class="lang-ts sm">
+        function greetLog(name: string) {
+          console.log(`Hello ${name}`);
+        }
+        const msg = greetLog("Noa");
+        console.log(msg);
+      </pre>
+      <pre class="out sm">
+        Hello Noa
+        undefined
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מחזירה – ואפשר להשתמש בתוצאה</h3>
+      <pre class="lang-ts sm">
+        function greet(name: string): string {
+          return `Hello ${name}`;
+        }
+        const msg = greet("Noa");
+        console.log(msg);
+      </pre>
+      <pre class="out sm">
+        Hello Noa
+      </pre>
+    </div>
+  </div>
+  <div class="tip">צריך את התוצאה (לשמור, להשוות, לבדוק ב-assert)? → <code>return</code>. רק להציג? → <code>console.log</code></div>
+</section>
+
+<section class="slide">
+  <h2>פרמטר אופציונלי – <code>?</code></h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>tag?: string</code> – מותר <b>לא</b> להעביר את הפרמטר</li>
+        <li>אם לא הועבר – הערך שלו <code>undefined</code></li>
+        <li>בתוך הפונקציה הטיפוס הוא <code>string | undefined</code> – חייבים לבדוק לפני שימוש</li>
+        <li>פרמטרים אופציונליים תמיד <b>בסוף</b>, אחרי פרמטרי החובה</li>
+      </ul>
+      <div class="warn">שימוש ב-<code>tag</code> בלי <code>if (tag)</code> → שגיאת קומפילציה: הערך אולי <code>undefined</code></div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function formatTestName(
+          id: string,
+          title: string,
+          tag?: string,
+        ): string {
+          if (tag) return `[${id}] ${title} @${tag}`;
+          return `[${id}] ${title}`;
+        }
+
+        console.log(formatTestName("TC-1", "Login works"));
+        console.log(formatTestName("TC-2", "Logout", "smoke"));
+      </pre>
+      <pre class="out">
+        [TC-1] Login works
+        [TC-2] Logout @smoke
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ערך ברירת מחדל – <code>= value</code></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>לא הועבר ארגומנט? נלקח ערך ברירת המחדל</li>
+        <li>TS מסיק את הטיפוס מהערך (כאן: number)</li>
+        <li>מושלם להגדרות: baseUrl, timeout, retries</li>
+      </ul>
+      <table class="small">
+        <tr><th></th><th><code>tag?: string</code></th><th><code>t = 5000</code></th></tr>
+        <tr><td>לא הועבר</td><td><code>undefined</code></td><td><code>5000</code></td></tr>
+        <tr><td>לבדוק בפנים?</td><td>כן</td><td>לא</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function buildUrl(
+          path: string,
+          baseUrl: string = "http://localhost:3000",
+        ): string {
+          return `${baseUrl}${path}`;
+        }
+        console.log(buildUrl("/users"));
+        console.log(buildUrl("/users", "https://staging.example.com"));
+
+        function waitFor(selector: string, timeoutMs = 5000): string {
+          return `wait ${timeoutMs}ms for ${selector}`;
+        }
+        console.log(waitFor("#login"));
+        console.log(waitFor("#login", 10000));
+      </pre>
+      <pre class="out sm">
+        http://localhost:3000/users
+        https://staging.example.com/users
+        wait 5000ms for #login
+        wait 10000ms for #login
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Rest parameters – מספר לא ידוע של ארגומנטים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>...durations: number[]</code> אוסף את כל הארגומנטים <b>למערך</b></li>
+        <li>אפשר לקרוא עם 0, 1 או 100 ארגומנטים</li>
+        <li>יש כבר מערך? פורסים אותו בקריאה: <code>average(...times)</code></li>
+      </ul>
+      <pre class="out sm">
+        220
+        0
+        200
+        login [smoke, regression]
+      </pre>
+      <div class="warn small">סדר חובה: רגילים ← אופציונליים ← rest (תמיד אחרון). אחרת – שגיאת קומפילציה</div>
+    </div>
+    <pre class="lang-ts sm">
+      function average(...durations: number[]): number {
+        if (durations.length === 0) return 0;
+        let sum = 0;
+        for (const d of durations) sum += d;
+        return sum / durations.length;
+      }
+      console.log(average(120, 340, 200));
+      console.log(average());
+      const times = [100, 300];
+      console.log(average(...times));
+
+      function tagTest(name: string, ...tags: string[]) {
+        return `${name} [${tags.join(", ")}]`;
+      }
+      console.log(tagTest("login", "smoke", "regression"));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>להחזיר כמה ערכים – בעזרת אובייקט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>פונקציה מחזירה ערך <b>אחד</b> – אבל הוא יכול להיות אובייקט</li>
+        <li>טיפוס ההחזרה מתאר את <b>צורת</b> האובייקט</li>
+        <li><code>{ passed }</code> – קיצור כששם השדה זהה לשם המשתנה</li>
+        <li>בצד הקורא: destructuring שולף שדות למשתנים (עוד בחלק 3)</li>
+      </ul>
+      <pre class="out">
+        { passed: 3, failed: 1 }
+        1
+        1 1
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      function summarize(
+        results: boolean[],
+      ): { passed: number; failed: number } {
+        let passed = 0;
+        for (const r of results) if (r) passed++;
+        return { passed, failed: results.length - passed };
+      }
+
+      const summary = summarize([true, true, false, true]);
+      console.log(summary);
+      console.log(summary.failed);
+
+      // destructuring
+      const { passed, failed } = summarize([true, false]);
+      console.log(passed, failed);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>פונקציה כערך: function expression וטיפוס של פונקציה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>פונקציה היא <b>ערך</b> – אפשר לשמור אותה במשתנה ולהעביר הלאה</li>
+        <li><code>Validator</code> – טיפוס של פונקציה, "חוזה": מקבלת string ומחזירה boolean</li>
+        <li><code>check</code> מריצה <b>כל</b> בדיקה שעומדת בחוזה</li>
+      </ul>
+      <pre class="out">
+        true false
+        not empty: PASS
+        has @: FAIL
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const isSuccess = function (status: number): boolean {
+        return status &gt;= 200 &amp;&amp; status &lt; 300;
+      };
+      console.log(isSuccess(201), isSuccess(500));
+
+      type Validator = (value: string) =&gt; boolean;
+      const notEmpty: Validator = function (value) {
+        return value.trim().length &gt; 0;
+      };
+      const hasAt: Validator = function (value) {
+        return value.includes("@");
+      };
+
+      function check(label: string, value: string, rule: Validator) {
+        console.log(`${label}: ${rule(value) ? "PASS" : "FAIL"}`);
+      }
+      check("not empty", "noa@test.com", notEmpty);
+      check("has @", "noa.test.com", hasAt);
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: פונקציות</h2>
+  <ul>
+    <li>פתחו את <code>lessons/02-functions-classes/exercises/01-functions.ts</code></li>
+    <li>בכל פונקציה – החליפו את שורת ה-TODO בפתרון שלכם</li>
+    <li>התרגילים: <code>retryDelay</code> (ברירת מחדל) · <code>addStep</code> (void) · <code>formatLogLine</code> (אופציונלי + ברירת מחדל) · <code>summarizeStatuses</code> (rest + אובייקט) · <code>countFailedChecks</code> (פונקציות כפרמטר) · בונוס: <code>createLengthValidator</code></li>
+    <li>הבדיקה העצמית מדפיסה <code>&lt;result&gt; =&gt; expected: &lt;value&gt;</code> – זהים? פתרתם</li>
+    <li>תרגיל שעוד לא נפתר מדפיס <code>✋ TODO</code></li>
+  </ul>
+  <div class="grid2">
+    <pre class="lang-bash">
+      npm run exercise -- 02 01   # הרצה + בדיקה עצמית
+    </pre>
+    <pre class="lang-bash">
+      npm run solution -- 02 01   # הפתרון (אחרי שניסיתם!)
+    </pre>
+  </div>
+</section>
+
+<!-- ===================== חלק 2: Arrow Functions ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>Arrow Functions ופונקציות על מערכים</h1>
+  <p class="subtitle">תחביר מקוצר, callbacks, ו-map / filter / find / some / every / reduce / sort</p>
+</section>
+
+<section class="slide">
+  <h2>Arrow Functions – תחביר</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>=&gt;</code> ("חץ") מחליף את המילה <code>function</code></li>
+        <li>שומרים אותה ב-<code>const</code>, כמו כל ערך</li>
+        <li>גוף עם <code>{ }</code> → חייבים <code>return</code></li>
+        <li>ביטוי יחיד בלי <code>{ }</code> → <b>מוחזר אוטומטית</b></li>
+        <li>כלל אצבע: callback קטן – arrow; פונקציית עזר עם שם – <code>function</code></li>
+      </ul>
+      <pre class="out">
+        4 6 8
+        Hello QA false
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      // פונקציה רגילה
+      function double(n: number): number {
+        return n * 2;
+      }
+      // אותה פונקציה בתחביר חץ
+      const doubleArrow = (n: number): number =&gt; {
+        return n * 2;
+      };
+      // גרסה מקוצרת: ביטוי יחיד מוחזר אוטומטית
+      const doubleShort = (n: number) =&gt; n * 2;
+
+      console.log(double(2), doubleArrow(3), doubleShort(4));
+
+      const greet = (name: string) =&gt; `Hello ${name}`;
+      const isOk = (code: number) =&gt; code === 200;
+      console.log(greet("QA"), isOk(404));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות ב-Arrow Functions</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ לא כך</h3>
+      <pre class="lang-ts sm">
+        // סוגריים מסולסלים בלי החזרה
+        const double = (n: number) =&gt; { n * 2 };
+        console.log(double(5)); // undefined
+
+        // אובייקט בלי סוגריים עגולים
+        const toRow = (name: string) =&gt; { name: name };
+        console.log(toRow("login")); // undefined
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ כך</h3>
+      <pre class="lang-ts sm">
+        // ביטוי יחיד, בלי סוגריים מסולסלים
+        const double = (n: number) =&gt; n * 2;
+        console.log(double(5)); // 10
+
+        // אובייקט עטוף בסוגריים עגולים
+        const toRow = (name: string) =&gt; ({ name: name });
+        console.log(toRow("login")); // { name: 'login' }
+      </pre>
+    </div>
+  </div>
+  <div class="note">למה? <code>{</code> מיד אחרי <code>=&gt;</code> נקרא תמיד כ"גוף פונקציה", לא כאובייקט. בלי <code>return</code> בגוף – מוחזר <code>undefined</code></div>
+</section>
+
+<section class="slide">
+  <h2>Callbacks – העברת פונקציה כפרמטר</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>Callback</b> = פונקציה שמעבירים לפונקציה אחרת, והיא "קוראת לה בחזרה" כשצריך</li>
+        <li><code>() =&gt; void</code> = "פונקציה בלי פרמטרים שלא מחזירה ערך"</li>
+        <li><code>runWithLog</code> לא יודעת <b>מה</b> הפעולה – רק <b>מתי</b> להריץ אותה</li>
+      </ul>
+      <div class="warn small"><code>runWithLog("x", clickLogin())</code> – קורא לפונקציה <b>מיד</b> ומעביר את התוצאה (void) → שגיאת קומפילציה</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function runWithLog(name: string, action: () =&gt; void): void {
+          console.log(`START ${name}`);
+          action(); // הקריאה בחזרה
+          console.log(`END   ${name}`);
+        }
+
+        runWithLog("login test", () =&gt; console.log("   ...clicking login"));
+
+        const clickLogin = () =&gt; console.log("   click!");
+        runWithLog("by name", clickLogin); // מעבירים, לא קוראים
+      </pre>
+      <pre class="out sm">
+        START login test
+           ...clicking login
+        END   login test
+        START by name
+           click!
+        END   by name
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הנתונים לדוגמאות הבאות: תוצאות ריצה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כל הדוגמאות הבאות עובדות על אותו מערך <code>results</code></li>
+        <li><code>interface Result</code> מתאר את הצורה של כל איבר (נעמיק בשיעור 6)</li>
+        <li>מתודות מערך מקבלות <b>callback</b> ומריצות אותו על כל איבר</li>
+        <li>TS כבר יודע ש-<code>r</code> הוא <code>Result</code> – לא צריך לכתוב טיפוס</li>
+      </ul>
+    </div>
+    <pre class="lang-ts">
+      interface Result {
+        name: string;
+        status: "passed" | "failed";
+        durationMs: number;
+      }
+
+      const results: Result[] = [
+        { name: "login",    status: "passed", durationMs: 1200 },
+        { name: "search",   status: "failed", durationMs: 3400 },
+        { name: "checkout", status: "passed", durationMs: 2100 },
+        { name: "logout",   status: "failed", durationMs: 500 },
+      ];
+    </pre>
+  </div>
+  <div class="flow">
+    <div class="step"><b>המערך</b>results</div><div class="arrow">←</div>
+    <div class="step y"><b>callback</b>רץ על כל איבר: <code>(r) =&gt; ...</code></div><div class="arrow">←</div>
+    <div class="step g"><b>תוצאה חדשה</b>מערך / איבר / ערך – המקור לא משתנה (חוץ מ-sort)</div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>map – המרה של כל איבר (במקום לולאת for)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>for</b> = "איך": יוצרים מערך ריק וממלאים ב-<code>push</code></li>
+        <li><b>map</b> = "מה": מריץ את ה-callback על <b>כל</b> איבר ומחזיר <b>מערך חדש</b> באותו אורך</li>
+        <li>מה שה-callback מחזיר = האיבר החדש; אפשר לקבל גם את האינדקס <code>i</code></li>
+        <li>מחזירים אובייקט? עוטפים ב-<code>({ ... })</code></li>
+        <li>for עדיין מתאים ללוגיקה מורכבת או ל-<code>break</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        // לולאת for – מערך ריק ו-push לכל איבר
+        const loopNames: string[] = [];
+        for (const r of results) loopNames.push(r.name);
+
+        // map – אותה תוצאה בשורה אחת
+        const names = results.map((r) =&gt; r.name);
+        const numbered = results.map((r, i) =&gt; `${i + 1}.${r.name}`);
+        const isError = [200, 404, 500].map((code) =&gt; code &gt;= 400);
+        const flags = results.map((r) =&gt; ({ slow: r.durationMs &gt; 2000 }));
+
+        console.log(names);
+        console.log(numbered);
+        console.log(isError);
+        console.log(flags);
+      </pre>
+      <pre class="out sm">
+        [ 'login', 'search', 'checkout', 'logout' ]
+        [ '1.login', '2.search', '3.checkout', '4.logout' ]
+        [ false, true, true ]
+        [ { slow: false }, { slow: true }, { slow: true }, { slow: false } ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>filter – סינון, ושרשור עם map</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>filter</code> שומר רק איברים שה-callback החזיר עבורם <code>true</code></li>
+        <li>מחזיר <b>מערך חדש</b> – קצר יותר, ואפילו ריק <code>[]</code></li>
+        <li>המערך המקורי לא משתנה</li>
+        <li><b>שרשור (chaining)</b>: התוצאה היא מערך – ממשיכים מיד עם <code>.map(...)</code></li>
+      </ul>
+      <pre class="out">
+        2
+        [ 'search', 'logout' ]
+        [ 'search', 'checkout' ]
+        []
+        4
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const failed = results.filter((r) =&gt; r.status === "failed");
+      console.log(failed.length);
+      console.log(failed.map((r) =&gt; r.name));
+
+      // שרשור: קודם סינון, אחר כך המרה
+      const slowNames = results
+        .filter((r) =&gt; r.durationMs &gt; 2000)
+        .map((r) =&gt; r.name);
+      console.log(slowNames);
+
+      // אין התאמות – מערך ריק
+      console.log(results.filter((r) =&gt; r.durationMs &gt; 99999));
+      console.log(results.length); // המקור לא השתנה
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>find, some, every – לחפש ולשאול שאלות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>find</code> → <b>האיבר הראשון</b> שמתאים, או <code>undefined</code></li>
+        <li><code>?.</code> – ניגשים לשדה רק אם יש איבר (בלי לקרוס)</li>
+        <li><code>some</code> → <code>true</code> אם <b>לפחות אחד</b> מתאים</li>
+        <li><code>every</code> → <code>true</code> אם <b>כולם</b> מתאימים</li>
+      </ul>
+      <pre class="out sm">
+        search
+        undefined
+        true
+        true
+        false
+        false
+        true
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const slow = results.find((r) =&gt; r.durationMs &gt; 3000);
+        console.log(slow?.name);
+        const huge = results.find((r) =&gt; r.durationMs &gt; 99999);
+        console.log(huge?.name);
+
+        console.log(results.some((r) =&gt; r.status === "failed"));
+        console.log(results.every((r) =&gt; r.durationMs &lt; 5000));
+        console.log(results.every((r) =&gt; r.status === "passed"));
+
+        const empty: Result[] = [];
+        console.log(empty.some((r) =&gt; r.durationMs &gt; 0));
+        console.log(empty.every((r) =&gt; r.durationMs &gt; 0));
+      </pre>
+      <div class="warn small">מלכודת: על מערך ריק <code>some</code> → false, אבל <code>every</code> → true ("אף אחד לא נכשל")</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>reduce – לצמצם מערך לערך אחד</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>reduce</code> "מקפל" מערך שלם ל<b>ערך אחד</b>: סכום, ספירה, אובייקט סיכום</li>
+        <li>מקבל callback ו<b>ערך התחלתי</b>; <code>acc</code> ("הצובר") = התוצאה עד עכשיו</li>
+        <li>מה שה-callback מחזיר הופך ל-<code>acc</code> של האיבר הבא</li>
+      </ul>
+      <table class="small">
+        <tr><th>סיבוב</th><th>sum</th><th>r.durationMs</th><th>מחזיר</th></tr>
+        <tr><td>1</td><td><code>0</code></td><td>1200</td><td><code>1200</code></td></tr>
+        <tr><td>2</td><td><code>1200</code></td><td>3400</td><td><code>4600</code></td></tr>
+        <tr><td>3</td><td><code>4600</code></td><td>2100</td><td><code>6700</code></td></tr>
+        <tr><td>4</td><td><code>6700</code></td><td>500</td><td><b><code>7200</code></b></td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        // סכום: הצובר מתחיל מאפס
+        const totalMs = results.reduce((sum, r) =&gt; sum + r.durationMs, 0);
+        console.log("Total duration:", totalMs, "ms");
+
+        // ספירה: כמה טסטים נכשלו?
+        const failedCount = results.reduce(
+          (count, r) =&gt; (r.status === "failed" ? count + 1 : count),
+          0,
+        );
+        console.log("Failed:", failedCount);
+      </pre>
+      <pre class="out">
+        Total duration: 7200 ms
+        Failed: 2
+      </pre>
+      <div class="warn small">שכחתם את ה-<code>0</code>? ה-<code>sum</code> הראשון יהיה האיבר הראשון עצמו (אובייקט) – TS מתריע</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>sort – מיון עם פונקציית השוואה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>a - b</code> → מהקטן לגדול</li>
+        <li><code>b - a</code> → מהגדול לקטן</li>
+                <li><code>sort</code> <b>משנה את המקור</b> – ממיינים עותק: <code>[...results]</code></li>
+        <li>בלי פונקציית השוואה – מספרים ממוינים <b>כטקסט</b></li>
+      </ul>
+      <pre class="out sm">
+        [ 'logout', 'login', 'checkout', 'search' ]
+        [ 'search', 'checkout', 'login', 'logout' ]
+        login
+        [ 1000, 200, 404, 500 ]
+        [ 200, 404, 500, 1000 ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const fastFirst = [...results].sort(
+        (a, b) =&gt; a.durationMs - b.durationMs,
+      );
+      console.log(fastFirst.map((r) =&gt; r.name));
+
+      const slowFirst = [...results].sort(
+        (a, b) =&gt; b.durationMs - a.durationMs,
+      );
+      console.log(slowFirst.map((r) =&gt; r.name));
+      console.log(results[0].name); // המקור לא השתנה
+
+      const codes = [500, 200, 404, 1000];
+      console.log([...codes].sort()); // ❌ ממוין כטקסט
+      console.log([...codes].sort((a, b) =&gt; a - b)); // ✅ כמספרים
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות במתודות מערך</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ לא כך</h3>
+      <pre class="lang-ts sm">
+        // טעות 1: סוגריים מסולסלים בלי החזרה
+        const names = results.map((r) =&gt; { r.name; });
+        // [ undefined, undefined, undefined, undefined ]
+
+        // טעות 2: מצפים לתוצאה מלולאת forEach
+        const x = results.forEach((r) =&gt; r.name);
+        // undefined
+
+        // טעות 3: ממיינים את המקור עצמו
+        const sorted = codes.sort((a, b) =&gt; a - b);
+        // גם המערך המקורי השתנה!
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ כך</h3>
+      <pre class="lang-ts sm">
+        // תיקון 1: ביטוי יחיד, או החזרה מפורשת
+        const names = results.map((r) =&gt; r.name);
+
+
+        // תיקון 2: לולאה לפעולות, map לתוצאה
+        results.forEach((r) =&gt; console.log(r.name));
+        const all = results.map((r) =&gt; r.name);
+
+        // תיקון 3: ממיינים עותק
+        const sorted = [...codes].sort((a, b) =&gt; a - b);
+
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: Arrow Functions ומתודות מערך</h2>
+  <ul>
+    <li>פתחו את <code>lessons/02-functions-classes/exercises/02-arrow-functions.ts</code></li>
+    <li>כתבו הכול עם arrow functions ומתודות מערך – <b>בלי לולאות for</b> (חוץ מהבונוס)</li>
+    <li>התרגילים: <code>toSeconds</code> (map) · <code>firstSlowTest</code> (find) · <code>isRunGreen</code> (some / every) · <code>countByStatus</code> (reduce) · <code>slowestTests</code> (sort + שרשור) · בונוס: <code>retryUntil</code> (callback)</li>
+    <li>בדיקה עצמית: <code>&lt;result&gt; =&gt; expected: &lt;value&gt;</code> · לא נפתר עדיין: <code>✋ TODO</code></li>
+  </ul>
+  <div class="grid2">
+    <pre class="lang-bash">
+      npm run exercise -- 02 02
+    </pre>
+    <pre class="lang-bash">
+      npm run solution -- 02 02
+    </pre>
+  </div>
+</section>
+
+<!-- ===================== חלק 3: OOP ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>מבוא לתכנות מונחה עצמים (OOP)</h1>
+  <p class="subtitle">מחלקות, אובייקטים ובנאים</p>
+</section>
+
+<section class="slide">
+  <h2>מה זה OOP ולמה זה חשוב באוטומציה?</h2>
+  <ul>
+    <li><b>מחלקה (class)</b> – תבנית/שרטוט: אילו נתונים (שדות) ואילו פעולות (מתודות)</li>
+    <li><b>אובייקט (instance)</b> – "עותק" חי שנוצר מהתבנית עם <code>new</code></li>
+    <li><b>בנאי (constructor)</b> – קוד שרץ פעם אחת ביצירת האובייקט ומאתחל אותו</li>
+    <li>באוטומציה: <code>LoginPage</code>, <code>ApiClient</code>, <code>TestUser</code>, <code>Logger</code> – כולם מחלקות</li>
+    <li><b>ארבעת העקרונות</b> (בשיעורים הבאים): Encapsulation · Inheritance · Polymorphism · Abstraction</li>
+  </ul>
+  <div class="flow">
+    <div class="step"><b>class TestCase</b>התבנית: שדות + מתודות</div><div class="arrow">←</div>
+    <div class="step y"><b>new TestCase(...)</b>מפעיל את ה-constructor</div><div class="arrow">←</div>
+    <div class="step g"><b>loginTest</b>TC-001 · passed</div>
+    <div class="step g"><b>logoutTest</b>TC-002 · failed</div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחלקה: שדות ובנאי (constructor)</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>שם המחלקה ב-PascalCase: <code>TestCase</code></li>
+        <li><b>שדות</b> מוגדרים בראש המחלקה, עם טיפוס</li>
+        <li><code>constructor</code> רץ אוטומטית ב-<code>new</code>, מקבל פרמטרים ומאתחל את השדות</li>
+        <li><code>this.id = id</code> – "השדה של <b>האובייקט הזה</b> מקבל את הפרמטר"</li>
+        <li>שדות שלא מגיעים מבחוץ מקבלים ערך התחלתי קבוע</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      class TestCase {
+        // שדות (properties)
+        id: string;
+        title: string;
+        steps: string[];
+        status: "not-run" | "passed" | "failed";
+
+        // בנאי – רץ פעם אחת, כשיוצרים אובייקט עם new
+        constructor(id: string, title: string) {
+          this.id = id; // this = האובייקט שנוצר עכשיו
+          this.title = title;
+          this.steps = [];
+          this.status = "not-run";
+        }
+
+        // מתודות – בשקף הבא
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מתודות, ויצירת אובייקטים עם new</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      class TestCase {
+        // שדות ובנאי – מהשקף הקודם
+
+        addStep(step: string): void {
+          this.steps.push(step);
+        }
+        markPassed(): void {
+          this.status = "passed";
+        }
+        markFailed(): void {
+          this.status = "failed";
+        }
+        summary(): string {
+          return `${this.id} | ${this.title} | ${this.status}`;
+        }
+      }
+    </pre>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const loginTest = new TestCase("TC-001", "Valid login");
+        loginTest.addStep("Open /login");
+        loginTest.addStep("Click Login");
+        loginTest.markPassed();
+
+        const logoutTest = new TestCase("TC-002", "Logout");
+        logoutTest.markFailed();
+
+        console.log(loginTest.summary());
+        console.log(logoutTest.summary());
+        console.log(loginTest.steps);
+      </pre>
+      <pre class="out sm">
+        TC-001 | Valid login | passed
+        TC-002 | Logout | failed
+        [ 'Open /login', 'Click Login' ]
+      </pre>
+    </div>
+  </div>
+  <div class="tip"><b>מתודה</b> = פונקציה בתוך המחלקה, ניגשת לשדות דרך <code>this</code>. <b>ב-new</b>: נוצר אובייקט, ה-constructor מאתחל אותו, והוא מוחזר – כל <code>new</code> = אובייקט <b>עצמאי</b></div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות במחלקות</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ לא כך</h3>
+      <pre class="lang-ts sm">
+        // טעות 1: שכחנו this
+        addStep(step: string): void {
+          steps.push(step);
+        } // ❌ Cannot find name 'steps'. Did you mean 'this.steps'?
+
+        // טעות 2: שכחנו new
+        const t = TestCase("TC-1", "Login");
+        // ❌ ...is not callable. Did you mean to include 'new'?
+
+        // טעות 3: שכחנו סוגריים בקריאה
+        console.log(t.summary); // [Function: summary]
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ כך</h3>
+      <pre class="lang-ts sm">
+        // תיקון 1: ניגשים לשדה דרך this
+        addStep(step: string): void {
+          this.steps.push(step);
+        }
+
+        // תיקון 2: יוצרים אובייקט עם new
+        const t = new TestCase("TC-1", "Login");
+
+
+        // תיקון 3: קוראים למתודה עם סוגריים
+        console.log(t.summary()); // TC-1 | Login | not-run
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Parameter Properties – קיצור דרך נפוץ ב-TS</h2>
+  <div class="grid2">
+    <div class="card"><h3>הדרך הארוכה</h3>
+      <pre class="lang-ts sm">
+        class ApiClient {
+          baseUrl: string;
+          timeoutMs: number;
+
+          constructor(baseUrl: string, timeoutMs = 5000) {
+            this.baseUrl = baseUrl;
+            this.timeoutMs = timeoutMs;
+          }
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>הקיצור: public בפרמטר</h3>
+      <pre class="lang-ts sm">
+        class ApiClient {
+          constructor(
+            public baseUrl: string,
+            public timeoutMs: number = 5000,
+          ) {}
+
+          url(path: string): string {
+            return `${this.baseUrl}${path}`;
+          }
+        }
+      </pre>
+    </div>
+  </div>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      const client = new ApiClient("http://localhost:3000");
+      console.log(client.url("/users"), client.timeoutMs);
+    </pre>
+    <pre class="out sm">
+      http://localhost:3000/users 5000
+    </pre>
+  </div>
+  <div class="note"><code>public</code> / <code>private</code> / <code>readonly</code> לפני פרמטר = הגדרת שדה + השמה אוטומטית. אותה תוצאה, פחות קוד</div>
+</section>
+
+<section class="slide">
+  <h2>אתחול שדה, private ו-getter</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>אתחול ישיר בשדה (<code>= []</code>) – בלי constructor</li>
+        <li><code>private</code> – נגיש רק מתוך המחלקה (מגן על המצב מבחוץ)</li>
+        <li><code>get</code> = "שדה מחושב": נכתב כמו מתודה, נקרא <b>בלי סוגריים</b></li>
+        <li>נעמיק ב-<code>private</code> וב-getters בשיעור הבא</li>
+      </ul>
+      <pre class="out">
+        Run pass rate: 75 %
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TestRun {
+        private results: boolean[] = [];
+
+        record(passed: boolean): void {
+          this.results.push(passed);
+        }
+
+        get passRate(): number {
+          if (this.results.length === 0) return 0;
+          const passed = this.results.filter((r) =&gt; r).length;
+          return Math.round((passed / this.results.length) * 100);
+        }
+      }
+
+      const run = new TestRun();
+      [true, true, false, true].forEach((r) =&gt; run.record(r));
+      console.log("Run pass rate:", run.passRate, "%");
+      // run.results     ❌ Property 'results' is private
+      // run.passRate()  ❌ not callable – it's a 'get' accessor
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>למה OOP באוטומציה? Page Object Model</h2>
+  <p><b>Page Object</b> = מחלקה שמייצגת עמוד באתר: השדות הם הכתובת והסלקטורים, המתודות הן הפעולות שמשתמש עושה בעמוד.</p>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ בלי Page Object</h3>
+      <ul>
+        <li>הסלקטורים (<code>#query</code>, <code>#search-btn</code>) כתובים בתוך כל טסט</li>
+        <li>סלקטור השתנה → מתקנים עשרות טסטים</li>
+        <li>הטסט מלא בפרטים טכניים – קשה לראות מה בודקים</li>
+      </ul>
+    </div>
+    <div class="card good"><h3>✅ עם Page Object</h3>
+      <ul>
+        <li>כל הסלקטורים של העמוד במחלקה אחת</li>
+        <li>סלקטור השתנה → מתקנים <b>במקום אחד</b></li>
+        <li>הטסט קורא כמו תרחיש: <code>searchPage.search("laptop")</code></li>
+      </ul>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="step"><b>הטסט</b>"מה בודקים"</div><div class="arrow">←</div>
+    <div class="step y"><b>Page Object</b>"איך עושים": סלקטורים + פעולות</div><div class="arrow">←</div>
+    <div class="step g"><b>הדפדפן</b>האתר האמיתי</div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Page Object לדוגמה: SearchPage</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>actions</code> רק רושם מה "בוצע" – בלי דפדפן אמיתי (כמו בתרגיל)</li>
+        <li><code>baseUrl</code> נשמר כ-parameter property</li>
+        <li><code>search()</code> מרכיבה פעולה מכמה מתודות, דרך <code>this</code></li>
+        <li>בהמשך הקורס – אותו רעיון עם Playwright ו-<code>page</code> אמיתי</li>
+      </ul>
+      <pre class="out sm">
+        http://localhost:3000/search
+        [ 'fill #query "laptop"', 'click #search-btn' ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class SearchPage {
+        actions: string[] = [];
+
+        constructor(public baseUrl: string) {}
+
+        url(): string {
+          return `${this.baseUrl}/search`;
+        }
+        typeQuery(text: string): void {
+          this.actions.push(`fill #query "${text}"`);
+        }
+        submit(): void {
+          this.actions.push("click #search-btn");
+        }
+        search(text: string): void {
+          this.typeQuery(text);
+          this.submit();
+        }
+      }
+
+      const page = new SearchPage("http://localhost:3000");
+      page.search("laptop");
+      console.log(page.url());
+      console.log(page.actions);
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: מחלקות, אובייקטים ובנאים</h2>
+  <ul>
+    <li>פתחו את <code>lessons/02-functions-classes/exercises/03-classes-constructors.ts</code></li>
+    <li>השלימו כל TODO – גם בתוך ה-constructors</li>
+    <li><code>TestUser</code> – שדות, constructor ו-this</li>
+    <li><code>LoginPage</code> – Page Object לעמוד ההתחברות (נסו parameter property)</li>
+    <li><code>ResponseTimeTracker</code> – שדה private ו-getters · <code>RetryPolicy</code> – מצב בתוך אובייקט</li>
+    <li>בונוס: <code>BugTracker</code> – מחלקה שמנהלת אוסף של אובייקטים</li>
+  </ul>
+  <div class="grid2">
+    <pre class="lang-bash">
+      npm run exercise -- 02 03
+    </pre>
+    <pre class="lang-bash">
+      npm run solution -- 02 03
+    </pre>
+  </div>
+</section>
+
+<!-- ===================== סיכום ===================== -->
+<section class="slide">
+  <h2>מחברים הכול: מחלקה + arrow functions</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const smoke = new Suite("Smoke");
+        smoke.add("login", "passed", 1200);
+        smoke.add("search", "failed", 3400);
+        smoke.add("logout", "passed");
+        console.log(smoke.report());
+      </pre>
+      <pre class="out sm">
+        Smoke: 4600ms, failed: search
+      </pre>
+      <ul class="small">
+        <li>parameter property: <code>public name</code></li>
+        <li>שדה <code>private</code> עם אתחול ישיר</li>
+        <li>ברירת מחדל: <code>ms = 0</code></li>
+        <li>קיצור אובייקט: <code>{ name, status, ms }</code></li>
+        <li><code>reduce</code>, <code>filter</code> + <code>map</code> בשרשור</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      type Status = "passed" | "failed";
+      type Result = { name: string; status: Status; ms: number };
+
+      class Suite {
+        private results: Result[] = [];
+        constructor(public name: string) {}
+
+        add(name: string, status: Status, ms = 0): void {
+          this.results.push({ name, status, ms });
+        }
+        report(): string {
+          const total = this.results.reduce((sum, r) =&gt; sum + r.ms, 0);
+          const failed = this.results
+            .filter((r) =&gt; r.status === "failed")
+            .map((r) =&gt; r.name);
+          const names = failed.join(", ") || "none";
+          return `${this.name}: ${total}ms, failed: ${names}`;
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול מסכם – שיעור 2</h2>
+  <ul>
+    <li>הריצו ושחקו עם 3 הדוגמאות ב-<code>lessons/02-functions-classes/examples</code>, למשל:
+      <pre class="lang-bash">npx tsx lessons/02-functions-classes/examples/01-functions.ts</pre>
+    </li>
+    <li>השלימו את <code>exercises/exercises.ts</code> – תרגילים שמשלבים את כל נושאי השיעור:
+      <ul>
+        <li><code>passRate</code> · <code>formatTitle</code> (פרמטר אופציונלי)</li>
+        <li><code>failedNames</code> · <code>totalRunTime</code> (arrow + filter / map / reduce)</li>
+        <li><code>repeat</code> (callback) · מחלקה <code>BugReport</code> עם בנאי, מצב ומתודות</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="grid2">
+    <pre class="lang-bash">
+      npm run exercise -- 02   # תרגילי הסיכום
+    </pre>
+    <pre class="lang-bash">
+      npm run solution -- 02   # פתרון הסיכום
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סיכום</h2>
+  <ul>
+    <li>פונקציה: פרמטרים עם טיפוסים, ערך חזרה, <code>void</code>, אופציונלי / ברירת מחדל / rest</li>
+    <li>Arrow functions ו-callbacks – הבסיס לכל קוד בדיקות מודרני</li>
+    <li><code>filter / map / find / some / every / reduce / sort</code> – במקום לולאות ידניות</li>
+    <li>מחלקה = תבנית · אובייקט = מופע · constructor = אתחול · <code>this</code> = האובייקט הנוכחי</li>
+    <li>Page Object – מחלקה לכל עמוד: הטסטים קריאים, והתחזוקה במקום אחד</li>
+  </ul>
+  <div class="note">בשיעור הבא: <b>אובייקטים</b>, ומבוא לעקרונות ה-OOP – <b>Encapsulation</b> (<code>private</code>, getters) ו-<b>Inheritance</b> (<code>LoginPage extends BasePage</code>)</div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

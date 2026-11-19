@@ -1,0 +1,42 @@
+# Lesson 11 – Topic 04 Solution: Matrix, cache and needs
+name: Matrix Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental == true }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [22, 24]
+        exclude:
+          - os: windows-latest
+            node: 22
+        include:
+          - os: ubuntu-latest
+            node: 25
+            experimental: true
+    # => ubuntu/22, ubuntu/24, windows/24 + ubuntu/25 (experimental) – 2 at a time
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run solutions
+
+  summary:
+    needs: test
+    if: always() # runs even when test failed
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Matrix result = ${{ needs.test.result }}"

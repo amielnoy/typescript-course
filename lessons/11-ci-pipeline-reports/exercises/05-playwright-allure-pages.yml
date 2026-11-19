@@ -1,0 +1,69 @@
+# Lesson 11 – Topic 05: Playwright + Allure + GitHub Pages (Exercises)
+# Topic: examples/workflows/03-playwright-allure-pages.yml
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/05-playwright-allure-pages.yml
+#
+# Tasks:
+#  1. Workflow-level permissions (top-level permissions):
+#       contents: read,  pages: write,  id-token: write
+#  2. In the e2e job:  timeout-minutes: 20, and a step that installs a browser before running the tests:
+#       npx playwright install --with-deps chromium     (must come before  npx playwright test)
+#  3. A step that uploads the test-results/ folder (actions/upload-artifact@v7) as an artifact named traces
+#     only when the tests failed:  if: failure()
+#     (traces and videos are heavy – no point keeping them on a green run)
+#  4. An Allure report that is generated and published even on failure (if: always() on both steps):
+#     a. run: npx allure generate allure-results --clean -o allure-report
+#     b. actions/upload-pages-artifact@v5 with path: allure-report
+#  5. A job named deploy: runs after e2e (needs) even on failure (if: always()), on ubuntu-latest,
+#     with an environment named github-pages and url: ${{ steps.deployment.outputs.page_url }}
+#     and a step with id: deployment that uses actions/deploy-pages@v5
+#  6. (Bonus) Upload playwright-report/ as an artifact (upload-artifact@v7) with retention-days: 7
+#     and with  if: ${{ !cancelled() }}   – like always(), but not when someone cancelled the run manually
+
+name: E2E Report
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# TODO: permissions
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    # TODO: timeout-minutes
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # TODO: install the browser
+
+      - name: Run tests
+        run: npx playwright test
+
+      # TODO: traces (only on failure), Allure report, Pages artifact, playwright-report (Bonus)
+
+  # TODO: a job named deploy
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] Top-level permissions with  contents: read,  pages: write,  id-token: write
+# [ ] In the e2e job:  timeout-minutes: 20  at the job level
+# [ ] The step  npx playwright install --with-deps chromium  comes before  npx playwright test
+# [ ] An actions/upload-artifact@v7 step with  path: test-results/,  name: traces  and  if: failure()
+# [ ] A step  run: npx allure generate allure-results --clean -o allure-report  with  if: always()
+# [ ] An actions/upload-pages-artifact@v5 step with  path: allure-report  and  if: always()
+# [ ] A job named deploy with  needs: e2e,  if: always()  at the job level and runs-on: ubuntu-latest
+# [ ] In deploy: an environment with  name: github-pages  and  url: ${{ steps.deployment.outputs.page_url }}
+# [ ] In deploy: a step with  id: deployment  that uses actions/deploy-pages@v5
+# [ ] (Bonus) An actions/upload-artifact@v7 step with  path: playwright-report/,  retention-days: 7
+#         and  if: ${{ !cancelled() }}
+#
+# Compare with the solution: solutions/05-playwright-allure-pages.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/05-playwright-allure-pages.yml

@@ -1,0 +1,127 @@
+# Lesson 11 – Homework: A Full QA Pipeline for the Course Repository
+# Combines every topic of the lesson: triggers, inputs, concurrency, permissions, cache, matrix, needs,
+# artifacts + if: always(), Playwright + Allure, GitHub Pages and a quality gate.
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/homework.yml
+#
+# Scenario:
+#   You are the QA automation engineer of this course repository. The team wants ONE workflow that
+#   gives fast feedback on every PR, runs a full regression every night, lets anyone run a chosen
+#   Playwright suite by hand, publishes the latest Allure report to GitHub Pages, and exposes a
+#   single check ("quality-gate") that Branch Protection can require.
+#   This time the tasks say WHAT is needed – finding the exact keys and expressions is part of the work
+#   (the topic exercises 03–07 and examples/workflows/ have everything you need).
+#
+# Tasks:
+#  1. Triggers:
+#       - pull_request to main – but only when code changed (lessons/, shared/, scripts/, package files,
+#         tsconfig.json, the workflow files). A PR that touches only README files at the root must not start a run.
+#       - push to main
+#       - a nightly run on weekdays (pick the hour; remember cron is in UTC)
+#       - a manual run with an input named suite – a choice of all / api / ui / smoke (default all)
+#  2. Workflow-level settings:
+#       - concurrency: one run per branch/PR, a new push cancels the old run
+#       - least-privilege permissions: the code may only be read (any job that needs more asks for it itself)
+#  3. A job named quality (fast feedback, Node 22): checkout → setup-node with npm cache → npm ci
+#     → npm run typecheck → npm run solutions
+#  4. A job named tests that runs only after quality passed, on Node 22 AND 24 (a matrix – one failing
+#     version must not cancel the other). It runs npm run report and uploads reports/ as an artifact
+#     whose name contains the Node version – also (and mainly) when the tests failed.
+#  5. A job named playwright (after quality) that works inside lessons/11-ci-pipeline-reports/playwright-project:
+#       - install the root dependencies too (the mock API needs tsx from the root)
+#       - install the project dependencies (it has no package-lock.json – see how .github/workflows/ci.yml handles it)
+#       - install chromium with its system dependencies
+#       - run the suite chosen in the input (all → everything, api → --project=api,
+#         ui → --project=chromium, smoke → --grep @smoke); on push/PR/schedule there is no input → all
+#       - generate the Allure report and upload the evidence (playwright-report/, allure-report/, test-results/)
+#         as one artifact – even when the tests failed
+#  6. A job named deploy-report that publishes allure-report to GitHub Pages – ONLY on a push to main
+#     or on the nightly run (never on a PR or a manual run), and also when the tests failed.
+#     Give this job (and only this job) the extra permissions that Pages needs.
+#     Hint: the Pages artifact is prepared in the playwright job, under the same condition.
+#  7. (Challenge) A job named quality-gate that needs all four jobs and always runs. It writes a results
+#     table (job | result) to $GITHUB_STEP_SUMMARY, and fails when any needed job failed or was cancelled.
+#     Think: deploy-report is "skipped" on every PR – the gate must still pass there.
+#  8. (Challenge) Make it production-grade:
+#       - cancel-in-progress only for PRs (a main/nightly run that is deploying must never be cut in the middle)
+#       - a separate concurrency group for the Pages deploy that never cancels
+#       - timeout-minutes on every job
+#       - skip the browser installation when the chosen suite is api
+#       - show the chosen suite in the name of the playwright job
+
+name: TODO
+
+on:
+  # TODO: pull_request (+ paths), push, schedule, workflow_dispatch (+ the suite input)
+
+# TODO: concurrency
+
+# TODO: permissions
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: checkout, setup-node (+ cache), npm ci, typecheck, solutions
+      - run: echo "TODO"
+
+  tests:
+    # TODO: needs + strategy/matrix
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: checkout, setup-node with the matrix version, npm ci, npm run report, upload reports/
+      - run: echo "TODO"
+
+  playwright:
+    # TODO: needs + defaults.run.working-directory
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: install, browsers, pick + run the suite, Allure, upload evidence, prepare the Pages artifact
+      - run: echo "TODO"
+
+  # TODO: a job named deploy-report (condition, permissions, environment, deploy-pages)
+
+  # TODO (Challenge): a job named quality-gate
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# Triggers and workflow-level settings
+# [ ] pull_request with  branches: [main]  and a paths list (lessons/**, shared/**, scripts/**, package files, .github/workflows/**)
+# [ ] push with  branches: [main]
+# [ ] schedule with a cron that runs on weekdays only (the 5th field is 1-5)
+# [ ] workflow_dispatch → inputs → suite:  type: choice,  options: [all, api, ui, smoke],  default: all
+# [ ] Top-level concurrency with a group that contains ${{ github.ref }} and cancel-in-progress
+# [ ] Top-level permissions with only  contents: read
+# Jobs
+# [ ] quality: actions/checkout@v6, actions/setup-node@v6 with  cache: npm,  then  npm ci → npm run typecheck → npm run solutions
+# [ ] tests:  needs: quality,  strategy.fail-fast: false,  matrix  node: [22, 24],  node-version: ${{ matrix.node }}
+# [ ] tests: npm run report, then actions/upload-artifact@v7 with  if: always(),  path: reports/  and a name with ${{ matrix.node }}
+# [ ] playwright:  needs: quality  and  defaults.run.working-directory: lessons/11-ci-pipeline-reports/playwright-project
+# [ ] playwright: root npm ci (working-directory: .), project install, npx playwright install --with-deps chromium
+# [ ] playwright: the test command uses the suite input, with a fallback to "all" when there is no input
+#         (e.g.  ${{ inputs.suite || 'all' }})
+# [ ] playwright: npx allure generate ... with  if: always(),  and an upload-artifact@v7 of the three folders with  if: always()
+# [ ] playwright: actions/upload-pages-artifact@v5 with  path: .../allure-report  only on push to main / schedule
+# [ ] deploy-report:  needs: playwright,  a job-level if that allows only push to main / schedule and does not require success
+#         (e.g. starts with  !cancelled() && ...)
+# [ ] deploy-report: job-level permissions  pages: write  and  id-token: write;
+#         environment  name: github-pages,  url: ${{ steps.deployment.outputs.page_url }};  a step with id: deployment using actions/deploy-pages@v5
+# [ ] (Challenge) quality-gate:  needs: [quality, tests, playwright, deploy-report]  and  if: always()
+# [ ] (Challenge) quality-gate: writes a markdown table with ${{ needs.<job>.result }} for every job to $GITHUB_STEP_SUMMARY
+# [ ] (Challenge) quality-gate: an  exit 1  step with
+#         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+# [ ] (Challenge) cancel-in-progress: ${{ github.event_name == 'pull_request' }},  a "pages" concurrency group in deploy-report,
+#         timeout-minutes on every job, and the browser install step is skipped when the suite is api
+#
+# Practical part (the real check – a green run in GitHub):
+#   1. Copy your file to .github/workflows/qa-pipeline.yml in your own GitHub repository (a copy of this course)
+#      and in Settings → Pages set Source to "GitHub Actions".
+#   2. Push, then go to the Actions tab → QA Pipeline → Run workflow, choose suite = smoke and run it.
+#   3. When it finishes: download the playwright-evidence artifact and open the reports inside it,
+#      and read the results table in the run Summary.
+#   4. Push a commit to main and open the Pages URL shown on the deploy-report job – the Allure report should be there.
+#
+# Compare with the solution: solutions/homework.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/homework.yml

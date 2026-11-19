@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 4 – עקרונות ה-OOP (חלקים א'+ב') ופולימורפיזם</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="4">
+
+<!-- ===================== פתיחה ===================== -->
+<section class="slide title">
+  <div class="badge">שיעור 4</div>
+  <h1>עקרונות ה-OOP (חלקים א'+ב') ופולימורפיזם</h1>
+  <p class="subtitle">חזרה והעמקה: Encapsulation ו-Inheritance · Polymorphism</p>
+  <div class="chips"><span>Encapsulation</span><span>Inheritance</span><span>super / override</span><span>Polymorphism</span><span>מערך מסוג הבסיס</span></div>
+  <div class="meta">20.11 · יום ו' · 09:00–14:00 · ZOOM · תיקייה בפרויקט: lessons/04-oop-polymorphism</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>חלק 1 – חזרה והעמקה: Encapsulation ו-Inheritance</h3>
+      <ul>
+        <li><code>private</code> / <code>readonly</code> / <code>#</code> ו-getters</li>
+        <li><code>extends</code>, <code>super(...)</code>, <code>protected</code></li>
+        <li>תרגול: תרגילי סיכום 1–2</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>חלק 2 – Polymorphism</h3>
+      <ul>
+        <li>אותה קריאה – התנהגות שונה</li>
+        <li><code>override</code> ו-<code>super.method()</code></li>
+        <li>מערך מסוג מחלקת הבסיס, <code>instanceof</code></li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">כל חלק מסתיים בשקף תרגול ✍️ – מומלץ לפתור מיד אחרי החלק.</div>
+  <div class="tip">הדוגמה המלאה להרצה: <code>npx tsx lessons/04-oop-polymorphism/examples/01-polymorphism.ts</code> · לחזרה – הדוגמאות של שיעור 3</div>
+</section>
+
+<!-- ===================== חלק 1: חזרה ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>חזרה והעמקה: Encapsulation ו-Inheritance</h1>
+  <p class="subtitle">עקרונות ה-OOP – חלקים א'+ב' · lessons/03-oop-encapsulation-inheritance/examples</p>
+</section>
+
+<section class="slide">
+  <h2>חזרה: Encapsulation – האובייקט שומר על עצמו</h2>
+  <div class="cols">
+    <div class="stack">
+      <table>
+        <tr><th>כלי</th><th>מה הוא נותן</th></tr>
+        <tr><td><code>private</code> / <code>#field</code></td><td>רק המחלקה עצמה ניגשת</td></tr>
+        <tr><td><code>protected</code></td><td>המחלקה והבנות שלה</td></tr>
+        <tr><td><code>readonly</code></td><td>מציבים פעם אחת (בבנאי), קוראים תמיד</td></tr>
+        <tr><td><code>get</code> / <code>set</code></td><td>גישה מבוקרת: ערך מחושב, ולידציה, נרמול</td></tr>
+      </table>
+      <div class="note">החוקים (מונים, ולידציה, סיסמאות) כתובים <b>במקום אחד</b> – ואי אפשר לעקוף אותם מבחוץ.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class TestRun {
+          #passed = 0;
+          #failed = 0;
+          constructor(readonly id: string) {}
+          record(ok: boolean): void {
+            if (ok) this.#passed++;
+            else this.#failed++;
+          }
+          get passRate(): number {
+            const total = this.#passed + this.#failed;
+            if (total === 0) return 0;
+            return Math.round((this.#passed / total) * 100);
+          }
+        }
+        const run = new TestRun("nightly-42");
+        [true, true, false].forEach((ok) =&gt; run.record(ok));
+        console.log(`${run.id}: ${run.passRate}%`);
+        // run.#passed = 100; ❌   run.id = "x"; ❌
+      </pre>
+      <pre class="out">
+        nightly-42: 67%
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>חזרה: Inheritance – extends, super, protected</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>extends</code> – מחלקה בת מקבלת את כל מה שיש לאב</li>
+        <li><code>super(...)</code> – קורא לבנאי של האב (חובה לפני <code>this</code>)</li>
+        <li><code>protected</code> – נגיש באב ובבנות, לא מבחוץ</li>
+        <li>היום: מה קורה כשהבת <b>משנה</b> מתודה של האב – ולמה זה כל כך שימושי</li>
+      </ul>
+      <div class="note">ירושה = "<b>is-a</b>": UsersApi <b>הוא</b> BaseApi. בגלל זה אפשר להשתמש בו בכל מקום שמצפה ל-BaseApi.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class BaseApi {
+          constructor(protected baseUrl: string) {}
+          url(path: string): string {
+            return `${this.baseUrl}${path}`;
+          }
+        }
+        class UsersApi extends BaseApi {
+          constructor(baseUrl: string) {
+            super(baseUrl); // קודם כל – האב
+          }
+          list(): string {
+            return `GET ${this.url("/users")}`; // מתודה של האב
+          }
+        }
+        console.log(new UsersApi("http://localhost:3000").list());
+      </pre>
+      <pre class="out">
+        GET http://localhost:3000/users
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – חזרה על Encapsulation ו-Inheritance</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>בתיקיית השיעור פתחו את <code>exercises/exercises.ts</code> – <b>תרגילים 1–2</b></li>
+        <li>1 – <code>Environment</code>: <code>readonly</code>, שדה פרטי, getter ו-setter שמאמת ומנרמל כתובת</li>
+        <li>2 – <code>HttpRequest</code> ← <code>AuthorizedRequest</code> ← <code>JsonRequest</code>: כל רמה מוסיפה רק את החלק שלה עם <code>super.describe()</code></li>
+        <li>תרגילים 3–4 (פולימורפיזם) – בסוף השיעור</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 04   # בדיקה עצמית
+        npm run solution -- 04   # הפתרון
+      </pre>
+      <div class="tip">רוצים עוד חזרה? תרגילי הסיכום ושיעורי הבית של שיעור 3: <code>npm run exercise -- 03</code></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===================== חלק 2: Polymorphism ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>Polymorphism – רב-צורתיות</h1>
+  <p class="subtitle">אותה קריאה, התנהגות שונה · examples/01-polymorphism.ts</p>
+</section>
+
+<section class="slide">
+  <h2>Polymorphism – רב-צורתיות</h2>
+  <ul>
+    <li><b>אותה קריאה – התנהגות שונה</b> לפי הסוג האמיתי של האובייקט</li>
+    <li>הקוד שמשתמש באובייקטים מכיר רק את <b>הטיפוס הכללי</b> (מחלקת האב / הממשק)</li>
+    <li>ההחלטה איזה מימוש ירוץ מתקבלת <b>בזמן ריצה</b></li>
+    <li>התוצאה: מוסיפים סוג חדש = מוסיפים מחלקה, <b>בלי לשנות</b> קוד קיים</li>
+    <li>באוטומציה: <code>report.render()</code>, <code>page.isLoaded()</code>, <code>notifier.notify()</code>, <code>driver.click()</code></li>
+  </ul>
+  <table>
+    <tr><th>הקריאה</th><th>האובייקט בפועל</th><th>מה קורה</th></tr>
+    <tr><td><code>n.notify("3 tests failed")</code></td><td>EmailNotifier</td><td>נשלח מייל</td></tr>
+    <tr><td><code>n.notify("3 tests failed")</code></td><td>SlackNotifier</td><td>הודעה בערוץ Slack</td></tr>
+    <tr><td><code>n.notify("3 tests failed")</code></td><td>SmsNotifier</td><td>SMS מקוצר ל-20 תווים</td></tr>
+  </table>
+  <div class="note">Poly = הרבה, Morph = צורה: משתנה אחד <code>n</code> "מתנהג" בהרבה צורות.</div>
+</section>
+
+<section class="slide">
+  <h2>צעד 1: מחלקת בסיס ודריסה (override)</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>למחלקת הבסיס <code>Notifier</code> יש מימוש "כללי" של <code>notify</code></li>
+        <li><code>EmailNotifier</code> <b>דורסת</b> (override) את <code>notify</code> – אותו שם, אותה חתימה, גוף אחר</li>
+        <li>כשקוראים ל-<code>notify</code> על אובייקט Email – רץ המימוש של Email</li>
+        <li>המילה <code>override</code> אומרת לקומפיילר: "אני דורס בכוונה"</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class Notifier {
+          constructor(protected recipient: string) {}
+          notify(msg: string): string {
+            return `[generic] to ${this.recipient}: ${msg}`;
+          }
+        }
+        class EmailNotifier extends Notifier {
+          override notify(msg: string): string {
+            return `📧 Email to ${this.recipient}: ${msg}`;
+          }
+        }
+        const email = new EmailNotifier("qa@example.com");
+        console.log(email.notify("build passed"));
+        console.log(new Notifier("ops").notify("build passed"));
+      </pre>
+      <pre class="out">
+        📧 Email to qa@example.com: build passed
+        [generic] to ops: build passed
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>דוגמה: ערוצי התראה – עוד שתי מחלקות בנות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כל בת מממשת <code>notify</code> בדרכה</li>
+        <li><code>SlackNotifier</code> צריכה שדה נוסף (<code>channel</code>) – ולכן בנאי משלה שקורא ל-<code>super</code></li>
+        <li><code>SmsNotifier</code> מקצרת הודעות ארוכות – לוגיקה שקיימת <b>רק</b> אצלה</li>
+        <li>הבסיס לא יודע ולא צריך לדעת על אף אחת מהן</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      class SlackNotifier extends Notifier {
+        constructor(recipient: string, private channel: string) {
+          super(recipient);
+        }
+        override notify(msg: string): string {
+          return `💬 Slack #${this.channel} @${this.recipient}: ${msg}`;
+        }
+      }
+
+      class SmsNotifier extends Notifier {
+        override notify(msg: string): string {
+          const short =
+            msg.length &gt; 20 ? msg.slice(0, 17) + "..." : msg;
+          return `📱 SMS to ${this.recipient}: ${short}`;
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>broadcast – פונקציה אחת לכל סוגי ה-Notifier</h2>
+  <pre class="lang-ts">
+    // לא יודעת ולא צריכה לדעת מה הסוג המדויק
+    function broadcast(notifiers: Notifier[], msg: string): void {
+      for (const n of notifiers) {
+        console.log(n.notify(msg)); // הקריאה "נשלחת" למימוש הנכון בזמן ריצה
+      }
+    }
+    const team: Notifier[] = [
+      new EmailNotifier("qa-team@example.com"),
+      new SlackNotifier("dana", "qa-alerts"),
+      new SmsNotifier("+972-50-0000000"),
+      new Notifier("fallback"),
+    ];
+    broadcast(team, "Nightly regression: 3 tests failed");
+  </pre>
+  <pre class="out">
+    📧 Email to qa-team@example.com: Nightly regression: 3 tests failed
+    💬 Slack #qa-alerts @dana: Nightly regression: 3 tests failed
+    📱 SMS to +972-50-0000000: Nightly regressio...
+    [generic] to fallback: Nightly regression: 3 tests failed
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>איך זה עובד? טיפוס המשתנה מול האובייקט האמיתי</h2>
+  <div class="flow">
+    <div class="step"><b dir="ltr">n.notify()</b>הקריאה בקוד</div><div class="arrow">←</div>
+    <div class="step y"><b>מה האובייקט בפועל?</b>EmailNotifier / PagerNotifier</div><div class="arrow">←</div>
+    <div class="step"><b>יש לו notify משלו?</b>כן ← מריצים אותו</div><div class="arrow">←</div>
+    <div class="step g"><b>אין?</b>עולים לאב (Notifier) ומריצים שם</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>בזמן קומפילציה</b>: הטיפוס של המשתנה (<code>Notifier</code>) קובע <b>מה מותר</b> לקרוא</li>
+        <li><b>בזמן ריצה</b>: האובייקט עצמו קובע <b>איזה מימוש</b> ירוץ</li>
+        <li><code>PagerNotifier</code> לא דרסה את <code>notify</code> – ולכן רץ המימוש של האב</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class PagerNotifier extends Notifier {
+          page(): string { return `paging ${this.recipient}`; }
+        }
+        const n: Notifier = new EmailNotifier("qa@example.com");
+        console.log(n.notify("build passed"));
+        const pager = new PagerNotifier("on-call");
+        console.log(pager.notify("server down"));
+      </pre>
+      <pre class="out">
+        📧 Email to qa@example.com: build passed
+        [generic] to on-call: server down
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מערך מסוג מחלקת הבסיס</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>Notifier[]</code> יכול להכיל <b>כל</b> אובייקט שהוא Notifier – כולל כל הבנות</li>
+        <li>על איברי המערך מותר לקרוא רק למה שמוגדר ב-<code>Notifier</code></li>
+        <li>מתודה שקיימת רק בבת (<code>joinChannel</code>) – שגיאת קומפילציה</li>
+        <li>וגם הפוך: אי אפשר לשים אב במשתנה מסוג בת</li>
+      </ul>
+      <div class="tip">זה בדיוק מה שאנחנו רוצים: הקוד הכללי עובד רק עם "החוזה" המשותף.</div>
+    </div>
+    <pre class="lang-ts sm">
+      class SlackNotifier extends Notifier {
+        // ... notify כמו קודם
+        joinChannel(): string {
+          return `joined #${this.channel}`;
+        }
+      }
+
+      const team: Notifier[] = [
+        new EmailNotifier("qa@x.io"),    // ✅ בת
+        new SlackNotifier("dana", "qa"), // ✅ בת
+      ];
+      team[0].notify("hi");              // ✅ קיים ב-Notifier
+
+      team[1].joinChannel();
+      // ❌ error TS2339: Property 'joinChannel' does not
+      //    exist on type 'Notifier'.
+
+      const s: SlackNotifier = new Notifier("x");
+      // ❌ error TS2739: Type 'Notifier' is missing the
+      //    following properties from type 'SlackNotifier':
+      //    channel, joinChannel
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>המילה override – הקומפיילר שומר עלינו</h2>
+  <ul>
+    <li>בפרויקט מוגדר <code>noImplicitOverride</code>: דריסה <b>חייבת</b> להיות מסומנת ב-<code>override</code></li>
+    <li>היתרון: טעות הקלדה בשם המתודה או חתימה שונה – נתפסות <b>לפני</b> הרצת הבדיקות</li>
+  </ul>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ שכחנו override</h3>
+      <pre class="lang-ts sm">
+        class A extends Notifier {
+          notify(msg: string): string {
+            return msg;
+          }
+        }
+        // error TS4114: This member must have an
+        // 'override' modifier because it overrides
+        // a member in the base class 'Notifier'.
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ טעות הקלדה</h3>
+      <pre class="lang-ts sm">
+        class B extends Notifier {
+          override notfy(msg: string): string {
+            return msg;
+          }
+        }
+        // error TS4117: This member cannot have an
+        // 'override' modifier because it is not
+        // declared in the base class 'Notifier'.
+        // Did you mean 'notify'?
+      </pre>
+    </div>
+  </div>
+  <div class="tip">נכון: <code>override notify(msg: string): string { ... }</code> – אותו שם, אותם פרמטרים, אותו טיפוס החזרה.</div>
+</section>
+
+<section class="slide">
+  <h2><bdi>super.method()</bdi> – להרחיב במקום להחליף</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>לפעמים לא רוצים להחליף את התנהגות האב, אלא <b>להוסיף</b> לה</li>
+        <li><code>super.log(...)</code> קורא למימוש של האב מתוך המתודה הדורסת</li>
+        <li>הפורמט <code>[STEP]</code> כתוב <b>פעם אחת</b> – אם ישתנה, ישתנה לכולם</li>
+        <li>אפשר להוסיף לפני (<code>TimedLogger</code>) או לשנות את הקלט (<code>ApiLogger</code>)</li>
+      </ul>
+      <div class="note">בלי <code>super</code> היינו מעתיקים את <code>`[STEP] ...`</code> לכל בת – שכפול קוד.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class StepLogger {
+          log(step: string): string { return `[STEP] ${step}`; }
+        }
+        class TimedLogger extends StepLogger {
+          override log(step: string): string {
+            return `10:42:07 ${super.log(step)}`;
+          }
+        }
+        class ApiLogger extends StepLogger {
+          override log(step: string): string {
+            return super.log(`[api] ${step}`);
+          }
+        }
+        const loggers: StepLogger[] =
+          [new StepLogger(), new TimedLogger(), new ApiLogger()];
+        loggers.forEach((l) =&gt; console.log(l.log("open login")));
+      </pre>
+      <pre class="out">
+        [STEP] open login
+        10:42:07 [STEP] open login
+        [STEP] [api] open login
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>בלי פולימורפיזם מול עם פולימורפיזם: ערוץ חדש</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ if על הסוג – נשבר בכל ערוץ חדש</h3>
+      <pre class="lang-ts sm">
+        type Channel = { type: string; address: string };
+        function send(ch: Channel, msg: string): string {
+          if (ch.type === "email") {
+            return `📧 Email to ${ch.address}: ${msg}`;
+          } else if (ch.type === "slack") {
+            return `💬 Slack @${ch.address}: ${msg}`;
+          }
+          // ערוץ חדש? עוד else if – בכל מקום שבודק סוג
+          return `unknown channel: ${ch.type}`;
+        }
+        console.log(send({ type: "teams", address: "qa" },
+          "3 tests failed"));
+      </pre>
+      <pre class="out">
+        unknown channel: teams
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ ערוץ חדש = מחלקה חדשה</h3>
+      <pre class="lang-ts sm">
+        class TeamsNotifier extends Notifier {
+          override notify(msg: string): string {
+            return `🟣 Teams to ${this.recipient}: ${msg}`;
+          }
+        }
+        broadcast( // אותה broadcast – בלי שום שינוי
+          [new TeamsNotifier("qa-leads"),
+           new EmailNotifier("dev@example.com")],
+          "Release blocked",
+        );
+      </pre>
+      <pre class="out">
+        🟣 Teams to qa-leads: Release blocked
+        📧 Email to dev@example.com: Release blocked
+      </pre>
+    </div>
+  </div>
+  <div class="warn"><code>if/switch</code> על "סוג" שחוזר בכמה מקומות ← צריך פולימורפיזם. "פתוח להרחבה, סגור לשינוי".</div>
+</section>
+
+<section class="slide">
+  <h2>instanceof – לבדוק מה הסוג האמיתי</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>x instanceof C</code> מחזיר <code>true</code> אם x נוצר מ-C <b>או מבת של C</b></li>
+        <li>בתוך ה-<code>if</code> – TypeScript "מצמצם" (narrowing) את הטיפוס, ואפשר לקרוא למתודות של הבת</li>
+        <li><b>כן</b>: בדיקת שגיאות ב-<code>catch</code> – <code>err instanceof Error</code>, או פעולה חד-פעמית שקיימת רק בבת</li>
+      </ul>
+      <div class="warn"><b>לא</b>: שרשרת <code>if (n instanceof ...)</code> שבוחרת "איך לעשות" – זה ה-<code>if</code> על הסוג מהשקף הקודם, בתחפושת. תנו לאובייקט להחליט: <code>n.notify(msg)</code>.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        for (const x of team) {
+          if (x instanceof SlackNotifier) {
+            console.log(x.joinChannel()); // ✅ x: SlackNotifier
+          }
+        }
+        const e = new EmailNotifier("a@b.c");
+        console.log(e instanceof EmailNotifier,
+          e instanceof Notifier, e instanceof SlackNotifier);
+        try {
+          JSON.parse("{bad json");
+        } catch (err) {
+          if (err instanceof Error) {
+            console.log("Parse failed:", err.name);
+          }
+        }
+      </pre>
+      <pre class="out">
+        joined #qa-alerts
+        true true false
+        Parse failed: SyntaxError
+      </pre>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="slide">
+  <h2>פולימורפיזם בקוד בדיקות: דרייברים לדפדפנים</h2>
+  <div class="cols">
+    <div class="stack">
+    <pre class="lang-ts sm">
+      class BrowserDriver {
+        open(url: string): string {
+          return `open ${url}`;
+        }
+        click(selector: string): string {
+          return `click ${selector}`;
+        }
+      }
+      class ChromeDriver extends BrowserDriver {
+        override open(url: string): string {
+          return `[chrome] ${super.open(url)}`;
+        }
+      }
+      class MobileDriver extends BrowserDriver {
+        override click(selector: string): string {
+          return `tap ${selector}`; // במובייל "מקישים"
+        }
+      }
+    </pre>
+    <div class="note">Playwright עצמו בנוי כך: <code>page.click()</code> עובד אותו דבר מול chromium, firefox ו-webkit – כל דפדפן "דורס" את המימוש. כך גם Reporters ו-Validators.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        // בדיקה אחת – רצה על כל דרייבר
+        function smokeTest(driver: BrowserDriver): void {
+          console.log(driver.open("/login"));
+          console.log(driver.click("#submit"));
+        }
+        const drivers: BrowserDriver[] = [
+          new BrowserDriver(),
+          new ChromeDriver(),
+          new MobileDriver(),
+        ];
+        drivers.forEach(smokeTest);
+      </pre>
+      <pre class="out">
+        open /login
+        click #submit
+        [chrome] open /login
+        click #submit
+        open /login
+        tap #submit
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>דוגמה: ולידטורים לשדות טופס</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class FieldValidator {
+          validate(value: string): string | null {
+            return null; // ברירת מחדל: אין שגיאה
+          }
+        }
+        class RequiredValidator extends FieldValidator {
+          override validate(value: string): string | null {
+            return value.trim() ? null : "required";
+          }
+        }
+        class EmailValidator extends FieldValidator {
+          override validate(value: string): string | null {
+            return value.includes("@") ? null : "invalid email";
+          }
+        }
+      </pre>
+      <div class="note">כל כלל מחזיר הודעת שגיאה או <code>null</code>. כלל חדש (MinLength, Phone...) = מחלקה חדשה.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const rules: FieldValidator[] = [
+          new RequiredValidator(),
+          new EmailValidator(),
+        ];
+        for (const v of ["", "dana", "dana@qa.io"]) {
+          const errors = rules
+            .map((r) =&gt; r.validate(v))
+            .filter((e) =&gt; e !== null);
+          console.log(JSON.stringify(v), errors);
+        }
+      </pre>
+      <pre class="out">
+        "" [ 'required', 'invalid email' ]
+        "dana" [ 'invalid email' ]
+        "dana@qa.io" []
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – Polymorphism</h2>
+  <table>
+    <tr><th>הטעות</th><th>מה קורה</th><th>התיקון</th></tr>
+    <tr><td>דריסה בלי <code>override</code></td><td><code>TS4114: This member must have an 'override' modifier...</code></td><td>מוסיפים <code>override</code></td></tr>
+    <tr><td>שינוי טיפוס ההחזרה בדריסה (<code>number</code> במקום <code>string</code>)</td><td><code>TS2416: Property 'notify' in type 'C' is not assignable to the same property in base type 'Notifier'.</code></td><td>שומרים על אותה חתימה בדיוק</td></tr>
+    <tr><td>קריאה למתודה של בת דרך משתנה מסוג האב</td><td><code>TS2339: Property 'joinChannel' does not exist on type 'Notifier'.</code></td><td>להעביר את המתודה לאב, או <code>instanceof</code> נקודתי</td></tr>
+    <tr><td>שימוש ב-<code>this</code> לפני <code>super()</code> בבנאי</td><td><code>TS17009: 'super' must be called before accessing 'this' in the constructor of a derived class.</code></td><td><code>super(...)</code> תמיד בשורה הראשונה</td></tr>
+    <tr><td><code>if/instanceof</code> על הסוג</td><td>מתקמפל – אבל כל סוג חדש מחייב לערוך את הפונקציה</td><td>מתודה דרוסה בכל מחלקה</td></tr>
+  </table>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Polymorphism</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>בתיקיית השיעור פתחו את <code>exercises/01-polymorphism.ts</code></li>
+        <li>1 – TestLogger: דריסה בסיסית + <code>super.log</code></li>
+        <li>2 – דרייברים לדפדפנים</li>
+        <li>3 – ולידטורים לשדות טופס</li>
+        <li>4 – אסטרטגיות המתנה בין ניסיונות (retry)</li>
+        <li>5 (בונוס) – מתודת בסיס שקוראת למתודה דרוסה</li>
+      </ul>
+      <div class="warn">בפונקציות שמקבלות מערך מסוג האב – בלי <code>instanceof</code> ובלי <code>if</code> על הסוג!</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 04 01   # בדיקה עצמית
+        npm run solution -- 04 01   # הפתרון
+      </pre>
+      <pre class="out">
+        --- Exercise 1: TestLogger – basic override ---
+          ✋ TODO
+      </pre>
+      <pre class="out">
+        --- Exercise 1: TestLogger – basic override ---
+        [console] start =&gt; expected: [console] start
+        LOG: START =&gt; expected: LOG: START
+      </pre>
+      <p class="small">למעלה: לפני הפתרון · למטה: אחרי – הערך משמאל ל-<code>=&gt; expected:</code> צריך להיות זהה לערך מימינו.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== סיכום ===================== -->
+<section class="slide practice">
+  <h2>תרגול – שיעור 4 (תרגילי סיכום)</h2>
+  <ul>
+    <li>תרגילים 1–2 – חזרה (אם עוד לא פתרתם): <code>Environment</code>, היררכיית <code>HttpRequest</code></li>
+    <li>3 – צעדי תרחיש: <code>NavigateStep</code>, <code>TypeStep</code>, <code>ClickStep</code> ו-<code>runScenario(page, steps)</code> – <b>בלי</b> <code>instanceof</code></li>
+    <li>4 (בונוס) – חוות מכשירים: <code>#battery</code>, <code>protected cost()</code> ש-<code>Phone</code> ו-<code>Emulator</code> דורסים</li>
+    <li>הקובץ: <code>lessons/04-oop-polymorphism/exercises/exercises.ts</code></li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 04        # תרגילי הסיכום – בדיקה עצמית
+    npm run exercise -- 04 01     # תרגילי הנושא (Polymorphism)
+    npm run exercise -- 04 hw     # שיעורי הבית: Form Robot
+    npm run solution -- 04        # הפתרון לתרגילי הסיכום
+  </pre>
+  <div class="tip">כל שורה בבדיקה העצמית: הערך שלכם <code>=&gt; expected:</code> הערך הצפוי. <code>✋ TODO</code> = עוד לא פתרתם.</div>
+</section>
+
+<section class="slide">
+  <h2>סיכום</h2>
+  <ul>
+    <li><b>Encapsulation</b>: <code>private</code> / <code>#</code> / <code>readonly</code> + getters/setters – האובייקט שומר על התקינות של עצמו</li>
+    <li><b>Inheritance</b>: <code>extends</code> + <code>super(...)</code> – קוד משותף נכתב פעם אחת, <code>protected</code> לבנות בלבד</li>
+    <li><b>Polymorphism</b>: קוד שעובד מול טיפוס כללי, והמימוש נבחר בזמן ריצה</li>
+    <li><b>override</b> + <code>noImplicitOverride</code> שומרים על דריסות נכונות · <b>super.method()</b> מרחיב במקום להחליף</li>
+    <li>מערך מסוג הבסיס: מוסיפים סוג חדש = מוסיפים מחלקה, <b>בלי לשנות</b> את הקוד שמשתמש בה</li>
+    <li>בשיעור הבא: <b>Abstract Classes</b> – מה עושים כשלמחלקת הבסיס אין מימוש הגיוני?</li>
+  </ul>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

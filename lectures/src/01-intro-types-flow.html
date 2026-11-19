@@ -1,0 +1,1433 @@
+<!doctype html>
+<!-- שיעור 1 – מבוא ל-TypeScript וסביבת עבודה. בנייה ל-PDF: npm run lectures -- 01 -->
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 1 – מבוא ל-TypeScript וסביבת עבודה</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="1">
+
+<!-- ============================================================ פתיחה -->
+<section class="slide title">
+  <div class="badge">שיעור 1</div>
+  <h1>מבוא ל-TypeScript וסביבת עבודה</h1>
+  <p class="subtitle">משתנים, טיפוסים, אופרטורים וזרימת תוכנית</p>
+  <div class="chips"><span>JavaScript ו-TypeScript</span><span>Node.js ו-NPM</span><span>טיפוסים</span><span>Operators</span><span>תנאים ולולאות</span></div>
+  <div class="meta">13.11 · יום ו' · 09:00–14:00 · ZOOM · תיקייה בפרויקט: lessons/01-intro-types-flow</div>
+</section>
+
+<section class="slide">
+  <h2>סדר היום</h2>
+  <table>
+    <tr><th>חלק</th><th>נושא</th><th>קובץ דוגמה (examples/)</th><th>תרגול</th></tr>
+    <tr><td>1</td><td>שלום TypeScript – קומפילציה, tsc ו-tsx</td><td><code>01-hello-typescript.ts</code></td><td><code>01 01</code></td></tr>
+    <tr><td>2</td><td>משתנים וטיפוסים – const, מערכים, אובייקטים, enum</td><td><code>02-variables-and-types.ts</code></td><td><code>01 02</code></td></tr>
+    <tr><td>3</td><td>אופרטורים – חשבון, השוואה, לוגיקה, <code>??</code> ו-<code>?.</code></td><td><code>03-operators.ts</code></td><td><code>01 03</code></td></tr>
+    <tr><td>4</td><td>תנאים – if / else ו-switch</td><td><code>04-conditions.ts</code></td><td><code>01 04</code></td></tr>
+    <tr><td>5</td><td>לולאות – for, for...of, while, break</td><td><code>05-loops.ts</code></td><td><code>01 05</code></td></tr>
+    <tr><td>6</td><td>Node.js ו-NPM – package.json, argv, env</td><td><code>06-node-and-npm.ts</code></td><td><code>01 06</code></td></tr>
+  </table>
+  <div class="note">אחרי כל חלק – תרגול קצר: <code>npm run exercise -- 01 NN</code>. בסוף – תרגיל סיכום לכל השיעור.</div>
+</section>
+
+<section class="slide">
+  <h2>למה בודק תוכנה צריך לדעת לתכנת?</h2>
+  <ul>
+    <li>בדיקות ידניות לא מתרחבות: רגרסיה מלאה על כל גרסה לוקחת ימים</li>
+    <li><b>אוטומציה</b> = קוד שבודק קוד – רץ בכל שינוי, בלילה, ובכל Pull Request</li>
+    <li>הכלים המובילים היום (Playwright, Cypress, WebdriverIO) כתובים ב-JavaScript/TypeScript</li>
+    <li>TypeScript מאפשר לתפוס טעויות <b>לפני</b> שהבדיקה רצה – חוסך זמן תחקור</li>
+    <li>המטרה בסוף המסלול: פרויקט אוטומציה ב-TypeScript שרץ ב-CI/CD ומפיק דוחות Allure</li>
+  </ul>
+  <div class="flow">
+    <div class="step"><b>היום</b>בדיקה ידנית לפי צעדים</div><div class="arrow">←</div>
+    <div class="step y"><b>שיעורים 1–8</b>כותבים את הצעדים כקוד TS</div><div class="arrow">←</div>
+    <div class="step g"><b>שיעורים 9–11</b>הקוד רץ לבד ב-CI ומפיק דוח</div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 1 -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>שלום TypeScript</h1>
+  <p class="subtitle">JavaScript מול TypeScript, קומפילציה, והתוכנית הראשונה</p>
+</section>
+
+<section class="slide">
+  <h2>JavaScript ו-TypeScript – מה ההבדל?</h2>
+  <div class="flow">
+    <div class="step"><b>קוד TypeScript</b><code>file.ts</code> – עם טיפוסים</div><div class="arrow">←</div>
+    <div class="step y"><b>קומפיילר</b><code>tsc</code> / <code>tsx</code> בודק ומתרגם</div><div class="arrow">←</div>
+    <div class="step"><b>קוד JavaScript</b><code>file.js</code> – בלי טיפוסים</div><div class="arrow">←</div>
+    <div class="step g"><b>הרצה</b>Node.js או דפדפן</div>
+  </div>
+  <ul>
+    <li>TypeScript = JavaScript + <b>מערכת טיפוסים</b>. כל קוד JS תקין הוא גם TS תקין</li>
+    <li>הטיפוסים קיימים רק בזמן כתיבה וקומפילציה – בזמן ריצה רץ JavaScript רגיל</li>
+    <li><b>קומפילציה</b> = תרגום. הדפדפן ו-Node.js מבינים רק JavaScript</li>
+  </ul>
+  <table>
+    <tr><th>כלי</th><th>מה הוא עושה</th><th>מתי נשתמש</th></tr>
+    <tr><td><code>npx tsx file.ts</code></td><td>מתרגם ברקע ומריץ מיד – בלי לבדוק טיפוסים</td><td>הרצת דוגמאות ותרגילים</td></tr>
+    <tr><td><code>npx tsc --noEmit</code></td><td>בודק טיפוסים בכל הפרויקט (<code>npm run typecheck</code>)</td><td>לפני commit וב-CI</td></tr>
+    <tr><td><code>npx tsc</code></td><td>בודק ומייצר קובצי <code>.js</code></td><td>בניית פרויקט להפצה</td></tr>
+  </table>
+  <div class="note">בסוף כל קובץ דוגמה יש <code>export {}</code> – הופך את הקובץ ל"מודול", כך שמשתנים בקבצים שונים לא מתנגשים</div>
+</section>
+
+<section class="slide">
+  <h2>למה צריך טיפוסים? אותו באג – פעמיים</h2>
+  <p><b>ב-JavaScript:</b> הערך הגיע מקובץ הגדרות כטקסט – והחיבור "עובד", אבל לא כמו שציפינו</p>
+  <div class="grid2">
+    <pre class="lang-ts">
+      const timeout = "5000";       // טקסט, לא מספר!
+      const total = timeout + 1000; // ציפינו ל-6000
+      console.log(total);
+    </pre>
+    <pre class="out">
+      50001000
+    </pre>
+  </div>
+  <p><b>ב-TypeScript:</b> מצהירים שזה מספר – והעורך מסמן שגיאה עוד לפני ההרצה</p>
+  <div class="cols" style="grid-template-columns: 0.7fr 1.3fr">
+    <pre class="lang-ts">
+      const timeout: number = "5000";
+    </pre>
+    <pre class="out sm">
+      error TS2322: Type 'string' is not assignable to type 'number'.
+    </pre>
+  </div>
+  <div class="tip">בבדיקה אמיתית באג כזה היה מתגלה רק בזמן ריצה (timeout של 50 מיליון ms...). TS תופס אותו בעורך.</div>
+</section>
+
+<section class="slide">
+  <h2>סביבת העבודה</h2>
+  <ul>
+    <li><b>Node.js</b> (גרסת LTS 22+) – מריץ JavaScript מחוץ לדפדפן: במחשב, בשרת וב-CI</li>
+    <li><b>VS Code</b> – עורך הקוד. תוספים מומלצים: ESLint, Prettier, Playwright Test</li>
+    <li><b>Git</b> – ניהול גרסאות (שיעור 9)</li>
+    <li>התקנת הפרויקט של הקורס:
+      <ul>
+        <li><code>git clone &lt;repo-url&gt;</code> או פריסת ה-ZIP</li>
+        <li><code>npm install</code> – מתקין את התלויות מתוך <code>package.json</code></li>
+        <li><code>npx tsx lessons/01-intro-types-flow/examples/01-hello-typescript.ts</code></li>
+      </ul>
+    </li>
+  </ul>
+  <div class="note">בדיקה שהכול מותקן: <code>node -v</code> ו-<code>npm -v</code> בטרמינל</div>
+</section>
+
+<section class="slide">
+  <h2>התוכנית הראשונה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>console.log(...)</code> מדפיס לטרמינל – הכלי הראשון לדיבאג</li>
+        <li><code>const name: type = value</code> – הצהרה על משתנה עם טיפוס</li>
+        <li>גרש הפוך <code>`...`</code> עם <code>${}</code> משלב ערכים בטקסט</li>
+        <li><code>process</code> – מידע על סביבת ההרצה של Node</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        console.log("Hello, TypeScript!");
+
+        const courseName: string = "QA Automation with TypeScript";
+        const lessonNumber: number = 1;
+        console.log(`Course: ${courseName}, lesson #${lessonNumber}`);
+
+        console.log(`Node version: ${process.version}`);
+        console.log(`Platform: ${process.platform}`);
+      </pre>
+      <pre class="out">
+        Hello, TypeScript!
+        Course: QA Automation with TypeScript, lesson #1
+        Node version: v26.5.0
+        Platform: darwin
+      </pre>
+    </div>
+  </div>
+  <div class="note">הגרסה ומערכת ההפעלה אצלכם יכולות להיות שונות (למשל <code>win32</code> ב-Windows)</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: שלום TypeScript</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>קובץ: <code>exercises/01-hello-typescript.ts</code></li>
+        <li><code>greet</code> · <code>formatTestTitle</code> · <code>parseTimeout</code> · <code>describeRuntime</code> · <code>getNodeMajorVersion</code> (בונוס)</li>
+        <li>משלימים את הקוד במקום <code>throw new Error("TODO")</code></li>
+        <li>התרגילים עטופים בפונקציות – את התחביר נלמד בשיעור הבא, כאן רק כותבים את הגוף</li>
+      </ul>
+      <pre class="lang-bash">
+        npm run exercise -- 01 01
+        npm run solution -- 01 01   # אחרי שניסיתם!
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="out sm">
+        --- Exercise 1: greet ---
+          ✋ TODO
+      </pre>
+      <pre class="out sm">
+        --- Exercise 1: greet ---
+        Hello, Dana! => expected: Hello, Dana!
+        Hello, QA Team! => expected: Hello, QA Team!
+        Hello, ! => expected: Hello, !
+      </pre>
+      <div class="tip small">פתרתם נכון כששני הצדדים של <code>=&gt; expected:</code> זהים</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 2 -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>משתנים וטיפוסים</h1>
+  <p class="subtitle">const ו-let, טיפוסים בסיסיים, מערכים, אובייקטים, enum, any ו-unknown</p>
+</section>
+
+<section class="slide">
+  <h2>משתנים: const ו-let</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>משתנה</b> = שם לערך, כדי להשתמש בו שוב</li>
+        <li>ברירת מחדל: <b>const</b> – אי אפשר להציב ערך חדש</li>
+        <li><code>let</code> רק כשהערך באמת משתנה (מונה, ניסיונות)</li>
+        <li>לא להשתמש ב-<code>var</code> (התנהגות ישנה ומבלבלת)</li>
+        <li>שמות באנגלית, camelCase: <code>maxRetries</code>, <code>baseUrl</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const baseUrl = "https://api.example.com"; // לא משתנה
+        let retries = 0;                           // ניתן לשנות
+        retries = retries + 1;
+        retries++;
+        console.log(baseUrl, "retries:", retries);
+
+        // baseUrl = "x";
+        // ❌ Cannot assign to 'baseUrl' because it is a constant.
+
+        const user = { name: "Dana", age: 29 };
+        user.age = 30; // ✅ מותר – רק ההצבה מוגנת
+        console.log(user);
+      </pre>
+      <pre class="out">
+        https://api.example.com retries: 2
+        { name: 'Dana', age: 30 }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טיפוסים בסיסיים: string, number, boolean</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>string</code> – טקסט: שם בדיקה, URL, הודעת שגיאה</li>
+        <li><code>number</code> – כל מספר: שלם או עשרוני (אין int/float נפרדים)</li>
+        <li><code>boolean</code> – <code>true</code> / <code>false</code>: עבר? headless?</li>
+        <li>לטקסט יש כלים מובנים: <code>.length</code>, <code>.toUpperCase()</code></li>
+        <li><code>Number("5000")</code> – ממיר טקסט למספר</li>
+        <li><code>typeof x</code> – שם הטיפוס כטקסט. מלכודת: <code>null</code> ומערך → <code>"object"</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const testName: string = "Login with valid user";
+        const durationMs: number = 1532.5;
+        const isPassed: boolean = true;
+
+        console.log(typeof testName, typeof durationMs, typeof isPassed);
+        console.log(testName.length, testName.toUpperCase());
+        console.log(durationMs / 1000, "seconds");
+        console.log(Number("5000") + 1000);
+        console.log(typeof null, typeof [1, 2]); // מלכודת!
+      </pre>
+      <pre class="out">
+        string number boolean
+        21 LOGIN WITH VALID USER
+        1.5325 seconds
+        6000
+        object object
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Type Inference – מתי בכלל צריך לכתוב טיפוס?</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>TS <b>מסיק</b> את הטיפוס מהערך ההתחלתי – לא חייבים לכתוב אותו</li>
+        <li>הטיפוס נקבע פעם אחת ונשאר: אי אפשר לשים מספר במשתנה טקסט</li>
+        <li>כותבים טיפוס כשאין ערך התחלתי, או כשרוצים להיות מפורשים</li>
+        <li>טיפ: ב-VS Code עמדו עם העכבר על משתנה כדי לראות את הטיפוס</li>
+      </ul>
+      <pre class="lang-ts sm">
+        let browser = "chromium";
+        // browser = 42; ❌ Type 'number' is not
+        //                  assignable to type 'string'.
+        let lastStatus: number; // אין ערך עדיין
+        lastStatus = 404;
+      </pre>
+    </div>
+    <table>
+      <tr><th>הצהרה</th><th>הטיפוס ש-TS מסיק</th></tr>
+      <tr><td><code>let browser = "chromium"</code></td><td><code>string</code></td></tr>
+      <tr><td><code>let count = 0</code></td><td><code>number</code></td></tr>
+      <tr><td><code>let ok = true</code></td><td><code>boolean</code></td></tr>
+      <tr><td><code>let codes = [200, 404]</code></td><td><code>number[]</code></td></tr>
+      <tr><td><code>let user = { name: "Dana" }</code></td><td><code>{ name: string }</code></td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מערכים (Arrays)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>רשימה מסודרת של ערכים מאותו טיפוס</li>
+        <li>שני תחבירים זהים: <code>number[]</code> או <code>Array&lt;number&gt;</code></li>
+        <li>האינדקס מתחיל ב-<b>0</b>; האחרון: <code>length - 1</code></li>
+        <li><code>push</code> מוסיף לסוף · <code>includes</code> בודק אם קיים</li>
+        <li>אינדקס שלא קיים מחזיר <code>undefined</code> – לא שגיאה!</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const statusCodes: number[] = [200, 201, 404];
+        const browsers: Array&lt;string&gt; = ["chromium", "firefox"];
+
+        statusCodes.push(500);
+        console.log(statusCodes, "count:", statusCodes.length);
+        console.log("first:", browsers[0]);
+        console.log("last:", browsers[browsers.length - 1]);
+        console.log("missing:", browsers[5]);
+        console.log(statusCodes.includes(404));
+      </pre>
+      <pre class="out">
+        [ 200, 201, 404, 500 ] count: 4
+        first: chromium
+        last: firefox
+        missing: undefined
+        true
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>אובייקטים (Objects)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מקבץ שדות בעלי שם – למשל תוצאה של בדיקה אחת</li>
+        <li>הטיפוס מתאר את <b>צורת</b> האובייקט: שם השדה + הטיפוס שלו</li>
+        <li>גישה לשדה: <code>obj.field</code> או <code>obj["field"]</code></li>
+        <li>שדה חסר או שגוי בשם → שגיאת קומפילציה</li>
+      </ul>
+      <div class="note">בשיעור 6 נלמד לתת לצורה הזו שם (interface / type)</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const testResult: {
+          id: string;
+          durationMs: number;
+          passed: boolean;
+        } = {
+          id: "TC-001",
+          durationMs: 840,
+          passed: false,
+        };
+
+        console.log(testResult.id, testResult.passed);
+        testResult.passed = true;
+        console.log(testResult);
+        console.log(testResult["durationMs"]);
+      </pre>
+      <pre class="out">
+        TC-001 false
+        { id: 'TC-001', durationMs: 840, passed: true }
+        840
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>enum – קבוצה סגורה של ערכים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מתאים כשיש רשימה קבועה: חומרות באגים, סביבות, סטטוסים</li>
+        <li>במקום "מחרוזות קסם" – שם ברור, והשלמה אוטומטית בעורך</li>
+        <li><b>enum של מחרוזות</b> – כל ערך מקבל טקסט</li>
+        <li><b>enum מספרי</b> – ממוספר אוטומטית מ-0, ואפשר גם לחפש שם לפי מספר</li>
+      </ul>
+      <div class="warn small">טעות הקלדה <code>"CRITICLA"</code> לא נתפסת · <code>Severity.Criticla</code> – כן</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        enum Severity {
+          Low = "LOW",
+          Medium = "MEDIUM",
+          High = "HIGH",
+          Critical = "CRITICAL",
+        }
+        enum Environment { Dev, Staging, Production } // 0, 1, 2
+
+        const bugSeverity: Severity = Severity.Critical;
+        console.log("Bug severity:", bugSeverity);
+        console.log("Staging:", Environment.Staging);
+        console.log("Name of 2:", Environment[2]);
+        console.log(bugSeverity === Severity.Critical);
+      </pre>
+      <pre class="out">
+        Bug severity: CRITICAL
+        Staging: 1
+        Name of 2: Production
+        true
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>any מול unknown – כשלא יודעים מה הטיפוס</h2>
+  <div class="grid2">
+    <div class="card bad">
+      <h3>❌ any – "סמוך עליי"</h3>
+      <p>TS מפסיק לבדוק לגמרי. הטעות מתגלה רק בזמן ריצה</p>
+      <pre class="lang-ts sm">
+        let anything: any = 5;
+        console.log("before crash");
+        anything.toUpperCase(); // TS לא מתריע...
+      </pre>
+      <pre class="out sm">
+        before crash
+        TypeError: anything.toUpperCase is not a function
+      </pre>
+    </div>
+    <div class="card good">
+      <h3>✅ unknown – "בדוק לפני שימוש"</h3>
+      <p>TS מכריח לבדוק מה יש בפנים (למשל תשובה מ-API)</p>
+      <pre class="lang-ts sm">
+        const body: unknown = JSON.parse('{"id": 7}');
+        // body.id;  ❌ 'body' is of type 'unknown'
+
+        if (typeof body === "object" &amp;&amp; body !== null &amp;&amp;
+            "id" in body) {
+          console.log("id:", (body as { id: number }).id);
+        }
+      </pre>
+      <pre class="out sm">
+        id: 7
+      </pre>
+    </div>
+  </div>
+  <div class="note">כלל אצבע: <b>לא</b> משתמשים ב-<code>any</code>. <code>as</code> אומר ל-TS "סמוך עליי, זה הטיפוס" – נרחיב בהמשך</div>
+</section>
+
+<section class="slide">
+  <h2>null, undefined ו"או" ( | )</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>null</code> – "אין ערך", בכוונה (עוד לא שויך מטפל לבאג)</li>
+        <li><code>undefined</code> – "לא הוגדר": משתנה בלי ערך, שדה שלא קיים</li>
+        <li><code>string | null</code> – <b>Union</b>: אחד מהטיפוסים</li>
+        <li><code>timeout?: number</code> – שדה אופציונלי (יכול להיות חסר)</li>
+      </ul>
+      <div class="tip small">TS לא ייתן להשתמש בערך שעלול להיות null בלי לבדוק קודם</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        let assignee: string | null = null;
+        console.log("assignee:", assignee);
+        assignee = "Yossi";
+        console.log("assignee:", assignee);
+
+        let finishedAt: number | undefined;
+        console.log("finishedAt:", finishedAt);
+
+        const config: { browser: string; timeout?: number } = {
+          browser: "chromium",
+        };
+        console.log("timeout:", config.timeout);
+      </pre>
+      <pre class="out">
+        assignee: null
+        assignee: Yossi
+        finishedAt: undefined
+        timeout: undefined
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: משתנים וטיפוסים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>קובץ: <code>exercises/02-variables-and-types.ts</code></li>
+        <li>בונים אובייקט תוצאה, עובדים עם מערכים, enum מספרי, null ו-unknown</li>
+        <li>זכרו: גם מערך/אובייקט שהוגדר ב-<code>const</code> אפשר לשנות מבפנים</li>
+      </ul>
+      <pre class="lang-bash">
+        npm run exercise -- 01 02
+        npm run solution -- 01 02   # אחרי שניסיתם!
+      </pre>
+    </div>
+    <table>
+      <tr><th>#</th><th>תרגיל</th></tr>
+      <tr><td>1</td><td><code>createTestResult</code></td></tr>
+      <tr><td>2</td><td><code>summarizeBrowsers</code></td></tr>
+      <tr><td>3</td><td><code>addStatusCode</code></td></tr>
+      <tr><td>4</td><td><code>getEnvironmentName</code></td></tr>
+      <tr><td>5</td><td><code>escalateBug</code></td></tr>
+      <tr><td>6</td><td><code>readIdFromApi</code> (בונוס)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 3 -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>אופרטורים</h1>
+  <p class="subtitle">חשבון, השוואה, לוגיקה, טרנרי, ?? ו-?.</p>
+</section>
+
+<section class="slide">
+  <h2>אופרטורים אריתמטיים – ומלכודות של +</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>+ - * /</code> – כמו במחשבון · <code>%</code> – <b>שארית</b> · <code>**</code> – חזקה</li>
+        <li><code>Math.floor</code> – עיגול למטה · <code>Math.round</code> – לשלם הקרוב</li>
+        <li><code>x++</code> – הוסף 1 · <code>x += 5</code> – קיצור של <code>x = x + 5</code></li>
+        <li><code>+</code> עם טקסט = <b>חיבור מחרוזות</b>, לא חשבון</li>
+        <li>עשרוניים לא תמיד מדויקים – לא משווים אותם ב-<code>===</code></li>
+      </ul>
+      <div class="warn small">ערכים משורת הפקודה ומשתני סביבה הם תמיד טקסט → המירו עם <code>Number()</code></div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const passed = 47;
+        const total = 50;
+        console.log("pass rate:", (passed / total) * 100);
+        console.log("each:", Math.floor(10 / 3), "left:", 10 % 3);
+
+        let attempts = 0;
+        attempts++;      // 1
+        attempts += 5;   // 6
+        console.log("attempts:", attempts, "| 2 ** 3 =", 2 ** 3);
+
+        console.log("5" + 1, Number("5") + 1); // טקסט מול מספר
+        console.log(0.1 + 0.2);
+      </pre>
+      <pre class="out sm">
+        pass rate: 94
+        each: 3 left: 1
+        attempts: 6 | 2 ** 3 = 8
+        51 6
+        0.30000000000000004
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>השוואה: תמיד === ולא ==</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>תוצאת השוואה היא תמיד <code>boolean</code></li>
+        <li><code>===</code> – שווה בערך <b>וגם</b> בטיפוס · <code>!==</code> – שונה</li>
+        <li><code>==</code> הישן ממיר טיפוסים בשקט – והתוצאות מפתיעות:</li>
+      </ul>
+      <table class="small">
+        <tr><th>ערכים</th><th>==</th><th>===</th></tr>
+        <tr><td><code>"5"</code> מול <code>5</code></td><td>true</td><td>false</td></tr>
+        <tr><td><code>0</code> מול <code>""</code></td><td>true</td><td>false</td></tr>
+        <tr><td><code>false</code> מול <code>"0"</code></td><td>true</td><td>false</td></tr>
+        <tr><td><code>null</code> מול <code>undefined</code></td><td>true</td><td>false</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const expected: number = 200;
+        const actual: number = 404;
+        const responseTime = 850;
+
+        console.log(expected === actual);
+        console.log(expected !== actual);
+        console.log(responseTime &lt; 1000);
+        console.log(responseTime &gt;= 850);
+        const actualStatus: string = "Passed";
+        console.log(actualStatus === "passed");
+      </pre>
+      <pre class="out">
+        false
+        true
+        true
+        true
+        false
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>אופרטורים לוגיים: &amp;&amp;, || ו-!</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>&amp;&amp;</code> (וגם) – true רק אם <b>שני</b> הצדדים true</li>
+        <li><code>||</code> (או) – true אם <b>לפחות אחד</b> true</li>
+        <li><code>!</code> (לא) – הופך: <code>!true</code> = false</li>
+      </ul>
+      <table class="small">
+        <tr><th>a</th><th>b</th><th>a &amp;&amp; b</th><th>a || b</th></tr>
+        <tr><td>true</td><td>true</td><td>true</td><td>true</td></tr>
+        <tr><td>true</td><td>false</td><td>false</td><td>true</td></tr>
+        <tr><td>false</td><td>true</td><td>false</td><td>true</td></tr>
+        <tr><td>false</td><td>false</td><td>false</td><td>false</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const isLoggedIn = true;
+        const hasPermission = false;
+        const isMaintenance = false;
+
+        console.log("AND:", isLoggedIn &amp;&amp; hasPermission);
+        console.log("OR :", isLoggedIn || hasPermission);
+        console.log("NOT:", !isMaintenance);
+
+        const canRun = isLoggedIn &amp;&amp; !isMaintenance;
+        console.log("can run smoke tests?", canRun);
+      </pre>
+      <pre class="out">
+        AND: false
+        OR : true
+        NOT: true
+        can run smoke tests? true
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>אופרטור טרנרי – תנאי בשורה אחת</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>תחביר: <code>condition ? ifTrue : ifFalse</code></li>
+        <li>מחזיר <b>ערך</b> – מצוין לבחירה בין שתי אפשרויות</li>
+        <li>אפשר לשרשר, אבל מעל 2 רמות – עדיף if (חלק 4)</li>
+      </ul>
+      <div class="tip small">בתרגול של חלק זה עוד אין if – פתרו עם טרנרי</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const passRate = 94;
+        const status = passRate &gt;= 90 ? "PASS" : "FAIL";
+        console.log("Suite status:", status);
+
+        const failed = 1;
+        console.log(`${failed} ${failed === 1 ? "test" : "tests"} failed`);
+
+        const ms = 1500;
+        const speed = ms &lt; 200 ? "fast" : ms &lt; 1000 ? "ok" : "slow";
+        console.log("speed:", speed);
+      </pre>
+      <pre class="out">
+        Suite status: PASS
+        1 test failed
+        speed: slow
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>?? מול || – ערך ברירת מחדל</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>a ?? b</code> – אם <code>a</code> הוא <code>null</code>/<code>undefined</code> → <code>b</code></li>
+        <li><code>a || b</code> – אם <code>a</code> "שקרי" (גם <code>0</code>, <code>""</code>, <code>false</code>) → <code>b</code></li>
+        <li>לברירות מחדל של הגדרות – <b>תמיד <code>??</code></b></li>
+      </ul>
+      <pre class="lang-ts sm">
+        const envTimeout: number | undefined = undefined;
+        const timeout = envTimeout ?? 30_000;
+        console.log("timeout:", timeout);
+
+        const retries: number = 0; // ביקשו במפורש 0
+        console.log("|| :", retries || 3); // ❌
+        console.log("?? :", retries ?? 3); // ✅
+      </pre>
+      <pre class="out sm">
+        timeout: 30000
+        || : 3
+        ?? : 0
+      </pre>
+    </div>
+    <div class="stack">
+      <p><b>מעקב:</b> מה מחזיר כל ביטוי?</p>
+      <table>
+        <tr><th>value</th><th><code>value || 30000</code></th><th><code>value ?? 30000</code></th></tr>
+        <tr><td><code>undefined</code></td><td>30000</td><td>30000</td></tr>
+        <tr><td><code>null</code></td><td>30000</td><td>30000</td></tr>
+        <tr><td><code>0</code></td><td>30000 ⚠️</td><td><b>0</b></td></tr>
+        <tr><td><code>""</code></td><td>30000 ⚠️</td><td><b>""</b></td></tr>
+        <tr><td><code>false</code></td><td>30000 ⚠️</td><td><b>false</b></td></tr>
+        <tr><td><code>5000</code></td><td>5000</td><td>5000</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>?. – Optional chaining: גישה בטוחה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>תשובות API לא תמיד מלאות – חלק מהשדות יכולים לחסור</li>
+        <li><code>a?.b</code> – אם <code>a</code> חסר, מחזיר <code>undefined</code> במקום לקרוס</li>
+        <li>משלבים עם <code>??</code> כדי לקבל ערך ברירת מחדל</li>
+        <li>בלי <code>?.</code> – TS מתריע: <code>possibly 'undefined'</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const response: { data?: { user?: { name: string } } } = {
+          data: {},
+        };
+
+        console.log(response.data?.user?.name);
+        console.log(response.data?.user?.name ?? "anonymous");
+
+        // response.data.user.name ❌ possibly 'undefined'
+      </pre>
+      <pre class="out">
+        undefined
+        anonymous
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: אופרטורים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>קובץ: <code>exercises/03-operators.ts</code></li>
+        <li>עוד לא למדנו <code>if</code> – פתרו הכול עם אופרטורים (כולל <code>? :</code>)</li>
+        <li>רמזים: <code>Math.round(x * 100) / 100</code> לעיגול ל-2 ספרות, <code>**</code> ל-backoff</li>
+      </ul>
+      <pre class="lang-bash">
+        npm run exercise -- 01 03
+        npm run solution -- 01 03   # אחרי שניסיתם!
+      </pre>
+    </div>
+    <table>
+      <tr><th>#</th><th>תרגיל</th></tr>
+      <tr><td>1</td><td><code>calcPassRate</code> – אחוז הצלחה</td></tr>
+      <tr><td>2</td><td><code>formatDuration</code> – דקות ושניות</td></tr>
+      <tr><td>3</td><td><code>backoffDelay</code> – המתנה בין ניסיונות</td></tr>
+      <tr><td>4</td><td><code>checkStatus</code> – צפוי מול בפועל</td></tr>
+      <tr><td>5</td><td><code>canRunAdminTests</code></td></tr>
+      <tr><td>6</td><td><code>getUserName</code> (בונוס)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 4 -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>תנאים</h1>
+  <p class="subtitle">if / else if / else, switch, ו-truthy / falsy</p>
+</section>
+
+<section class="slide">
+  <h2>if / else if / else – איזה ענף ירוץ?</h2>
+  <p>התנאים נבדקים <b>מלמעלה למטה</b>; הענף <b>הראשון</b> שמתקיים רץ וכל השאר מדולגים. <code>else</code> – "כל מקרה אחר"</p>
+  <div class="cols">
+    <div class="stack">
+      <table class="small">
+        <tr><th>statusCode</th><th>נבדקו</th><th>רץ</th><th>מה מודפס</th></tr>
+        <tr><td><code>200</code></td><td><code>1</code></td><td><code>200–299</code></td><td>Success ✅</td></tr>
+        <tr><td><code>404</code></td><td><code>1, 2</code></td><td><code>400–499</code></td><td>Client error ⚠️</td></tr>
+        <tr><td><code>503</code></td><td><code>1, 2, 3</code></td><td><code>500+</code></td><td>Server error ❌</td></tr>
+        <tr><td><code>302</code></td><td><code>1, 2, 3</code></td><td><code>else</code></td><td>Other</td></tr>
+      </table>
+      <div class="warn small">הסדר חשוב! תנאי רחב (<code>ms &lt; 1000</code>) לפני צר (<code>ms &lt; 200</code>) "בולע" אותו – הצר לעולם לא ירוץ. שימו את הצר קודם.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const statusCode: number = 404;
+
+        if (statusCode &gt;= 200 &amp;&amp; statusCode &lt; 300) {
+          console.log(`${statusCode}: Success ✅`);
+        } else if (statusCode &gt;= 400 &amp;&amp; statusCode &lt; 500) {
+          console.log(`${statusCode}: Client error ⚠️`);
+        } else if (statusCode &gt;= 500) {
+          console.log(`${statusCode}: Server error ❌`);
+        } else {
+          console.log(`${statusCode}: Other`);
+        }
+      </pre>
+      <pre class="out">
+        404: Client error ⚠️
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>switch – השוואה לרשימת ערכים</h2>
+  <ul>
+    <li>משווה ערך <b>אחד</b> מול ערכים מדויקים (===) · לטווחים (<code>&gt;= 400</code>) – if</li>
+    <li><code>case</code> – ערך אפשרי (כמה ברצף – אותו קוד) · <code>break</code> – יציאה · <code>default</code> – כמו else</li>
+  </ul>
+  <div class="grid2">
+    <div class="card good">
+      <h3>✅ עם break – רק ה-case המתאים</h3>
+      <pre class="lang-ts sm">
+        const browser: string = "chrome";
+        switch (browser) {
+          case "chromium":
+          case "chrome": // שני case-ים לאותו קוד
+            console.log("Running on Chromium engine");
+            break;
+          case "firefox":
+            console.log("Running on Gecko engine");
+            break;
+          default: console.log("Unknown browser");
+        }
+      </pre>
+      <pre class="out sm">
+        Running on Chromium engine
+      </pre>
+    </div>
+    <div class="card bad">
+      <h3>❌ שכחתי break – "נופל" לכל ה-case-ים הבאים</h3>
+      <pre class="lang-ts sm">
+        const env: string = "staging";
+        switch (env) {
+          case "staging":
+            console.log("url: staging.example.com");
+          case "production":
+            console.log("url: www.example.com");
+          default: console.log("url: localhost");
+        }
+      </pre>
+      <pre class="out sm">
+        url: staging.example.com
+        url: www.example.com
+        url: localhost
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>switch על enum</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>switch ו-enum – זוג מושלם: רשימה סגורה של מקרים</li>
+        <li><code>P1 = 1</code> – הבאים ממשיכים אוטומטית: P2=2, P3=3</li>
+        <li>TS מתריע אם כתבתם <code>case</code> עם ערך שלא קיים ב-enum</li>
+        <li>הפונקציה מדמה ערך שמגיע ממערכת ניהול באגים</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        enum Priority { P1 = 1, P2, P3 } // 1, 2, 3
+        // מדמה ערך שמגיע ממערכת ניהול באגים
+        function getPriorityFromJira(): Priority {
+          return Priority.P2;
+        }
+        const bugPriority = getPriorityFromJira();
+
+        switch (bugPriority) {
+          case Priority.P1:
+            console.log("Fix immediately – blocks release");
+            break;
+          case Priority.P2:
+            console.log("Fix in current sprint");
+            break;
+          case Priority.P3:
+            console.log("Add to backlog");
+            break;
+        }
+      </pre>
+      <pre class="out sm">
+        Fix in current sprint
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Truthy ו-Falsy – מה נחשב "אמת" בתנאי?</h2>
+  <div class="cols">
+    <div class="stack">
+      <div class="card bad">
+        <h3>Falsy – רק 6 ערכים</h3>
+        <p><code>false</code> <code>0</code> <code>""</code> <code>null</code> <code>undefined</code> <code>NaN</code></p>
+      </div>
+      <div class="card good">
+        <h3>Truthy – כל השאר, גם אלה!</h3>
+        <p><code>"0"</code> <code>"false"</code> <code>" "</code> <code>[]</code> <code>{}</code> <code>-1</code></p>
+      </div>
+      <div class="note small"><code>if (!errorMessage)</code> – "אם אין הודעת שגיאה" (ריקה, null או undefined)</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const errorMessage = "";
+        if (!errorMessage) {
+          console.log("No error message received");
+        }
+
+        const failedCount = 0;
+        if (failedCount) {
+          console.log("There are failures");
+        } else {
+          console.log("All green");
+        }
+        console.log(Boolean("0"), Boolean(" "), Boolean([]));
+      </pre>
+      <pre class="out">
+        No error message received
+        All green
+        true true true
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: תנאים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>קובץ: <code>exercises/04-conditions.ts</code></li>
+        <li>שימו לב לגבולות: 199, 200, 999, 1000 – לאיזה ענף כל אחד נכנס?</li>
+        <li>רמזים: <code>browser.toLowerCase()</code>, כמה <code>case</code> ברצף</li>
+      </ul>
+      <pre class="lang-bash">
+        npm run exercise -- 01 04
+        npm run solution -- 01 04   # אחרי שניסיתם!
+      </pre>
+    </div>
+    <table>
+      <tr><th>#</th><th>תרגיל</th></tr>
+      <tr><td>1</td><td><code>getBrowserEngine</code> (switch)</td></tr>
+      <tr><td>2</td><td><code>rateResponseTime</code> (if / else if)</td></tr>
+      <tr><td>3</td><td><code>getPriorityAction</code> (switch על enum)</td></tr>
+      <tr><td>4</td><td><code>formatErrorMessage</code> (truthy / falsy)</td></tr>
+      <tr><td>5</td><td><code>shouldRetry</code> – לנסות שוב?</td></tr>
+      <tr><td>6</td><td><code>releaseDecision</code> – Go / No-Go (בונוס)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 5 -->
+<section class="slide section">
+  <div class="badge">חלק 5</div>
+  <h1>לולאות</h1>
+  <p class="subtitle">for, for...of, for...in, while, break ו-continue, לולאה מקוננת</p>
+</section>
+
+<section class="slide">
+  <h2>למה לולאות? for הקלאסי – צעד אחר צעד</h2>
+  <p>לולאה מריצה את אותו קוד שוב ושוב – למשל על כל תוצאת בדיקה. <code>for</code> מתאים כשצריך את ה<b>אינדקס</b></p>
+  <div class="flow">
+    <div class="step"><b>1. אתחול</b><code>let i = 0</code> (פעם אחת)</div><div class="arrow">←</div>
+    <div class="step y"><b>2. תנאי</b><code>i &lt; 3</code>? אם false – יציאה</div><div class="arrow">←</div>
+    <div class="step g"><b>3. גוף</b><code>console.log(...)</code></div><div class="arrow">←</div>
+    <div class="step"><b>4. קידום</b><code>i++</code> וחזרה לשלב 2</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const results: string[] = ["passed", "failed", "skipped"];
+
+        for (let i = 0; i &lt; results.length; i++) {
+          console.log(`Test #${i + 1}: ${results[i]}`);
+        }
+      </pre>
+      <pre class="out sm">
+        Test #1: passed
+        Test #2: failed
+        Test #3: skipped
+      </pre>
+    </div>
+    <table class="small">
+      <tr><th>סיבוב</th><th>i</th><th><code>i &lt; results.length</code></th><th>מה קורה</th></tr>
+      <tr><td>1</td><td>0</td><td><code>0 &lt; 3</code> ✅</td><td><code>Test #1: passed</code></td></tr>
+      <tr><td>2</td><td>1</td><td><code>1 &lt; 3</code> ✅</td><td><code>Test #2: failed</code></td></tr>
+      <tr><td>3</td><td>2</td><td><code>2 &lt; 3</code> ✅</td><td><code>Test #3: skipped</code></td></tr>
+      <tr><td>–</td><td>3</td><td><code>3 &lt; 3</code> ❌</td><td>יציאה מהלולאה</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>for...of – מעבר על ערכים (המומלץ למערכים)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>בכל סיבוב המשתנה מקבל את <b>הערך</b> הבא במערך</li>
+        <li>אין אינדקס לנהל – פחות מקום לטעויות</li>
+        <li>תבנית נפוצה: <b>מונה</b> או <b>סכום</b> שמתחיל ב-0 ומתעדכן בלולאה</li>
+      </ul>
+      <div class="tip small">צריך רק את הערכים? for...of. צריך גם מיקום? for קלאסי.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const results: string[] = [
+          "passed", "passed", "failed", "skipped", "passed", "failed",
+        ];
+
+        let failedCount = 0;
+        for (const result of results) {
+          if (result === "failed") failedCount++;
+        }
+        console.log("Failed tests:", failedCount);
+
+        const durations = [1200, 850, 3100];
+        let totalMs = 0;
+        for (const ms of durations) {
+          totalMs += ms;
+        }
+        console.log("Total:", totalMs, "ms");
+      </pre>
+      <pre class="out">
+        Failed tests: 2
+        Total: 5150 ms
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>for...in – מעבר על מפתחות של אובייקט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>בכל סיבוב מקבלים <b>שם של שדה</b> (מפתח)</li>
+        <li>את הערך שולפים עם <code>config[key]</code></li>
+        <li><code>Record&lt;string, ...&gt;</code> – אובייקט עם מפתחות טקסט וערכים מטיפוס מסוים</li>
+      </ul>
+      <div class="warn small">על מערך, for...in מחזיר אינדקסים כטקסט: <code>"0"</code>, <code>"1"</code>. למערכים – for...of</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        const config: Record&lt;string, string | number | boolean&gt; = {
+          browser: "chromium",
+          headless: true,
+          retries: 2,
+        };
+
+        for (const key in config) {
+          console.log(`${key} = ${config[key]}`);
+        }
+      </pre>
+      <pre class="out">
+        browser = chromium
+        headless = true
+        retries = 2
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>while – כל עוד התנאי מתקיים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כשלא יודעים מראש כמה סיבובים: retry, המתנה לאלמנט, polling</li>
+        <li>התנאי נבדק <b>לפני</b> כל סיבוב</li>
+        <li>חובה שמשהו בגוף ישנה את התנאי – אחרת לולאה אינסופית</li>
+      </ul>
+      <table class="small">
+        <tr><th>attempt</th><th>success</th><th>ממשיכים?</th></tr>
+        <tr><td>1</td><td>false</td><td>✅</td></tr>
+        <tr><td>2</td><td>false</td><td>✅</td></tr>
+        <tr><td>3</td><td>true</td><td>❌ יציאה</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        let attempt = 0;
+        let success = false;
+        const maxAttempts = 5;
+
+        while (!success &amp;&amp; attempt &lt; maxAttempts) {
+          attempt++;
+          success = attempt === 3; // מדמה הצלחה בניסיון השלישי
+          console.log(`Attempt ${attempt}:`, success ? "OK" : "retrying...");
+        }
+        console.log("finished after", attempt, "attempts");
+      </pre>
+      <pre class="out">
+        Attempt 1: retrying...
+        Attempt 2: retrying...
+        Attempt 3: OK
+        finished after 3 attempts
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>break ו-continue</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>continue</code> – מדלג על שאר הסיבוב הנוכחי, ועובר לבא</li>
+        <li><code>break</code> – יוצא מהלולאה לגמרי</li>
+        <li>דוגמה: <b>fail fast</b> – עוצרים בכישלון הראשון</li>
+      </ul>
+      <table class="small">
+        <tr><th>result</th><th>מה קורה</th></tr>
+        <tr><td>passed</td><td>מודפס</td></tr>
+        <tr><td>skipped</td><td>continue – דילוג</td></tr>
+        <tr><td>passed</td><td>מודפס</td></tr>
+        <tr><td>failed</td><td>break – עצירה</td></tr>
+        <tr><td>passed</td><td>לא מגיעים</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const results = ["passed", "skipped", "passed", "failed", "passed"];
+
+        for (const result of results) {
+          if (result === "skipped") continue; // דלג לסיבוב הבא
+          if (result === "failed") {
+            console.log("First failure – stopping (fail fast)");
+            break; // צא מהלולאה לגמרי
+          }
+          console.log("ok:", result);
+        }
+      </pre>
+      <pre class="out">
+        ok: passed
+        ok: passed
+        First failure – stopping (fail fast)
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות בלולאות</h2>
+  <div class="grid2">
+    <div class="card bad">
+      <h3>❌ Off-by-one: <code>&lt;=</code> במקום <code>&lt;</code></h3>
+      <pre class="lang-ts sm">
+        const ids = ["TC-1", "TC-2", "TC-3"];
+        for (let i = 0; i &lt;= ids.length; i++) {
+          console.log(ids[i]);
+        }
+      </pre>
+      <pre class="out sm">
+        TC-1
+        TC-2
+        TC-3
+        undefined
+      </pre>
+    </div>
+    <div class="card bad">
+      <h3>❌ לולאה אינסופית</h3>
+      <pre class="lang-ts sm">
+        let attempt = 0;
+        while (attempt &lt; 3) {
+          console.log("trying...");
+          // ⚠️ חסר כאן קידום של המונה!
+        }
+      </pre>
+      <p>התוכנית "נתקעת" ומדפיסה בלי סוף. עצירה: <code>Ctrl+C</code></p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card good"><h3>✅ התיקון</h3><p><code>i &lt; ids.length</code> – האינדקס האחרון הוא <code>length - 1</code>. או פשוט <code>for...of</code></p></div>
+    <div class="card good"><h3>✅ התיקון</h3><p>לוודא שבכל סיבוב משהו מקדם את התנאי (<code>attempt++</code>) ולהגביל מקסימום</p></div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: לולאות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>קובץ: <code>exercises/05-loops.ts</code></li>
+        <li>לכל תרגיל רשום באיזו לולאה כדאי להשתמש</li>
+        <li>בדקו גם מקרי קצה: מערך ריק, אובייקט ריק</li>
+        <li>לולאה <b>מקוננת</b> = לולאה בתוך לולאה: על כל דפדפן, הפנימית עוברת על כל מערכות ההפעלה (2 × 2 = 4 הרצות)</li>
+      </ul>
+      <pre class="lang-bash">
+        npm run exercise -- 01 05
+        npm run solution -- 01 05   # אחרי שניסיתם!
+      </pre>
+    </div>
+    <table>
+      <tr><th>#</th><th>תרגיל</th></tr>
+      <tr><td>1</td><td><code>countByStatus</code> (for...of)</td></tr>
+      <tr><td>2</td><td><code>findFirstFailure</code> (for + break)</td></tr>
+      <tr><td>3</td><td><code>describeConfig</code> (for...in)</td></tr>
+      <tr><td>4</td><td><code>attemptsUntilSuccess</code> (while)</td></tr>
+      <tr><td>5</td><td><code>buildRunMatrix</code> (מקוננת)</td></tr>
+      <tr><td>6</td><td><code>longestFailStreak</code> (בונוס)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 6 -->
+<section class="slide section">
+  <div class="badge">חלק 6</div>
+  <h1>Node.js ו-NPM</h1>
+  <p class="subtitle">package.json, סקריפטים, ארגומנטים ומשתני סביבה</p>
+</section>
+
+<section class="slide">
+  <h2>Node.js, NPM ו-package.json</h2>
+  <div class="flow">
+    <div class="step"><b>package.json</b>רשימת התלויות והסקריפטים</div><div class="arrow">←</div>
+    <div class="step y"><b>npm install</b>מוריד את החבילות</div><div class="arrow">←</div>
+    <div class="step"><b>node_modules/</b>החבילות (לא נכנס לגיט!)</div><div class="arrow">←</div>
+    <div class="step g"><b>npm run / npx</b>מריצים את הכלים</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li><b>Node.js</b> מריץ JS מחוץ לדפדפן · <b>NPM</b> – מנהל החבילות שלו</li>
+        <li><code>npm init -y</code> – יצירת <code>package.json</code> לפרויקט חדש</li>
+        <li><code>npm install -D &lt;pkg&gt;</code> – הוספת כלי ל-<code>devDependencies</code></li>
+        <li><code>npm run &lt;name&gt;</code> – הרצת סקריפט. מה שאחרי <code>--</code> עובר אליו כארגומנטים</li>
+        <li><code>npx &lt;tool&gt;</code> – הרצת כלי מתוך הפרויקט</li>
+        <li><code>^5.9.0</code> = 5.9.0 ומעלה באותה גרסה ראשית; המדויקות ב-<code>package-lock.json</code></li>
+      </ul>
+    </div>
+    <pre class="lang-json sm">
+      {
+        "name": "qa-automation-ts-course",
+        "type": "module",
+        "scripts": {
+          "typecheck": "tsc --noEmit",
+          "exercise": "node scripts/run-exercise.mjs",
+          "solution": "node scripts/run-exercise.mjs --solutions"
+        },
+        "devDependencies": {
+          "@types/node": "^22.10.0",
+          "tsx": "^4.19.0",
+          "typescript": "^5.9.0"
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מודולים מובנים של Node: קריאת קובץ</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>Node מגיע עם מודולים מובנים: <code>node:fs</code> (קבצים), <code>node:os</code> (מערכת)</li>
+        <li><code>import</code> – מביא כלי ממודול אחר</li>
+        <li><code>readFileSync</code> – קורא קובץ כטקסט</li>
+        <li><code>JSON.parse</code> – הופך טקסט JSON לאובייקט</li>
+      </ul>
+      <div class="note small">הרצה מתיקיית השורש של הפרויקט – שם נמצא <code>package.json</code></div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        import { readFileSync } from "node:fs";
+        const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
+          name: string;
+          scripts: Record&lt;string, string&gt;;
+        };
+        console.log("Project:", pkg.name);
+        for (const name in pkg.scripts) {
+          console.log(`  npm run ${name}`);
+        }
+      </pre>
+      <pre class="out sm">
+        Project: qa-automation-ts-course
+          npm run typecheck
+          npm run exercise
+          npm run solution
+          npm run solutions
+          npm run examples
+          npm run mock-api
+          npm run report
+          npm run ci
+          npm run lectures
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>process.argv – ארגומנטים משורת הפקודה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כך מעבירים לבדיקות "באיזו סביבה לרוץ" בלי לשנות קוד</li>
+        <li><code>process.argv</code> – מערך של כל מילות הפקודה</li>
+      </ul>
+      <table class="small">
+        <tr><th>אינדקס</th><th>תוכן</th></tr>
+        <tr><td>0</td><td>הנתיב של node</td></tr>
+        <tr><td>1</td><td>הנתיב של הקובץ שרץ</td></tr>
+        <tr><td>2 ואילך</td><td><b>הארגומנטים שלנו</b></td></tr>
+      </table>
+      <div class="note small">לכן <code>slice(2)</code> – מדלגים על שני הראשונים</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const args = process.argv.slice(2);
+        console.log("all argv:", process.argv.length, "items");
+        console.log("our args:", args);
+
+        const envArg = args.find((a) =&gt; a.startsWith("--env="));
+        const env = envArg ? envArg.split("=")[1] : "dev";
+        const headless = args.includes("--headless");
+        console.log({ env, headless });
+      </pre>
+      <pre class="out sm">
+        $ npx tsx run.ts --env=staging --headless
+        all argv: 4 items
+        our args: [ '--env=staging', '--headless' ]
+        { env: 'staging', headless: true }
+
+        $ npx tsx run.ts
+        all argv: 2 items
+        our args: []
+        { env: 'dev', headless: false }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>process.env – משתני סביבה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כך ה-CI מעביר לבדיקות הגדרות, כתובות ו<b>סודות</b> – בלי לכתוב אותם בקוד</li>
+        <li>הערך תמיד <code>string</code> או <code>undefined</code> (אם לא הוגדר)</li>
+        <li><code>??</code> – ברירת מחדל · <code>Number()</code> – המרה למספר</li>
+      </ul>
+      <div class="warn small">סיסמאות וטוקנים – רק במשתני סביבה, אף פעם לא בקוד שעולה לגיט</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+        const retries = Number(process.env.RETRIES ?? "2");
+
+        console.log("BASE_URL:", baseUrl);
+        console.log("RETRIES:", retries, typeof retries);
+        console.log("raw:", process.env.RETRIES);
+      </pre>
+      <pre class="out sm">
+        $ npx tsx env.ts
+        BASE_URL: http://localhost:3000
+        RETRIES: 2 number
+        raw: undefined
+
+        $ BASE_URL=https://qa.example.com RETRIES=0 npx tsx env.ts
+        BASE_URL: https://qa.example.com
+        RETRIES: 0 number
+        raw: 0
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: Node.js ו-NPM</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>קובץ: <code>exercises/06-node-and-npm.ts</code></li>
+        <li>מקבלים <code>argv</code> / <code>env</code> / package.json כקלט – בלי להריץ באמת</li>
+        <li>זכרו: <code>"0"</code> ממשתנה סביבה הוא 0, לא ברירת המחדל (<code>??</code>!)</li>
+      </ul>
+      <pre class="lang-bash">
+        npm run exercise -- 01 06
+        npm run solution -- 01 06   # אחרי שניסיתם!
+      </pre>
+    </div>
+    <table>
+      <tr><th>#</th><th>תרגיל</th></tr>
+      <tr><td>1</td><td><code>getUserArgs</code></td></tr>
+      <tr><td>2</td><td><code>hasFlag</code></td></tr>
+      <tr><td>3</td><td><code>getArgValue</code> – <code>--name=value</code></td></tr>
+      <tr><td>4</td><td><code>readEnvConfig</code></td></tr>
+      <tr><td>5</td><td><code>listNpmCommands</code></td></tr>
+      <tr><td>6</td><td><code>findMissingDevDeps</code> (בונוס)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ סיום -->
+<section class="slide practice">
+  <h2>תרגול – שיעור 1</h2>
+  <ul>
+    <li>הריצו את כל 6 הדוגמאות ב-<code>lessons/01-intro-types-flow/examples</code> ושנו ערכים כדי לראות מה קורה</li>
+    <li>השלימו את 6 תרגילי הנושאים (<code>npm run exercise -- 01 01</code> עד <code>01 06</code>)</li>
+    <li>פתחו את <code>exercises/exercises.ts</code> והשלימו את 6 תרגילי הסיכום:
+      <ul>
+        <li><code>classifyStatus</code> · <code>totalDuration</code> · <code>countBySeverity</code></li>
+        <li><code>buildTestIds</code> · <code>isValidPassword</code> · <code>resolveTimeout</code> (בונוס)</li>
+      </ul>
+    </li>
+    <li>בדקו את עצמכם עד שכל השורות תואמות ל-<code>=&gt; expected:</code></li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 01        # תרגילי הסיכום + בדיקה עצמית
+    npm run solution -- 01        # הפתרון של תרגילי הסיכום
+    npm run solution -- 01 03     # הפתרון של נושא אחד
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>סיכום: כל השיעור בשקף אחד</h2>
+  <div class="grid3">
+    <div class="card"><h3>1 · TypeScript</h3><p>JS + טיפוסים. <code>tsx</code> מריץ, <code>tsc</code> בודק. שגיאות נתפסות בעורך</p></div>
+    <div class="card"><h3>2 · טיפוסים</h3><p><code>const</code> כברירת מחדל · מערך, אובייקט, enum · <code>unknown</code> ולא <code>any</code></p></div>
+    <div class="card"><h3>3 · אופרטורים</h3><p><code>===</code> תמיד · <code>??</code> לברירות מחדל · <code>?.</code> לגישה בטוחה · <code>? :</code></p></div>
+    <div class="card"><h3>4 · תנאים</h3><p>if לטווחים, switch לערכים קבועים (עם <code>break</code>!) · 6 ערכים falsy</p></div>
+    <div class="card"><h3>5 · לולאות</h3><p><code>for...of</code> למערכים · <code>for...in</code> לאובייקטים · <code>while</code> ל-retry · <code>break</code> / <code>continue</code></p></div>
+    <div class="card"><h3>6 · Node ו-NPM</h3><p>Node מריץ, NPM מנהל חבילות · <code>npm run</code> · <code>process.argv</code> · <code>process.env</code></p></div>
+  </div>
+  <p><b>שגרת העבודה בתרגול:</b></p>
+  <div class="flow">
+    <div class="step"><b>1. כותבים</b>משלימים TODO ב-VS Code</div><div class="arrow">←</div>
+    <div class="step y"><b>2. מריצים</b><code>npm run exercise</code></div><div class="arrow">←</div>
+    <div class="step g"><b>3. משווים</b>כל שורה זהה ל-<code>expected</code>?</div><div class="arrow">←</div>
+    <div class="step r"><b>4. תקועים?</b><code>npm run solution</code></div>
+  </div>
+  <div class="note">בשיעור הבא: <b>פונקציות</b>, <b>Arrow Functions</b> ומחלקות ראשונות (<b>classes</b>)</div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

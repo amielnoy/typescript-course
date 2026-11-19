@@ -1,0 +1,1228 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 10 – תחקור בדיקות, ניתוח תוצאות ועולם ה-CI/CD</title>
+  <link rel="stylesheet" href="theme.css" />
+  <style>
+    .mini-report { direction: ltr; text-align: left; border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; font-family: Arial, sans-serif; background: #fff; }
+    .mini-report h4 { margin: 0 0 4px; font-size: 22px; color: #1f2328; }
+    .mini-report .gen { font-size: 14px; color: #57606a; }
+    .mini-report .cards { display: flex; gap: 10px; margin: 12px 0; }
+    .mini-report .c { border: 1px solid #d0d7de; border-radius: 8px; padding: 8px 14px; font-size: 15px; min-width: 92px; }
+    .mini-report .c b { display: block; font-size: 26px; color: inherit; }
+    .mini-report table { font-size: 15px; }
+    .mini-report th { background: #f6f8fa; color: #1f2328; text-align: left; padding: 6px 10px; }
+    .mini-report td { padding: 6px 10px; }
+    .mini-report .badge { color: #fff; border-radius: 12px; padding: 2px 10px; font-size: 12px; }
+    .mini-report .err { color: #cf222e; font-family: Menlo, monospace; font-size: 13px; }
+    .mini-report .tags { color: #57606a; font-size: 12px; }
+    .pyramid { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .pyramid div { border-radius: 10px; padding: 10px 14px; text-align: center; font-size: 19px; border: 2px solid; }
+    .md-table { direction: ltr; text-align: left; font-size: 16px; }
+    .md-table th { background: #f6f8fa; color: #1f2328; text-align: left; }
+  </style>
+</head>
+<body data-lesson="10">
+
+<!-- ===================== פתיחה ===================== -->
+<section class="slide title">
+  <div class="badge">שיעור 10</div>
+  <h1>תחקור בדיקות, ניתוח תוצאות ועולם ה-CI/CD</h1>
+  <p class="subtitle">Screenshots, Logs, Reports + CI/CD Concepts</p>
+  <div class="chips"><span>Logs</span><span>Screenshots &amp; Evidence</span><span>Reporters</span><span>JUnit / HTML</span><span>CI</span><span>CD</span><span>Pipeline</span></div>
+  <div class="meta">1.1 · ZOOM · תיקייה בפרויקט: lessons/10-ci-cd-logs-reports</div>
+</section>
+
+<section class="slide">
+  <h2>סדר היום</h2>
+  <table>
+    <tr><th>חלק</th><th>נושא</th><th>קובץ בפרויקט</th></tr>
+    <tr><td>פתיחה</td><td>אנטומיה של בדיקה שנכשלה: הודעה, expected/actual, stack trace</td><td>–</td></tr>
+    <tr><td>1</td><td><b>Logger</b> – רמות, timestamp, context, סינון וסודות</td><td><code>examples/01-logger.ts</code></td></tr>
+    <tr><td>2</td><td><b>Reporters</b> – spec, TAP, JUnit XML ואיך ה-CI קורא אותם</td><td><code>examples/02-built-in-reporters.ts</code></td></tr>
+    <tr><td>3</td><td><b>ראיות בכישלון</b> – צילום מסך, HTML, תשובת API, לוג</td><td><code>examples/03-evidence-on-failure.ts</code></td></tr>
+    <tr><td>4</td><td><b>Mini Runner ודוחות</b> – JSON, JUnit, HTML, Step Summary</td><td><code>examples/04-mini-runner-with-reports.ts</code></td></tr>
+    <tr><td>5</td><td><b>עולם ה-CI/CD</b> – Pipeline, Quality Gates, סביבות</td><td>–</td></tr>
+  </table>
+  <div class="note">אחרי כל חלק יש תרגול קצר עם בדיקה עצמית: <code>npm run exercise -- 10 NN</code></div>
+</section>
+
+<section class="slide">
+  <h2>בדיקה נכשלה ב-CI בשלוש בלילה. מה עכשיו?</h2>
+  <ul>
+    <li>אין מסך, אין דיבאגר – נשארו רק <b>הראיות</b>: 📝 לוגים · 📸 צילומי מסך / Trace · 📦 תשובות השרת · 📊 דוח</li>
+    <li>המטרה: לענות מהר על <b>באג במוצר? באג בבדיקה? בעיית סביבה?</b> – לכל תשובה פעולה אחרת</li>
+  </ul>
+  <div class="grid3">
+    <div class="card bad"><h3>🐞 באג במוצר</h3>
+      <p>השרת מחזיר <code>role: "tester"</code> למשתמש שאמור להיות admin, אחרי שינוי בהרשאות.</p>
+      <p><b>פעולה:</b> פותחים באג למפתחים, מצרפים את הראיות.</p></div>
+    <div class="card"><h3>🧪 באג בבדיקה</h3>
+      <p>הבדיקה מצפה ל-3 משתמשים, אבל בדיקה אחרת יצרה משתמש רביעי באותה סביבה.</p>
+      <p><b>פעולה:</b> מתקנים את הבדיקה / את ניהול הנתונים.</p></div>
+    <div class="card"><h3>🌐 בעיית סביבה</h3>
+      <p><code>ECONNREFUSED</code> או timeout – השרת לא עלה, שירות חיצוני נפל, DNS.</p>
+      <p><b>פעולה:</b> מטפלים בסביבה ומריצים שוב. לא פותחים באג במוצר.</p></div>
+  </div>
+  <div class="note">את ההחלטה מקבלים <b>רק מתוך הראיות</b>. ראיות חלשות = שעות של ניחושים, או באג שנפתח בטעות למפתחים.</div>
+</section>
+
+<section class="slide">
+  <h2>אנטומיה של בדיקה שנכשלה – הקוד</h2>
+  <div class="cols" style="grid-template-columns: 0.6fr 1.4fr">
+    <div class="stack">
+      <ul>
+        <li>3 בדיקות על משתמשי ה-Mock API</li>
+        <li>בדיקה 1 תעבור, 2 ו-3 ייכשלו בכוונה</li>
+        <li>ב-assert השני הוספנו <b>הודעה משלנו</b></li>
+        <li>ה-assert של בדיקה 2 נמצא בשורה <b>23</b> בקובץ</li>
+        <li>הרצה:<br /><code>node --import tsx --test demo/roles.test.ts</code></li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      async function getUser(id: number): Promise&lt;User&gt; {
+        const res = await fetch(`${api.url}/users/${id}`);
+        return (await res.json()) as User;
+      }
+
+      describe("Users roles", () =&gt; {
+        it("user 1 is admin", async () =&gt; {
+          const user = await getUser(1);
+          assert.equal(user.role, "admin");
+        });
+        it("user 2 is admin", async () =&gt; {
+          const user = await getUser(2);
+          assert.equal(user.role, "admin", "user 2 should be admin"); // line 23
+        });
+        it("user 3 has full profile", async () =&gt; {
+          const user = await getUser(3);
+          assert.deepEqual(user, { id: 3, name: "Noa Mizrahi", role: "admin" });
+        });
+      });
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הפלט – שורת הסיכום מספרת מה נכשל</h2>
+  <div class="cols">
+    <pre class="out">
+      ▶ Users roles
+        ✔ user 1 is admin (11.670208ms)
+        ✖ user 2 is admin (2.406625ms)
+        ✖ user 3 has full profile (3.006167ms)
+      ✖ Users roles (21.032416ms)
+      ℹ tests 3
+      ℹ suites 1
+      ℹ pass 1
+      ℹ fail 2
+      ℹ cancelled 0
+      ℹ skipped 0
+      ℹ todo 0
+      ℹ duration_ms 115.08375
+
+      ✖ failing tests:
+      …
+    </pre>
+    <div class="stack">
+      <ul>
+        <li><code>✔</code> עברה · <code>✖</code> נכשלה · <code>▶</code> קבוצה (describe)</li>
+        <li>בסוגריים – <b>משך הבדיקה</b>. הבדיקה הראשונה איטית יותר (חימום)</li>
+        <li>שורות <code>ℹ</code> – סיכום הריצה: כמה עברו, נכשלו, דולגו</li>
+        <li>מתחת: <code>failing tests</code> – פירוט מלא של כל כישלון</li>
+        <li>exit code של הריצה: <b>1</b> – ה-CI יסמן את השלב באדום</li>
+      </ul>
+      <div class="tip">קוראים מלמעלה למטה: קודם <b>מה</b> נכשל, אחר כך <b>למה</b>.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>קריאת הודעת השגיאה: הודעה · expected/actual · stack trace</h2>
+  <pre class="out sm">
+    ✖ user 2 is admin (2.406625ms)
+      AssertionError [ERR_ASSERTION]: user 2 should be admin
+
+      'tester' !== 'admin'
+
+          at TestContext.&lt;anonymous&gt; (…/demo/roles.test.ts:23:12)
+          at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+          …
+        actual: 'tester',
+        expected: 'admin',
+        operator: 'strictEqual',
+        …
+  </pre>
+  <div class="grid3">
+    <div class="card"><h3>1. ההודעה</h3><p><code>user 2 should be admin</code> – ההודעה שאנחנו כתבנו. אומרת <b>מה ציפינו</b> במילים.</p></div>
+    <div class="card"><h3>2. actual מול expected</h3><p><code>'tester' !== 'admin'</code> – קיבלנו tester, ציפינו ל-admin. זו העובדה החשובה ביותר.</p></div>
+    <div class="card"><h3>3. stack trace</h3><p>השורה הראשונה <b>מהקוד שלנו</b>: <code>roles.test.ts:23:12</code> (שורה 23, עמודה 12). שורות <code>node:internal</code> – מדלגים.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>השוואת אובייקטים: קריאת diff של deepEqual</h2>
+  <div class="cols">
+    <pre class="out">
+      ✖ user 3 has full profile (3.006167ms)
+        AssertionError [ERR_ASSERTION]: Expected
+        values to be strictly deep-equal:
+        + actual - expected
+
+          {
+        +   email: 'noa@example.com',
+            id: 3,
+            name: 'Noa Mizrahi',
+        +   role: 'developer'
+        -   role: 'admin'
+          }
+
+            at TestContext.&lt;anonymous&gt; (…:28:12)
+        …
+    </pre>
+    <div class="stack">
+      <ul>
+        <li><code>+</code> שורה שקיימת רק <b>בתוצאה בפועל</b> (actual)</li>
+        <li><code>-</code> שורה שקיימת רק <b>בציפייה</b> (expected)</li>
+        <li>בלי סימן – זהה בשניהם</li>
+        <li><code>email</code> – השרת מחזיר שדה ששכחנו בציפייה</li>
+        <li><code>role</code> – ציפינו ל-admin, קיבלנו developer</li>
+      </ul>
+      <div class="warn">כאן <b>הבדיקה</b> שגויה (ציפייה לא מלאה), לא המוצר. את זה מבינים רק מה-diff.</div>
+    </div>
+  </div>
+  <p class="small muted">(שבירת השורה של הודעת השגיאה בפלט היא לצורך התצוגה בשקף בלבד)</p>
+</section>
+
+<section class="slide">
+  <h2>טעות נפוצה: assertion שלא מספר מה התקבל</h2>
+  <div class="card bad"><h3>❌ <code>assert.ok</code> על ביטוי – רק "false"</h3>
+    <div class="cols" style="grid-template-columns: 0.7fr 1.3fr">
+      <pre class="lang-ts sm">
+        assert.ok(user.role === "admin");
+      </pre>
+      <pre class="out sm">
+        AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+          assert.ok(user.role === "admin")
+        …
+          actual: false,
+          expected: true,
+      </pre>
+    </div>
+  </div>
+  <div class="card good"><h3>✅ <code>assert.equal</code> + הודעה – רואים את הערך האמיתי</h3>
+    <div class="cols" style="grid-template-columns: 0.7fr 1.3fr">
+      <pre class="lang-ts sm">
+        assert.equal(user.role, "admin",
+          `user ${user.id} role`);
+      </pre>
+      <pre class="out sm">
+        AssertionError [ERR_ASSERTION]: user 2 role
+
+        'tester' !== 'admin'
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== חלק 1: Logger ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>Logger – לוגים שמספרים סיפור</h1>
+  <p class="subtitle">רמות, timestamp, context, סינון – ומה אסור לרשום · examples/01-logger.ts</p>
+</section>
+
+<section class="slide">
+  <h2>אנטומיה של שורת לוג טובה</h2>
+  <pre class="out sm">
+    [2026-11-10T08:18:43.809Z] [ERROR] [suite:cart] Assertion failed: expected 3 items, got 2 {"cartId":"c-981"}
+  </pre>
+  <table>
+    <tr><th>חלק בשורה</th><th>עונה על</th><th>למה זה חשוב בתחקור</th></tr>
+    <tr><td><code>[2026-11-10T08:18:43.809Z]</code></td><td><b>מתי?</b></td><td>סדר אירועים, השוואה ללוגים של השרת (ISO, UTC)</td></tr>
+    <tr><td><code>[ERROR]</code></td><td><b>כמה חמור?</b></td><td>סינון: רוצים לראות קודם רק שגיאות</td></tr>
+    <tr><td><code>[suite:cart]</code></td><td><b>איפה?</b></td><td>איזו סוויטה/בדיקה – כשרצות עשרות במקביל</td></tr>
+    <tr><td><code>Assertion failed: …</code></td><td><b>מה?</b></td><td>תיאור הפעולה או הכישלון, במילים</td></tr>
+    <tr><td><code>{"cartId":"c-981"}</code></td><td><b>עם אילו נתונים?</b></td><td>מזהים לשחזור: מספר עגלה, משתמש, הזמנה</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>רמות לוג – מתי משתמשים בכל אחת</h2>
+  <table>
+    <tr><th>רמה</th><th>מתי</th><th>דוגמה מעולם הבדיקות</th><th>מוצגת ב-CI?</th></tr>
+    <tr><td><code>debug</code></td><td>פרטים קטנים, רק כשמחפשים באג</td><td>Filling username field</td><td>רק עם <code>LOG_LEVEL=debug</code></td></tr>
+    <tr><td><code>info</code></td><td>הצעדים העיקריים של הבדיקה</td><td>POST /api/login → 200 (143ms)</td><td>כן (ברירת מחדל)</td></tr>
+    <tr><td><code>warn</code></td><td>משהו חשוד, אבל הבדיקה ממשיכה</td><td>Response slower than expected: 2300ms</td><td>כן</td></tr>
+    <tr><td><code>error</code></td><td>כישלון / חריגה</td><td>Assertion failed: expected 3 items, got 2</td><td>תמיד</td></tr>
+  </table>
+  <div class="note">הרמות <b>מסודרות</b>: debug &lt; info &lt; warn &lt; error. בוחרים "רמה מינימלית" – וכל מה שמתחתיה לא מודפס.</div>
+  <div class="tip">כלל אצבע: אם הבדיקה עברה – מספיק לראות info. אם נכשלה – רוצים debug.</div>
+</section>
+
+<section class="slide">
+  <h2>לוג טוב</h2>
+  <pre class="lang-ts sm">
+    class Logger {
+      constructor(private context: string, private minLevel: Level = levelFromEnv("info"), private filePath?: string) {}
+      child(sub: string) { return new Logger(`${this.context}:${sub}`, this.minLevel, this.filePath); }
+      info(msg: string, data?: unknown) { this.write("info", msg, data); }
+      error(msg: string, data?: unknown) { this.write("error", msg, data); }
+
+      private write(level: Level, msg: string, data?: unknown) {
+        if (ORDER[level] &lt; ORDER[this.minLevel]) return;
+        const line = `[${new Date().toISOString()}] [${level.toUpperCase()}] [${this.context}] ${msg}`
+                   + (data !== undefined ? ` ${JSON.stringify(data)}` : "");
+        console.log(line);
+        if (this.filePath) appendFileSync(this.filePath, line + "\n");
+      }
+    }
+
+    const log = new Logger("suite", "debug", "reports/logs/run.log").child("cart");
+    log.error("Assertion failed: expected 3 items, got 2", { cartId: "c-981" });
+    // [2026-01-01T02:14:07.112Z] [ERROR] [suite:cart] Assertion failed: ... {"cartId":"c-981"}
+  </pre>
+  <div class="grid2">
+    <ul class="small">
+      <li><b>מתי</b> – timestamp ב-ISO</li>
+      <li><b>כמה חמור</b> – debug / info / warn / error</li>
+      <li><b>איפה</b> – context (סוויטה:בדיקה)</li>
+    </ul>
+    <ul class="small">
+      <li><b>מה</b> – הודעה + נתונים</li>
+      <li>רמת לוג דרך <code>LOG_LEVEL</code></li>
+      <li>לא לרשום סיסמאות וטוקנים!</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הרצת הדוגמה – וחיפוש בקובץ הלוג</h2>
+  <pre class="lang-bash sm">
+    npx tsx lessons/10-ci-cd-logs-reports/examples/01-logger.ts
+  </pre>
+  <pre class="out sm">
+    [2026-11-10T08:18:43.808Z] [INFO ] [suite] Starting regression suite {"env":"local","ci":false}
+    [2026-11-10T08:18:43.809Z] [DEBUG] [suite:login] Filling username field
+    [2026-11-10T08:18:43.809Z] [INFO ] [suite:login] POST /api/login {"status":200,"durationMs":143}
+    [2026-11-10T08:18:43.809Z] [WARN ] [suite:cart] Response slower than expected {"durationMs":2300,"thresholdMs":2000}
+    [2026-11-10T08:18:43.809Z] [ERROR] [suite:cart] Assertion failed: expected 3 items, got 2 {"cartId":"c-981"}
+    [2026-11-10T08:18:43.809Z] [INFO ] [quiet] this will be printed
+
+    Log file written to reports/logs/example-run.log
+  </pre>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>ה-context של <code>root.child("login")</code> הוא <code>suite:login</code> – לוגר "בן" לכל בדיקה</li>
+      <li><code>quiet</code> ברמת info – ה-debug שלו <b>סונן</b></li>
+      <li>ב-CI הלוג הוא קובץ (artifact) של אלפי שורות – בזכות ה-context מסננים <b>רק את הבדיקה שנכשלה</b></li>
+    </ul>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        grep "suite:cart" reports/logs/example-run.log
+      </pre>
+      <pre class="out sm">
+        [2026-11-10T08:18:43.809Z] [WARN ] [suite:cart] Response slower …
+        [2026-11-10T08:18:43.809Z] [ERROR] [suite:cart] Assertion failed …
+      </pre>
+      <p class="small muted">ב-Windows PowerShell: <code>Select-String "suite:cart" file.log</code></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סינון לפי רמה עם <code>LOG_LEVEL</code></h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      // demo/filter.ts (Logger from example 01)
+      const log = new Logger("checkout"); // level: LOG_LEVEL
+      log.debug("Clicked 'Pay' button");
+      log.info("POST /orders", { status: 201 });
+      log.warn("Payment retry", { attempt: 2 });
+      log.error("Order not found", { orderId: "o-17" });
+    </pre>
+    <div class="stack">
+      <ul>
+        <li>ברירת המחדל בלוגר: <code>levelFromEnv("info")</code> – הערך מ-<code>LOG_LEVEL</code>, ואם הוא חסר או לא מוכר: <code>info</code></li>
+        <li>הסינון: <code>if (ORDER[level] &lt; ORDER[min]) return;</code></li>
+        <li><b>אותו קוד</b> – כמות פרטים שונה, בלי לשנות שורה</li>
+      </ul>
+    </div>
+  </div>
+  <pre class="out sm">
+    $ npx tsx demo/filter.ts
+    [2026-11-10T08:20:50.053Z] [INFO ] [checkout] POST /orders {"status":201}
+    [2026-11-10T08:20:50.054Z] [WARN ] [checkout] Payment retry {"attempt":2}
+    [2026-11-10T08:20:50.054Z] [ERROR] [checkout] Order not found {"orderId":"o-17"}
+    $ LOG_LEVEL=warn npx tsx demo/filter.ts
+    [2026-11-10T08:20:50.689Z] [WARN ] [checkout] Payment retry {"attempt":2}
+    [2026-11-10T08:20:50.690Z] [ERROR] [checkout] Order not found {"orderId":"o-17"}
+    $ LOG_LEVEL=debug npx tsx demo/filter.ts
+    [2026-11-10T08:20:50.380Z] [DEBUG] [checkout] Clicked 'Pay' button
+    …
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>מה <b>לא</b> רושמים בלוג: סיסמאות, טוקנים, מידע אישי</h2>
+  <pre class="lang-ts sm">
+    const SECRET_KEYS = ["password", "token", "authorization"];
+    function redact(data: Record&lt;string, unknown&gt;): Record&lt;string, unknown&gt; {
+      const copy: Record&lt;string, unknown&gt; = {};
+      for (const [key, value] of Object.entries(data)) {
+        copy[key] = SECRET_KEYS.includes(key.toLowerCase()) ? "***" : value;
+      }
+      return copy;
+    }
+    const log = new Logger("login");
+    const body = { username: "dana", password: "S3cret!" };
+    log.info("POST /login (bad)", body);
+    log.info("POST /login (good)", redact(body));
+    log.info("headers", redact({ Authorization: "Bearer eyJhbGci", Accept: "json" }));
+  </pre>
+  <pre class="out sm">
+    [2026-11-10T08:20:59.311Z] [INFO ] [login] POST /login (bad) {"username":"dana","password":"S3cret!"}
+    [2026-11-10T08:20:59.312Z] [INFO ] [login] POST /login (good) {"username":"dana","password":"***"}
+    [2026-11-10T08:20:59.312Z] [INFO ] [login] headers {"Authorization":"***","Accept":"json"}
+  </pre>
+  <div class="warn">GitHub מסתיר בלוג רק ערכים שהוגדרו כ-secrets. טוקן שהתקבל בזמן הריצה – לא יוסתר!</div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות בלוגים</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ לא כך</h3>
+      <ul>
+        <li><code>console.log("here 2")</code> – אין זמן, אין context, אין משמעות</li>
+        <li>הכול ב-info → אלפי שורות, השגיאה "נבלעת"</li>
+        <li>הדפסת body שלם של 5MB בכל בקשה</li>
+        <li><code>catch {}</code> שרושם רק <code>"error"</code> וממשיך</li>
+        <li>סיסמה / טוקן / תעודת זהות בלוג</li>
+      </ul>
+    </div>
+    <div class="card good"><h3>✅ כך</h3>
+      <ul>
+        <li>הודעה שמתארת פעולה + נתונים מזהים</li>
+        <li>debug לפרטים, info לצעדים, error לכישלון</li>
+        <li>רק השדות הרלוונטיים (status, id, durationMs)</li>
+        <li>לרשום את <code>err.message</code> – ולזרוק הלאה</li>
+        <li>להעביר נתונים רגישים דרך <code>redact</code></li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">שאלת המבחן: "אם הבדיקה הזו תיכשל בלילה – האם הלוג לבד יספיק לי להבין למה?"</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Logger</h2>
+  <ul>
+    <li>פתחו את <code>lessons/10-ci-cd-logs-reports/exercises/01-logger.ts</code></li>
+    <li><code>childContext</code> – context של לוגר "בן" · <code>countByLevel</code> – כמה שורות מכל רמה</li>
+    <li><code>parseLogLine</code> – פענוח שורת לוג · <code>filterLogs</code> – סינון לתחקור</li>
+    <li><code>MemoryLogger</code> – לוגר שאפשר לבדוק · בונוס: <code>redactSecrets</code></li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 10 01        # בדיקה עצמית
+    npm run solution -- 10 01        # הפתרון – רק אחרי שניסיתם
+  </pre>
+  <div class="note">כל שורה בבדיקה העצמית מדפיסה את התוצאה שלכם, אחריה <code>=&gt; expected:</code> והערך הצפוי. <code>✋ TODO</code> = תרגיל שעוד לא פתרתם.</div>
+</section>
+
+<!-- ===================== חלק 2: Reporters ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>Reporters – אותן בדיקות, פורמטים שונים</h1>
+  <p class="subtitle">spec · TAP · JUnit XML · examples/02-built-in-reporters.ts</p>
+</section>
+
+<section class="slide">
+  <h2>מה זה Reporter? – ו-Reporters מובנים ב-node:test</h2>
+  <p>ה-runner מריץ ואוסף תוצאות. ה-<b>Reporter</b> מחליט <b>איך להציג/לשמור</b> אותן – לבני אדם או למכונות (CI).</p>
+  <table>
+    <tr><th>Reporter</th><th>נראה כמו</th><th>מי קורא</th><th>מתי משתמשים</th></tr>
+    <tr><td><code>spec</code></td><td>עץ עם ✔ / ✖ וזמנים</td><td>בני אדם</td><td>טרמינל, לוג של ה-CI (ברירת מחדל)</td></tr>
+    <tr><td><code>dot</code></td><td><code>.XXX</code> – תו לכל בדיקה</td><td>בני אדם</td><td>הרבה בדיקות, פלט קצר</td></tr>
+    <tr><td><code>tap</code></td><td><code>ok 1 - …</code> / <code>not ok 2 - …</code></td><td>כלים</td><td>פורמט טקסט סטנדרטי, ותיק</td></tr>
+    <tr><td><code>junit</code></td><td>XML: <code>&lt;testsuite&gt;</code>, <code>&lt;testcase&gt;</code></td><td>מערכות CI</td><td>GitHub, Jenkins, GitLab, Azure DevOps</td></tr>
+  </table>
+  <pre class="lang-bash sm">
+    node --import tsx --test \
+      --test-reporter=spec  --test-reporter-destination=stdout \
+      --test-reporter=junit --test-reporter-destination=reports/junit.xml \
+      lessons/10-ci-cd-logs-reports/examples/sample-tests/users-api.test.ts
+    echo $?      # אפס = הכול עבר · אחר = כישלון
+  </pre>
+  <ul class="small">
+    <li>כל <code>--test-reporter</code> מקבל <code>--test-reporter-destination</code> משלו (לפי הסדר) · הדוגמה <code>examples/02-built-in-reporters.ts</code> מריצה בדיוק את זה</li>
+    <li><b>exit code</b> הוא מה שה-CI באמת בודק – לא הטקסט שעל המסך · גם Playwright: <code>reporter: [['list'], ['html'], ['junit']]</code></li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>spec לבני אדם · TAP (Test Anything Protocol) לכלים</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="out sm">
+        ▶ Users API
+          ✔ GET /health returns ok (13.691584ms)
+          ✔ GET /users returns a non-empty list (2.076166ms)
+          …
+          ﹣ DELETE /users/1 as non-admin returns 403
+            (not implemented yet) (0.078291ms) # SKIP
+        ✔ Users API (24.384958ms)
+        ℹ tests 5
+        ℹ suites 1
+        ℹ pass 4
+        ℹ fail 0
+        ℹ cancelled 0
+        ℹ skipped 1
+        …
+      </pre>
+      <ul class="small">
+        <li><code>▶</code> describe · <code>✔</code> + משך · שורות <code>ℹ</code> – הסיכום</li>
+        <li><code>﹣ … # SKIP</code> – <code>it.skip</code>: לא רצה, לא נכשלה → exit <b>0</b></li>
+        <li>⚠️ skipped הוא לא "עבר" – דילוג של חודשים = כיסוי שאבד</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash sm">
+        node --import tsx --test \
+          --test-reporter=tap demo/roles.test.ts
+      </pre>
+      <pre class="out sm">
+        TAP version 13
+        # Subtest: Users roles
+            …
+            # Subtest: user 2 is admin
+            not ok 2 - user 2 is admin
+              ---
+              …
+              error: |-
+                user 2 should be admin
+                …
+              expected: 'admin'
+              actual: 'tester'
+        …
+      </pre>
+      <ul class="small">
+        <li><code>ok N</code> / <code>not ok N</code> · <code>1..3</code> – כמה בדיקות היו</li>
+        <li><code>---</code> עד <code>...</code>: פרטי YAML (<code>error</code>, <code>expected</code>, <code>actual</code>)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>JUnit XML – השפה המשותפת של מערכות ה-CI</h2>
+  <pre class="out sm">
+    &lt;?xml version="1.0" encoding="utf-8"?&gt;
+    &lt;testsuites&gt;
+      &lt;testsuite name="Users roles" time="0.020918" disabled="0" errors="0" tests="3" failures="2" skipped="0" …&gt;
+        &lt;testcase name="user 1 is admin" time="0.011381" classname="test" file="…/demo/roles.test.ts"/&gt;
+        &lt;testcase name="user 2 is admin" time="0.002479" classname="test" file="…/demo/roles.test.ts" failure="…"&gt;
+          &lt;failure type="testCodeFailure" message="user 2 should be admin&amp;#10;&amp;#10;'tester' !== 'admin'"&gt;
+            …
+          &lt;/failure&gt;
+        &lt;/testcase&gt;
+        …
+  </pre>
+  <div class="cols">
+    <ul>
+      <li><code>&lt;testsuite&gt;</code> – סיכום: <code>tests</code>, <code>failures</code>, <code>skipped</code>, <code>time</code></li>
+      <li><code>&lt;testcase&gt;</code> – בדיקה אחת: שם וזמן (בשניות)</li>
+      <li>בדיקה שעברה – תגית ריקה <code>&lt;testcase …/&gt;</code></li>
+    </ul>
+    <ul>
+      <li>נכשלה – <code>&lt;failure message="…"&gt;</code> בפנים</li>
+      <li>דולגה – <code>&lt;skipped type="skipped" message="true"/&gt;</code></li>
+      <li><code>&amp;#10;</code> = ירידת שורה (escape של XML)</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>איך מערכת CI "קוראת" JUnit</h2>
+  <div class="flow">
+    <div class="step"><b>הבדיקות רצות</b>reporter=junit</div><div class="arrow">←</div>
+    <div class="step"><b>junit.xml</b>נכתב לתיקיית reports</div><div class="arrow">←</div>
+    <div class="step y"><b>העלאה / פרסום</b>שלב ב-Pipeline</div><div class="arrow">←</div>
+    <div class="step g"><b>תצוגה</b>טאב Tests, היסטוריה, הערות ב-PR</div>
+  </div>
+  <table>
+    <tr><th>כלי CI</th><th>איך מחברים את junit.xml</th></tr>
+    <tr><td>GitHub Actions</td><td>מעלים כ-artifact, ו/או action ייעודי (למשל <code>dorny/test-reporter</code>)</td></tr>
+    <tr><td>GitLab CI</td><td><code>artifacts: reports: junit: reports/junit.xml</code></td></tr>
+    <tr><td>Jenkins</td><td>הצעד <code>junit 'reports/*.xml'</code></td></tr>
+    <tr><td>Azure DevOps</td><td>המשימה <code>PublishTestResults</code></td></tr>
+  </table>
+  <div class="tip">כל הכלים מבינים את אותו XML – לכן כמעט כל framework (node:test, Playwright, Jest, pytest) יודע לייצר אותו.</div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות עם Reporters</h2>
+  <div class="card bad"><h3>❌ התיקייה של היעד לא קיימת → הריצה קורסת</h3>
+    <div class="cols" style="grid-template-columns: 0.85fr 1.15fr">
+      <pre class="lang-bash sm">
+        node --import tsx --test \
+          --test-reporter=junit \
+          --test-reporter-destination=nope/junit.xml \
+          demo/ok.test.ts
+        echo "exit=$?"
+      </pre>
+      <pre class="out sm">
+        Error: ENOENT: no such file or directory, open 'nope/junit.xml'
+        …
+        exit=7
+      </pre>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ עוד טעויות</h3>
+      <ul>
+        <li><code>npm test || true</code> – ה-CI תמיד ירוק</li>
+        <li>ב-CI רק spec – אין קובץ לכלים</li>
+        <li>הדוח לא נשמר כשהבדיקות נכשלו</li>
+      </ul>
+    </div>
+    <div class="card good"><h3>✅ כך</h3>
+      <ul>
+        <li><code>mkdir -p reports</code> לפני הריצה</li>
+        <li>spec למסך + junit לקובץ, במקביל</li>
+        <li>להעלות דוחות עם <code>if: always()</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Reporters</h2>
+  <ul>
+    <li>פתחו את <code>lessons/10-ci-cd-logs-reports/exercises/02-built-in-reporters.ts</code></li>
+    <li>מומלץ קודם להריץ את הדוגמה ולראות פלט spec ו-junit אמיתי</li>
+    <li><code>tapLine</code> · <code>specLine</code> · <code>reporterArgs</code> – הארגומנטים ל-<code>node --test</code></li>
+    <li><code>toTap</code> – מסמך TAP מלא · <code>parseTap</code> – פענוח פלט TAP</li>
+    <li>בונוס: <code>parseJUnitFailures</code> – חילוץ כישלונות מ-JUnit XML</li>
+  </ul>
+  <pre class="lang-bash">
+    npx tsx lessons/10-ci-cd-logs-reports/examples/02-built-in-reporters.ts
+    npm run exercise -- 10 02
+  </pre>
+</section>
+
+<!-- ===================== חלק 3: ראיות ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>ראיות בכישלון</h1>
+  <p class="subtitle">Screenshot · HTML · Response · Log · examples/03-evidence-on-failure.ts</p>
+</section>
+
+<section class="slide">
+  <h2>סוגי ראיות – מה כל אחת מספרת</h2>
+  <table>
+    <tr><th>ראיה</th><th>עונה על השאלה</th><th>מתאים ל</th><th>עלות</th></tr>
+    <tr><td>📸 Screenshot</td><td>מה המשתמש ראה ברגע הכישלון?</td><td>UI</td><td>נמוכה</td></tr>
+    <tr><td>🎬 Video</td><td>מה קרה בשניות שלפני?</td><td>UI, תזמונים</td><td>גבוהה</td></tr>
+    <tr><td>🔍 Trace (Playwright)</td><td>כל צעד: DOM, רשת, קונסול – אפשר "לטייל" בזמן</td><td>UI + API</td><td>בינונית-גבוהה</td></tr>
+    <tr><td>🌐 HAR</td><td>כל בקשות הרשת של הדפדפן</td><td>UI שתלוי בשרת</td><td>בינונית</td></tr>
+    <tr><td>📦 Response (<code>.response.json</code>)</td><td>מה השרת החזיר בדיוק? (status + body)</td><td>API</td><td>נמוכה</td></tr>
+    <tr><td>🧾 HTML / DOM</td><td>איך נראה מבנה הדף? האלמנט קיים?</td><td>UI, locators</td><td>נמוכה</td></tr>
+    <tr><td>📝 Log</td><td>מה קרה לפני, באיזה סדר?</td><td>הכול</td><td>נמוכה</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>איסוף ראיות בזמן כישלון</h2>
+  <pre class="lang-ts sm">
+    // page = Playwright Page · api = mock server · dir = evidence folder of this run
+    let status = 0;
+    let body: { role?: string } = {};
+    try {
+      const res = await fetch(`${api.url}/users/2`);
+      status = res.status;
+      body = (await res.json()) as { role?: string };
+      if (body.role !== "admin") throw new Error(`expected role "admin" but got "${body.role}"`);
+    } catch (err) {
+      const slug = testName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      writeFileSync(`${dir}/${slug}.response.json`, JSON.stringify({ status, body }, null, 2));
+      writeFileSync(`${dir}/${slug}.html`, await page.content());            // DOM
+      await page.screenshot({ path: `${dir}/${slug}.png`, fullPage: true });  // 📸
+      writeFileSync(`${dir}/${slug}.log`, logLines.join("\n"));
+      throw err; // הבדיקה עדיין צריכה להיכשל!
+    }
+  </pre>
+  <div class="grid2">
+    <ul class="small">
+      <li>שמות קבצים ברורים + חותמת זמן</li>
+      <li>תיקייה אחת לכל ריצה</li>
+      <li><b>Playwright עושה את זה בשבילנו</b> ←</li>
+    </ul>
+    <ul class="small">
+      <li><code>screenshot: 'only-on-failure'</code></li>
+      <li><code>video: 'retain-on-failure'</code></li>
+      <li><code>trace: 'retain-on-failure'</code></li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הרצת הדוגמה – ומה נשמר בתיקייה</h2>
+  <pre class="lang-bash sm">
+    npx tsx lessons/10-ci-cd-logs-reports/examples/03-evidence-on-failure.ts
+  </pre>
+  <pre class="out sm">
+    [2026-11-10T08:19:20.095Z] ▶ User 2 should be admin
+    [2026-11-10T08:19:20.106Z] GET /users/2 -> 200 {"id":2,"name":"Yossi Cohen","email":"yossi@example.com","role":"tester"}
+    [2026-11-10T08:19:20.106Z] ✘ FAILED: expected role "admin" but got "tester"
+    [2026-11-10T08:19:20.109Z] 📸 screenshot skipped (run 'npx playwright install chromium' to enable)
+    [2026-11-10T08:19:20.109Z] 🗂  evidence saved in reports/evidence/2026-11-10T08-19-20-090Z
+  </pre>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-bash sm">
+        ls reports/evidence/2026-11-10T08-19-20-090Z
+      </pre>
+      <pre class="out sm">
+        user-2-should-be-admin.html
+        user-2-should-be-admin.log
+        user-2-should-be-admin.response.json
+      </pre>
+    </div>
+    <pre class="lang-json sm">
+      {
+        "status": 200,
+        "body": {
+          "id": 2,
+          "name": "Yossi Cohen",
+          "email": "yossi@example.com",
+          "role": "tester"
+        }
+      }
+    </pre>
+  </div>
+  <div class="note">התשובה עצמה (<code>.response.json</code>) מוכיחה: השרת החזיר 200 עם <code>role: "tester"</code> – זה לא timeout ולא בעיית סביבה.</div>
+</section>
+
+<section class="slide">
+  <h2>מתי לשמור ראיות? מצבי capture</h2>
+  <div class="cols" style="grid-template-columns: 1fr 370px">
+    <table>
+      <tr><th>מצב</th><th>מתי נשמר</th><th>מתאים ל</th></tr>
+      <tr><td><code>off</code></td><td>אף פעם</td><td>ריצה מקומית מהירה</td></tr>
+      <tr><td><code>on</code></td><td>תמיד, גם כשעבר</td><td>דיבאג נקודתי (כבד!)</td></tr>
+      <tr><td><code style="white-space:nowrap">only-on-failure</code></td><td>רק כשהבדיקה נכשלה</td><td>צילומי מסך – ברירת מחדל טובה</td></tr>
+      <tr><td><code style="white-space:nowrap">retain-on-failure</code></td><td>מקליטים תמיד, <b>שומרים</b> רק בכישלון</td><td>וידאו, trace</td></tr>
+      <tr><td><code style="white-space:nowrap">on-first-retry</code></td><td>רק בניסיון החוזר הראשון</td><td>trace לבדיקות flaky – זול</td></tr>
+    </table>
+    <pre class="lang-ts sm">
+      // playwright.config.ts (lesson 11)
+      export default defineConfig({
+        retries: isCI ? 2 : 0,
+        use: {
+          screenshot: "only-on-failure",
+          trace: "retain-on-failure",
+          video: "retain-on-failure",
+        },
+      });
+    </pre>
+  </div>
+  <div class="tip">הפשרה: מספיק מידע כדי לתחקר כישלון – בלי לשמור ג'יגה-בייטים של וידאו לבדיקות שעברו.</div>
+</section>
+
+<section class="slide">
+  <h2>שמות לקבצי ראיות</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      const slug = (name: string) =&gt;
+        name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const runId = new Date().toISOString()
+        .replace(/[:.]/g, "-");
+
+      const names = [
+        "User 2 should be admin",
+        "Login: wrong password (403)",
+        "Cart &gt; add 3 items",
+      ];
+      for (const name of names) {
+        const file = `${runId}/${slug(name)}.png`;
+        console.log(`reports/evidence/${file}`);
+      }
+    </pre>
+    <div class="stack">
+      <ul>
+        <li><b>slug</b> – שם הבדיקה בלי רווחים ותווים מיוחדים</li>
+        <li><b>runId</b> – תיקייה לכל ריצה, בלי <code>:</code> (אסור ב-Windows)</li>
+        <li>הסיומת מספרת את הסוג: <code>.png</code> / <code>.html</code> / <code>.response.json</code></li>
+      </ul>
+      <div class="card bad"><p>❌ <code>screenshot.png</code> – כל בדיקה דורסת את הקודמת</p></div>
+      <div class="card good"><p>✅ שם בדיקה + ריצה = קובץ שאפשר למצוא</p></div>
+    </div>
+  </div>
+  <pre class="out sm">
+    reports/evidence/2026-11-10T08-28-51-794Z/user-2-should-be-admin.png
+    reports/evidence/2026-11-10T08-28-51-794Z/login-wrong-password-403-.png
+    reports/evidence/2026-11-10T08-28-51-794Z/cart-add-3-items.png
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות באיסוף ראיות</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ בולעים את השגיאה – הבדיקה "עוברת"</h3>
+      <pre class="lang-ts sm">
+        try {
+          await checkUserIsAdmin(2);
+        } catch (err) {
+          await saveEvidence(testName);
+          // שכחנו לזרוק – הבדיקה ירוקה
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ שומרים – וזורקים מחדש</h3>
+      <pre class="lang-ts sm">
+        try {
+          await checkUserIsAdmin(2);
+        } catch (err) {
+          await saveEvidence(testName);
+          throw err; // נשאר אדום
+        }
+      </pre>
+    </div>
+  </div>
+  <ul>
+    <li>❌ <code>video: "on"</code> לכל הבדיקות → ג'יגה-בייטים, artifacts איטיים</li>
+    <li>❌ צילום מסך של טופס עם סיסמה / HAR עם טוקן – גם ראיות צריכות <b>redact</b></li>
+    <li>❌ שומרים ראיות, אבל לא מעלים אותן כ-artifact כשה-job נכשל</li>
+  </ul>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – ראיות בכישלון</h2>
+  <ul>
+    <li>פתחו את <code>lessons/10-ci-cd-logs-reports/exercises/03-evidence-on-failure.ts</code></li>
+    <li><code>shouldCapture</code> – לשמור או לא, לפי מצב / סטטוס / retry</li>
+    <li><code>buildFailureContext</code> – "תמונת מצב" של הכישלון · <code>formatResponseEvidence</code></li>
+    <li><code>runWithEvidence</code> (async) · <code>EvidenceCollector</code> – כמו <code>testInfo.attach</code></li>
+    <li>בונוס: <code>writeEvidence</code> – כתיבת הראיות לדיסק</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 10 03
+  </pre>
+</section>
+
+<!-- ===================== חלק 4: Mini Runner ודוחות ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>Mini Runner ודוחות</h1>
+  <p class="subtitle">JSON · JUnit · HTML · GitHub Step Summary · examples/04-mini-runner-with-reports.ts</p>
+</section>
+
+<section class="slide">
+  <h2>Mini Test Runner – מה דוחות עושים "מבפנים"</h2>
+  <pre class="lang-ts sm">
+    const results: TestResult[] = [];
+    for (const t of tests) {
+      const start = performance.now();
+      try {
+        await t.fn({ api, log });
+        results.push({ name: t.name, status: "passed", durationMs: elapsed(start), logs });
+      } catch (err) {
+        results.push({ name: t.name, status: "failed", error: (err as Error).message, durationMs: elapsed(start), logs });
+      }
+    }
+
+    writeFileSync("reports/mini-runner/results.json", JSON.stringify(results, null, 2));
+    writeFileSync("reports/mini-runner/junit.xml", junitXml(results));
+    writeFileSync("reports/mini-runner/index.html", htmlReport(results));
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdownSummary(results));
+
+    process.exit(results.some((r) =&gt; r.status === "failed") ? 1 : 0);
+  </pre>
+  <div class="grid2">
+    <ul>
+      <li>הריצו: <code>npm run report</code></li>
+      <li>הדגמת כישלון: <code>DEMO_FAILURE=1 npm run report</code></li>
+    </ul>
+    <ul>
+      <li>פתחו את <code>reports/mini-runner/index.html</code></li>
+      <li>זה מה ש-Playwright ו-Allure עושים – בגדול</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הרצה עם כישלון – פלט, exit code ומה נכתב לדיסק</h2>
+  <div class="cols wide-code">
+    <ul class="small">
+      <li>בלי <code>DEMO_FAILURE</code> הבדיקה החמישית מדולגת; עם <code>DEMO_FAILURE=1</code> היא רצה ונכשלת – <b>exit: 1</b>, שלב ה-CI אדום</li>
+      <li>הקובץ <b>junit.xml</b> (למטה) – אותו מבנה כמו ב-node:test, ולכן ה-CI מבין אותו. <code>&amp;quot;</code> = escape של <code>"</code></li>
+      <li>הקובץ <b>results.json</b> – הנתונים הגולמיים של כל בדיקה, הבסיס לכל דוח אחר</li>
+      <li>ב-PowerShell: <code>$env:DEMO_FAILURE=1; npm run report</code></li>
+    </ul>
+    <pre class="out sm">
+      $ DEMO_FAILURE=1 npm run report; echo "exit: $?"
+      …
+      Running tests...
+        ✔ Health check returns ok
+        …
+        ✔ Unknown user returns 404
+        ✘ Second user is an admin
+            role: expected "admin", got "tester"
+
+      Reports written to reports/mini-runner/
+        (index.html, junit.xml, results.json)
+      ❌ 1 test(s) failed
+      exit: 1
+    </pre>
+  </div>
+  <pre class="out sm">
+    &lt;?xml version="1.0" encoding="UTF-8"?&gt;
+    &lt;testsuites&gt;
+      &lt;testsuite name="Mock API" tests="5" failures="1" skipped="0" time="0.017"&gt;
+        …
+        &lt;testcase classname="mock-api" name="Second user is an admin" time="0.001"&gt;
+          &lt;failure message="role: expected &amp;quot;admin&amp;quot;, got &amp;quot;tester&amp;quot;"/&gt;&lt;/testcase&gt;
+    …
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>GitHub Step Summary – דוח בעמוד הריצה</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        // GitHub shows everything written to this
+        // file on the run's summary page
+        if (process.env.GITHUB_STEP_SUMMARY) {
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            markdownSummary(results));
+        }
+      </pre>
+      <pre class="out sm">
+        ## 🧪 Mock API test results
+
+        | | Test | Duration | Error |
+        |---|---|---|---|
+        | ✅ | Health check returns ok | 11 ms |  |
+        | ✅ | List users returns 3 seeded … | 2 ms |  |
+        …
+        | ❌ | Second user is an admin | 2 ms | role: …
+      </pre>
+    </div>
+    <div class="stack">
+      <p><b>כך GitHub מציג את זה:</b></p>
+      <div class="card">
+        <h3 style="direction:ltr;text-align:left">🧪 Mock API test results</h3>
+        <table class="md-table">
+          <tr><th></th><th>Test</th><th>Duration</th><th>Error</th></tr>
+          <tr><td>✅</td><td>Health check returns ok</td><td>11 ms</td><td></td></tr>
+          <tr><td>✅</td><td>List users returns 3 seeded users</td><td>2 ms</td><td></td></tr>
+          <tr><td>✅</td><td>Create user returns 201 and an id</td><td>2 ms</td><td></td></tr>
+          <tr><td>✅</td><td>Unknown user returns 404</td><td>2 ms</td><td></td></tr>
+          <tr><td>❌</td><td>Second user is an admin</td><td>2 ms</td><td>role: expected "admin", got "tester"</td></tr>
+        </table>
+      </div>
+      <div class="note">מקומית המשתנה לא מוגדר – לכן הקוד בודק אותו קודם.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>דוח HTML – מה רואים בו</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>כרטיסי סיכום</b>: Total, Passed, Failed, Skipped, Pass rate</li>
+        <li><b>טבלה</b>: סטטוס צבעוני, שם, tags, משך</li>
+        <li>בכישלון – <b>השגיאה באדום</b> מתחת לשם</li>
+        <li><code>&lt;details&gt;</code> – הלוג של כל בדיקה, נפתח בלחיצה</li>
+        <li>"local run" או מספר ריצת ה-CI</li>
+      </ul>
+      <div class="tip">ב-CI מורידים את ה-HTML כ-artifact ופותחים בדפדפן.</div>
+    </div>
+    <div class="mini-report">
+      <h4>Mock API – Test Report</h4>
+      <div class="gen">Generated 2026-11-10T08:31:23.447Z · local run</div>
+      <div class="cards">
+        <div class="c">Total<b>5</b></div>
+        <div class="c" style="color:#1a7f37">Passed<b>4</b></div>
+        <div class="c" style="color:#cf222e">Failed<b>1</b></div>
+        <div class="c" style="color:#9a6700">Skipped<b>0</b></div>
+        <div class="c">Pass rate<b>80%</b></div>
+      </div>
+      <table>
+        <tr><th>Status</th><th>Test</th><th>Duration</th></tr>
+        <tr><td><span class="badge" style="background:#1a7f37">passed</span></td><td>Health check returns ok<div class="tags">#smoke</div></td><td>13 ms</td></tr>
+        <tr><td><span class="badge" style="background:#1a7f37">passed</span></td><td>Unknown user returns 404<div class="tags">#negative</div></td><td>2 ms</td></tr>
+        <tr><td><span class="badge" style="background:#cf222e">failed</span></td><td>Second user is an admin<div class="tags">#demo-failure</div><div class="err">role: expected "admin", got "tester"</div></td><td>2 ms</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="small muted">(שחזור מוקטן של <code>reports/mini-runner/index.html</code> מהריצה עם DEMO_FAILURE – 3 מתוך 5 השורות)</p>
+</section>
+
+<section class="slide">
+  <h2>סטטיסטיקה: pass rate – ומה עושים עם skipped?</h2>
+  <div class="cols" style="grid-template-columns: 1.2fr 0.8fr">
+    <pre class="lang-ts sm">
+      type Status = "passed" | "failed" | "skipped";
+      const statuses: Status[] =
+        ["passed", "passed", "passed", "failed", "skipped"];
+
+      const count = (s: Status) =&gt;
+        statuses.filter((x) =&gt; x === s).length;
+      const executed = count("passed") + count("failed");
+
+      const naive =
+        Math.round((count("passed") / statuses.length) * 100);
+      const passRate = executed
+        ? Math.round((count("passed") / executed) * 100) : 0;
+
+      console.log(`total=${statuses.length} executed=${executed}`);
+      console.log(`passed/total    = ${naive}%`);
+      console.log(`passed/executed = ${passRate}%`);
+    </pre>
+    <div class="stack">
+      <pre class="out">
+        total=5 executed=4
+        passed/total    = 60%
+        passed/executed = 75%
+      </pre>
+      <ul>
+        <li>בדוגמה 04 מחשבים: <code>passed / executed</code></li>
+        <li>skipped לא נספר – הוא לא עבר וגם לא נכשל</li>
+        <li><code>executed ? … : 0</code> – הגנה מחלוקה ב-0</li>
+      </ul>
+      <div class="warn">75% נשמע טוב – אבל צריך לדווח גם כמה דולגו!</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הבדיקות האיטיות והבדיקות ה-Flaky</h2>
+  <div class="grid2">
+    <div class="card"><h3>🐢 הבדיקות האיטיות</h3>
+      <table>
+        <tr><th>בדיקה</th><th>durationMs</th></tr>
+        <tr><td>Health check returns ok</td><td>11</td></tr>
+        <tr><td>List users returns 3 seeded users</td><td>2</td></tr>
+        <tr><td>Create user returns 201 and an id</td><td>2</td></tr>
+      </table>
+      <p>ממיינים לפי משך ומציגים את ה-N האיטיות. כאן הראשונה איטית כי היא "מחממת" את החיבור – בדקו לפני שמאשימים אותה.</p>
+    </div>
+    <div class="card"><h3>🎲 בדיקה Flaky</h3>
+      <table>
+        <tr><th>בדיקה</th><th>ריצה 1</th><th>ריצה 2</th><th>ריצה 3</th></tr>
+        <tr><td>login</td><td>✔</td><td>✔</td><td>✔</td></tr>
+        <tr><td>checkout</td><td>✔</td><td>✘</td><td>✔</td></tr>
+        <tr><td>search</td><td>✘</td><td>✘</td><td>✘</td></tr>
+      </table>
+      <p><b>checkout</b> – flaky: אותו קוד, תוצאות שונות. <b>search</b> – כישלון יציב (באג אמיתי?).</p>
+    </div>
+  </div>
+  <div class="note">Playwright מסמן בדיקה שנכשלה ועברה ב-retry כ-<b>flaky</b>. retries מסתירים את הבעיה – לא פותרים אותה.</div>
+</section>
+
+<section class="slide">
+  <h2>Artifacts – הדוחות יוצאים מה-Runner</h2>
+  <div class="cols">
+    <pre class="lang-yaml sm">
+      # .github/workflows/ci.yml (this repo)
+      - name: API tests with HTML report (mini runner)
+        run: npm run report # also writes $GITHUB_STEP_SUMMARY
+
+      - name: Upload reports
+        if: always() # even (especially!) when tests failed
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-node-${{ matrix.node }}
+          path: reports/
+          retention-days: 14
+    </pre>
+    <div class="stack">
+      <ul>
+        <li>ה-Runner של ה-CI <b>נמחק</b> בסוף הריצה – כל קובץ שלא הועלה אבד</li>
+        <li><b>Artifact</b> = קובץ/תיקייה שנשמרים אחרי הריצה (zip להורדה)</li>
+        <li><code>if: always()</code> – בלי זה, שלב שאחרי כישלון <b>לא רץ</b></li>
+        <li><code>retention-days</code> – כמה זמן לשמור (עולה מקום)</li>
+      </ul>
+      <div class="tip">מה מעלים: HTML, junit.xml, results.json, logs, evidence.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Mini Runner ודוחות</h2>
+  <ul>
+    <li>פתחו את <code>lessons/10-ci-cd-logs-reports/exercises/04-mini-runner-with-reports.ts</code></li>
+    <li><code>ciExitCode</code> – exit code לשלב ה-CI · <code>slowestTests</code> – הבדיקות האיטיות</li>
+    <li><code>statsByTag</code> – סטטיסטיקה לפי tag · <code>htmlRow</code> – שורה בטבלת ה-HTML</li>
+    <li><code>detectFlaky</code> – זיהוי בדיקות flaky · בונוס: <code>compareRuns</code></li>
+    <li>הריצו את הדוח עם כישלון ופתחו את <code>reports/mini-runner/index.html</code></li>
+  </ul>
+  <pre class="lang-bash">
+    DEMO_FAILURE=1 npm run report
+    npm run exercise -- 10 04
+  </pre>
+</section>
+
+<!-- ===================== חלק 5: CI/CD ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 5</div>
+  <h1>עולם ה-CI/CD</h1>
+  <p class="subtitle">Continuous Integration · Delivery · Deployment</p>
+</section>
+
+<section class="slide">
+  <h2>Pipeline: CI · Continuous Delivery · Continuous Deployment</h2>
+  <div class="flow">
+    <div class="step"><b>commit</b>push / PR</div><div class="arrow">←</div>
+    <div class="step"><b>build + tests</b>CI + דוחות</div><div class="arrow">←</div>
+    <div class="step"><b>staging</b>פריסה אוטומטית</div><div class="arrow">←</div>
+    <div class="step y"><b>👤 אישור?</b>Delivery: כן · Deployment: לא</div><div class="arrow">←</div>
+    <div class="step g"><b>production</b>משתמשים אמיתיים</div>
+  </div>
+  <p>כל שלב הוא פקודה; שלב שנכשל (<b>exit code ≠ 0</b>) <b>עוצר</b> את ה-Pipeline – ושום דבר אחריו לא מגיע לייצור.</p>
+  <table>
+    <tr><th></th><th>CI</th><th>Continuous Delivery</th><th>Continuous Deployment</th></tr>
+    <tr><td><b>אוטומטי</b></td><td>build + בדיקות</td><td>+ פריסה ל-staging</td><td>+ פריסה ל-production</td></tr>
+    <tr><td><b>ידני</b></td><td>כל השאר</td><td>לחיצה על "Release"</td><td>כלום</td></tr>
+    <tr><td><b>מגיע לייצור</b></td><td>כשמחליטים</td><td>מתי שרוצים, בלחיצה</td><td>כל commit שעבר</td></tr>
+    <tr><td><b>מה זה דורש מהבדיקות</b></td><td>משוב מהיר</td><td>אמון בגרסה</td><td>אמון מלא – הבדיקות הן השומר היחיד</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>Quality Gates – תנאי מעבר בין שלבים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>Quality Gate</b> – תנאי שחייב להתקיים כדי להמשיך</li>
+        <li>דוגמאות: אפס כישלונות, pass rate ≥ 95%, מעט skipped, כיסוי קוד, אישור Reviewer</li>
+        <li>הגייט "מדבר" עם ה-CI דרך <b>exit code</b></li>
+      </ul>
+      <pre class="out">
+        ❌ quality gate failed:
+        - 1 failed test(s)
+        - too many skipped: 10/40
+      </pre>
+      <p class="small">ה-exit code של הסקריפט: <code>1</code> → השלב אדום</p>
+    </div>
+    <pre class="lang-ts sm">
+      interface RunStats {
+        total: number; failed: number; skipped: number; passRate: number;
+      }
+
+      function qualityGate(s: RunStats): string[] {
+        const problems: string[] = [];
+        if (s.failed &gt; 0) problems.push(`${s.failed} failed test(s)`);
+        if (s.passRate &lt; 95)
+          problems.push(`pass rate ${s.passRate}% &lt; 95%`);
+        if (s.skipped / s.total &gt; 0.2)
+          problems.push(`too many skipped: ${s.skipped}/${s.total}`);
+        return problems;
+      }
+
+      const problems = qualityGate({
+        total: 40, failed: 1, skipped: 10, passRate: 97,
+      });
+      if (problems.length) {
+        console.log(`❌ quality gate failed:\n- ${problems.join("\n- ")}`);
+        process.exit(1);
+      }
+      console.log("✅ quality gate passed");
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>משוב מהיר: פירמידת הבדיקות בתוך ה-CI</h2>
+  <div class="cols wide-text">
+    <table>
+      <tr><th>מתי</th><th>אילו בדיקות</th><th>זמן יעד</th><th>חוסם?</th></tr>
+      <tr><td>כל push / PR</td><td>unit + smoke API</td><td>דקות</td><td>חוסם merge</td></tr>
+      <tr><td>merge ל-main</td><td>רגרסיית API + UI עיקרי</td><td>10–20 דק'</td><td>חוסם פריסה</td></tr>
+      <tr><td>לילי (cron)</td><td>רגרסיה מלאה, כל הדפדפנים</td><td>שעה+</td><td>דוח בבוקר</td></tr>
+      <tr><td>לפני release</td><td>E2E על staging</td><td>לפי צורך</td><td>Quality Gate</td></tr>
+    </table>
+    <div class="pyramid">
+      <div style="width:45%;border-color:#dc2626;background:#fdecec"><b>UI / E2E</b><br />מעט · איטי</div>
+      <div style="width:70%;border-color:#d4a017;background:#fff7e0"><b>API</b><br />הרבה · מהיר</div>
+      <div style="width:95%;border-color:#22a05a;background:#e9f8ef"><b>Unit</b><br />הכי הרבה · הכי מהיר</div>
+    </div>
+  </div>
+  <div class="tip">כלל: המשוב הראשון צריך להגיע <b>לפני</b> שהמפתח/ת עבר/ה למשימה הבאה. PR שמחכה שעה לבדיקות – לא יחכה.</div>
+</section>
+
+<section class="slide">
+  <h2>סביבות (Environments)</h2>
+  <table>
+    <tr><th>סביבה</th><th>מי משתמש</th><th>אילו בדיקות</th><th>נתונים</th></tr>
+    <tr><td><code>dev</code> / local</td><td>מפתחים</td><td>unit, בדיקות מקומיות</td><td>Mock / נתוני דמה</td></tr>
+    <tr><td><code>qa</code> / test</td><td>בודקים, ה-CI</td><td>API, UI, רגרסיה</td><td>נתוני בדיקה שמאופסים</td></tr>
+    <tr><td><code>staging</code></td><td>QA, מוצר, לקוח פנימי</td><td>E2E, smoke לפני release</td><td>דומה לייצור (מוסווה)</td></tr>
+    <tr><td><code>production</code></td><td>משתמשים אמיתיים</td><td>smoke לקריאה בלבד, ניטור</td><td>אמיתיים – לא נוגעים!</td></tr>
+  </table>
+  <ul>
+    <li>אותן בדיקות רצות על סביבות שונות – רק ה-URL משתנה: <code>BASE_URL</code> ממשתנה סביבה</li>
+    <li>בדיקה שנכשלת רק ב-staging? לבדוק קודם הבדלי <b>סביבה</b>: גרסה, קונפיגורציה, נתונים</li>
+  </ul>
+  <div class="warn">לא מריצים בדיקות שיוצרות/מוחקות נתונים על production.</div>
+</section>
+
+<section class="slide">
+  <h2>מילון מושגים</h2>
+  <table>
+    <tr><th>מושג</th><th>הסבר</th></tr>
+    <tr><td>Pipeline / Workflow</td><td>רצף שלבים אוטומטי שמוגדר בקובץ (YAML) בתוך ה-repository</td></tr>
+    <tr><td>Trigger</td><td>מה מפעיל: push, pull_request, שעה קבועה (cron), הפעלה ידנית</td></tr>
+    <tr><td>Job / Stage / Step</td><td>קבוצת צעדים שרצה על מכונה · שלב לוגי · פקודה בודדת</td></tr>
+    <tr><td>Runner / Agent</td><td>המכונה שמריצה (ענן או שרת של החברה)</td></tr>
+    <tr><td>Artifact</td><td>קובץ שנשמר מהריצה: דוח, צילום מסך, לוג, build</td></tr>
+    <tr><td>Secret</td><td>סיסמה/טוקן שמוזרקים לריצה ומוסתרים בלוגים</td></tr>
+    <tr><td>Environment</td><td>סביבת יעד: dev / qa / staging / production</td></tr>
+    <tr><td>Quality Gate</td><td>תנאי מעבר: אחוז הצלחה, כיסוי, אישור Reviewer</td></tr>
+  </table>
+</section>
+
+<!-- ===================== סיכום ===================== -->
+<section class="slide practice">
+  <h2>תרגול – שיעור 10 (תרגילי סיכום)</h2>
+  <ul>
+    <li>פתחו את <code>lessons/10-ci-cd-logs-reports/exercises/exercises.ts</code> והשלימו כל <code>TODO</code>:</li>
+    <li><code>formatLogLine</code> ו-<code>shouldLog</code> – לוגים עם רמות</li>
+    <li><code>summarize</code> – סיכום ריצה עם pass rate · <code>toMarkdownSummary</code> – סיכום ל-GitHub Actions</li>
+    <li><code>toJUnitXml</code> – כולל escape לתווים מיוחדים · <code>evidenceFileName</code> – שם קובץ לצילום מסך</li>
+    <li>הריצו <code>DEMO_FAILURE=1 npm run report</code> ונתחו את דוח ה-HTML</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 10           # תרגילי הסיכום + בדיקה עצמית
+    npm run solution -- 10           # הפתרונות של תרגילי הסיכום
+    npm run solution -- 10 03        # פתרון של נושא אחד
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>סיכום: תחקור כישלון צעד אחר צעד</h2>
+  <div class="flow">
+    <div class="step"><b>1. מה נכשל?</b>שורת הסיכום בדוח</div><div class="arrow">←</div>
+    <div class="step"><b>2. למה?</b>הודעה, expected / actual</div><div class="arrow">←</div>
+    <div class="step"><b>3. איפה?</b>stack trace – השורה שלנו</div><div class="arrow">←</div>
+    <div class="step y"><b>4. מה קרה לפני?</b>לוג לפי context</div><div class="arrow">←</div>
+    <div class="step y"><b>5. מה ראו?</b>צילום, response, trace</div><div class="arrow">←</div>
+    <div class="step g"><b>6. סיווג</b>מוצר / בדיקה / סביבה</div>
+  </div>
+  <ul>
+    <li>לוג טוב: זמן · רמה · הקשר · הודעה · נתונים – ובלי סודות · <code>LOG_LEVEL</code> לסינון</li>
+    <li>דוחות: <code>spec</code> לבני אדם · <code>junit</code> למערכות CI · HTML ו-Step Summary – כמה במקביל</li>
+    <li>ראיות רק בכישלון (only-on-failure), שמות עם slug + runId, ומעלים כ-artifact עם <code>if: always()</code></li>
+    <li>Pipeline – שלוש רמות אוטומציה: CI, Continuous Delivery, Continuous Deployment · Quality Gates בין השלבים</li>
+    <li>ה-<b>exit code</b> קובע אם השלב ירוק או אדום</li>
+  </ul>
+  <div class="note">בשיעור הבא (11): Pipeline אמיתי ב-GitHub Actions + Playwright + Allure</div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

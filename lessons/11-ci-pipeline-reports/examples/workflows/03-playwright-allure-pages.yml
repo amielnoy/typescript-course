@@ -1,0 +1,66 @@
+# שיעור 11 – Workflow 3: Playwright + Allure 2 + פרסום הדוח ל-GitHub Pages
+# דרישות חד-פעמיות ב-repository: Settings → Pages → Source: "GitHub Actions"
+# אחרי הריצה הדוח זמין בכתובת:  https://<user>.github.io/<repo>/
+name: E2E + Allure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write # נדרש לפרסום ל-Pages
+  id-token: write
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE_URL: ${{ vars.BASE_URL }} # משתנה ברמת ה-repository (Settings → Variables)
+      API_TOKEN: ${{ secrets.API_TOKEN }} # סוד – מוסתר אוטומטית בלוגים (***)
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run tests
+        run: npx playwright test
+
+      # Allure 2 דורש Java – קיים כבר במכונות ubuntu-latest של GitHub
+      - name: Generate Allure report
+        if: always()
+        run: npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload Playwright HTML report (artifact)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+      - name: Prepare Pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: allure-report
+
+  deploy-report:
+    needs: e2e
+    if: always() # מפרסמים את הדוח גם כשיש כישלונות – בדיוק אז רוצים לראות אותו
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

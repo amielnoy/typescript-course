@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 8 – קוד אסינכרוני וטיפול בשגיאות</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="8">
+
+<!-- ============================================================ פתיחה -->
+<section class="slide title">
+  <div class="badge">שיעור 8</div>
+  <h1>קוד אסינכרוני וטיפול בשגיאות</h1>
+  <p class="subtitle">Promise, async/await, Error Handling</p>
+  <div class="chips"><span>Promise</span><span>then / catch</span><span>Promise.all</span><span>async / await</span><span>try / catch</span><span>retry &amp; timeout</span><span>fetch</span></div>
+  <div class="meta">3.12 · יום ה' · 09:00–16:00 · ZOOM · תיקייה בפרויקט: lessons/08-async-error-handling</div>
+</section>
+
+<section class="slide">
+  <h2>מה בתוכנית היום</h2>
+  <div class="flow">
+    <div class="step"><b>חלק 1</b>Promise<br />then / catch, all / race</div><div class="arrow">←</div>
+    <div class="step"><b>חלק 2</b>async / await<br />סדרתי מול מקבילי</div><div class="arrow">←</div>
+    <div class="step y"><b>חלק 3</b>טיפול בשגיאות<br />try / catch, retry, timeout</div><div class="arrow">←</div>
+    <div class="step g"><b>חלק 4</b>fetch אמיתי<br />מול שרת ה-Mock</div>
+  </div>
+  <ul>
+    <li>איך כותבים קוד ש"מחכה" – לשרת, לדפדפן, לטיימר – <b>בלי</b> לתקוע את התוכנית</li>
+    <li>איך מתמודדים עם מה שמשתבש: שגיאות, שרת איטי, תקלה זמנית</li>
+    <li>כל דוגמה בשקפים רצה באמת – הפלט שמוצג הוא הפלט האמיתי</li>
+    <li>בסוף כל חלק – תרגול קצר: <code>npm run exercise -- 08 NN</code></li>
+    <li>הדוגמאות המלאות: <code>lessons/08-async-error-handling/examples/</code></li>
+  </ul>
+</section>
+
+<!-- ============================================================ חלק 1 -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>Promise – הבטחה לערך עתידי</h1>
+  <p class="subtitle">סדר ריצה, מצבים, then / catch / finally, all / allSettled / race</p>
+</section>
+
+<section class="slide">
+  <h2>למה אסינכרוני – ולמה קוד בדיקות כמעט תמיד כזה?</h2>
+  <div class="grid3">
+    <div class="card"><h3>🌐 רשת</h3><p>קריאת API לוקחת 20ms – או 5 שניות. <code>fetch</code>, Axios, <code>request.get</code> ב-Playwright</p></div>
+    <div class="card"><h3>🖥️ דפדפן</h3><p>טעינת דף, לחיצה, המתנה שאלמנט יופיע: <code>await page.click("#login")</code></p></div>
+    <div class="card"><h3>⏱️ זמן</h3><p>spinner, אנימציה, job ברקע שמסתיים "מתישהו" – צריך לחכות ולבדוק שוב</p></div>
+  </div>
+  <ul>
+    <li>JavaScript לא חוסם את התוכנית בזמן ההמתנה – הוא מקבל <b>הבטחה</b> לתוצאה עתידית, וממשיך לרוץ</li>
+    <li>אנלוגיה: מלצר לוקח הזמנה, מעביר למטבח וממשיך לשולחן הבא – הוא לא עומד ליד התנור</li>
+    <li>בדיקה אוטומטית = רצף של <b>עשה פעולה ← חכה לתוצאה ← בדוק</b>; <b>כל</b> פעולה ב-Playwright אסינכרונית</li>
+    <li>לא מחכים מספיק? <b>flaky test</b> (לפעמים עובר, לפעמים נכשל). מחכים 5 שניות "ליתר ביטחון"? בדיקות איטיות מאוד</li>
+  </ul>
+  <div class="tip">היום נלמד לחכות <b>נכון</b>: בדיוק כמה שצריך – ולטפל במה שמשתבש</div>
+</section>
+
+<section class="slide">
+  <h2>סדר הריצה – מי מודפס קודם?</h2>
+  <pre class="lang-ts">
+    console.log("A. test started");
+    setTimeout(() =&gt; console.log("B. timer fired"), 0);          // "בעוד 0ms"
+    Promise.resolve().then(() =&gt; console.log("C. promise resolved"));
+    console.log("D. test continues");
+  </pre>
+  <div class="cols">
+    <pre class="out">
+      A. test started
+      D. test continues
+      C. promise resolved
+      B. timer fired
+    </pre>
+    <ul>
+      <li>קוד רגיל (סינכרוני) רץ קודם, שורה אחרי שורה: <b>A, D</b></li>
+      <li>רק אחר כך JS מטפל במה ש"מחכה בתור"</li>
+      <li>Promise שהסתיים (<code>then</code>) – לפני טיימרים: <b>C</b></li>
+      <li><code>setTimeout</code> – אחרון, אפילו עם 0ms: <b>B</b></li>
+    </ul>
+  </div>
+  <div class="note">לא צריך לזכור את הכללים בעל-פה – רק ש<b>כשיש המתנות, הקוד לא רץ בסדר שבו הוא כתוב</b></div>
+</section>
+
+<section class="slide">
+  <h2>שלושת המצבים של Promise</h2>
+  <div class="flow">
+    <div class="step y"><b>pending</b>ממתין – עדיין אין תשובה</div><div class="arrow">←</div>
+    <div class="step g"><b>fulfilled ✅</b>הצליח – יש ערך<br /><code>resolve(value)</code></div><div class="arrow">או</div>
+    <div class="step r"><b>rejected ❌</b>נכשל – יש שגיאה<br /><code>reject(error)</code></div>
+  </div>
+  <table>
+    <tr><th>מצב</th><th>מה זה אומר</th><th>מי מטפל בו</th></tr>
+    <tr><td><code>pending</code></td><td>הבקשה נשלחה, מחכים לתשובה</td><td>– (עוד אין מה לטפל)</td></tr>
+    <tr><td><code>fulfilled</code></td><td>הפעולה הצליחה, יש תוצאה</td><td><code>.then(value =&gt; ...)</code></td></tr>
+    <tr><td><code>rejected</code></td><td>הפעולה נכשלה, יש Error</td><td><code>.catch(err =&gt; ...)</code></td></tr>
+  </table>
+  <ul>
+    <li>Promise מתחיל תמיד ב-pending, ועובר <b>פעם אחת בלבד</b> למצב סופי (settled) – ולא משתנה יותר</li>
+    <li>אנלוגיה: מספר מעקב של משלוח – החבילה עוד לא אצלכם, אבל יש "הבטחה" שתגיע (או הודעה שנכשלה)</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>יצירת Promise – <code>new Promise</code> ו-<code>sleep</code></h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>new Promise((resolve, reject) =&gt; ...)</code> – שני "כפתורים": <code>resolve</code> ← fulfilled, <code>reject</code> ← rejected</li>
+        <li><code>Promise&lt;User&gt;</code> = "בעתיד יהיה כאן User" · <code>Promise&lt;void&gt;</code> = "סיימתי"</li>
+        <li><code>sleep</code> עוטף את <code>setTimeout</code> ב-Promise – כדי <b>לדמות</b> שרת איטי</li>
+      </ul>
+      <pre class="out">
+        Promise { &lt;pending&gt; }
+        Promise { { id: 1, name: 'User1' } }
+      </pre>
+      <div class="note">בפועל fetch ו-Playwright כבר מחזירים Promise – כאן זה כדי להבין מה קורה בפנים</div>
+    </div>
+    <pre class="lang-ts sm">
+      type User = { id: number; name: string };
+      function sleep(ms: number): Promise&lt;void&gt; {
+        return new Promise((resolve) =&gt; setTimeout(resolve, ms));
+      }
+      function fetchUserMock(id: number): Promise&lt;User&gt; {
+        return new Promise((resolve, reject) =&gt; {
+          setTimeout(() =&gt; {
+            if (id &gt; 0) resolve({ id, name: `User${id}` });
+            else reject(new Error(`Invalid id ${id}`));
+          }, 100); // מדמה שרת שעונה אחרי 100ms
+        });
+      }
+
+      const p = fetchUserMock(1);
+      console.log(p);                  // מיד
+      p.then(() =&gt; console.log(p));    // אחרי 100ms
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>then / catch / finally</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>then</code> – כשהצליח</li>
+        <li><code>catch</code> – כשנכשל</li>
+        <li><code>finally</code> – תמיד (ניקוי)</li>
+        <li>מה שמחזירים מ-then עובר ל-then הבא</li>
+        <li>שימו לב לסדר ההדפסות!</li>
+      </ul>
+      <pre class="out sm">
+        1. before
+        2. after – runs BEFORE the promise resolves!
+        3. got user: User1
+        4. 10
+        5. always
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      console.log("1. before");
+      fetchUserMock(1)
+        .then((user) =&gt; {
+          console.log("3. got user:", user.name);
+          return user.id * 10; // עובר ל-then הבא
+        })
+        .then((value) =&gt; console.log("4.", value))
+        .catch((err: Error) =&gt; console.log("error:", err.message))
+        .finally(() =&gt; console.log("5. always"));
+      console.log("2. after – runs BEFORE the promise resolves!");
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>כשה-Promise נכשל: rejection "מדלג" עד ה-catch</h2>
+  <div class="flow">
+    <div class="step r"><b>reject</b>Invalid id -1</div><div class="arrow">←</div>
+    <div class="step"><b>then</b>מדולג</div><div class="arrow">←</div>
+    <div class="step"><b>then</b>מדולג</div><div class="arrow">←</div>
+    <div class="step y"><b>catch</b>מטפל בשגיאה</div><div class="arrow">←</div>
+    <div class="step g"><b>finally</b>רץ תמיד</div>
+  </div>
+  <pre class="lang-ts">
+    fetchUserMock(-1)
+      .then((u) =&gt; console.log("will not run", u))
+      .then(() =&gt; console.log("also skipped"))
+      .catch((err: Error) =&gt; console.log("caught:", err.message))
+      .finally(() =&gt; console.log("cleanup – always"));
+  </pre>
+  <div class="cols">
+    <pre class="out">
+      caught: Invalid id -1
+      cleanup – always
+    </pre>
+    <ul>
+      <li><code>catch</code> אחד בסוף השרשרת תופס שגיאה מ<b>כל</b> שלב</li>
+      <li>Promise שנכשל <b>בלי</b> catch ← <code>Unhandled rejection</code> והתוכנית (או הטסט) קורסת</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שרשור: מחזירים Promise מתוך then</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מחזירים <b>ערך</b> מ-then ← הוא עובר ל-then הבא</li>
+        <li>מחזירים <b>Promise</b> ← ה-then הבא <b>מחכה</b> שהוא יסתיים</li>
+        <li>כך בונים תרחיש: login ← profile ← בדיקה</li>
+      </ul>
+      <pre class="out">
+        token: token-dana
+        profile: Dana
+      </pre>
+      <div class="warn">שכחתם <code>return</code>? ה-then הבא לא מחכה ומקבל <code>undefined</code></div>
+    </div>
+    <pre class="lang-ts sm">
+      function login(user: string): Promise&lt;string&gt; {
+        return sleep(100).then(() =&gt; `token-${user}`);
+      }
+      function getProfile(token: string): Promise&lt;User&gt; {
+        return sleep(100).then(() =&gt; ({ id: 1, name: "Dana" }));
+      }
+
+      login("dana")
+        .then((token) =&gt; {
+          console.log("token:", token);
+          return getProfile(token); // ה-then הבא יחכה לו
+        })
+        .then((profile) =&gt; console.log("profile:", profile.name))
+        .catch((err: Error) =&gt; console.log("failed:", err.message));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הרצה מקבילית של כמה Promises</h2>
+  <table>
+    <tr><th>פונקציה</th><th>מחכה ל...</th><th>נכשל כש...</th><th>שימוש</th></tr>
+    <tr><td><code>Promise.all</code></td><td>כולם</td><td><b>אחד</b> נכשל</td><td>יצירת כמה משתמשי בדיקה במקביל</td></tr>
+    <tr><td><code>Promise.allSettled</code></td><td>כולם (גם כישלונות)</td><td>אף פעם</td><td>דוח: מה הצליח ומה נכשל</td></tr>
+    <tr><td><code>Promise.race</code></td><td>הראשון שמסתיים</td><td>הראשון נכשל</td><td>Timeout</td></tr>
+    <tr><td><code>Promise.any</code></td><td>הראשון שמצליח</td><td>כולם נכשלו</td><td>שרתים חלופיים</td></tr>
+  </table>
+  <div class="warn">3 בקשות של 100ms במקביל ≈ 100ms. ברצף ≈ 300ms</div>
+  <div class="note">כולן מקבלות <b>מערך</b> של Promises ומחזירות Promise <b>אחד</b> – שאפשר לעשות לו then או await</div>
+</section>
+
+<section class="slide">
+  <h2>Promise.all ו-Promise.allSettled</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>all</code>: הכול <b>יחד</b> – ⏱️ 101ms ולא 300ms. התוצאות <b>באותו סדר</b> כמו הקלט</li>
+        <li><code>all</code>: אחת נכשלה ← הכול נכשל מיד – <code>fail fast</code></li>
+        <li><code>allSettled</code>: אף פעם לא נכשל; <code>r.status</code> ← <code>value</code> / <code>reason</code></li>
+        <li>מושלם ל-QA: רואים את <b>כל</b> הכישלונות, לא רק את הראשון</li>
+      </ul>
+      <pre class="out sm">
+        User1, User2, User3 in 101ms
+        rejected: Invalid id -5
+        id 1: ✅ User1
+        id -2: ❌ Invalid id -2
+        id 3: ✅ User3
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const start = Date.now();
+      Promise.all([1, 2, 3].map(fetchUserMock)).then((users) =&gt; {
+        const names = users.map((u) =&gt; u.name).join(", ");
+        console.log(`${names} in ${Date.now() - start}ms`);
+      });
+      Promise.all([fetchUserMock(1), fetchUserMock(-5)])
+        .catch((err: Error) =&gt; console.log("rejected:", err.message));
+
+      const ids = [1, -2, 3];
+      Promise.allSettled(ids.map(fetchUserMock)).then((results) =&gt; {
+        results.forEach((r, i) =&gt; {
+          if (r.status === "fulfilled") {
+            console.log(`id ${ids[i]}: ✅ ${r.value.name}`);
+          } else {
+            console.log(`id ${ids[i]}: ❌ ${r.reason.message}`);
+          }
+        });
+      });
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Promise.race ו-Promise.any – מי ראשון?</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>race</code> – הראשון <b>שמסתיים</b> קובע (הצלחה או כישלון)</li>
+        <li>שימוש קלאסי: timeout – "אם הדף לא נטען תוך 100ms, תיכשל"</li>
+        <li><code>any</code> – הראשון <b>שמצליח</b>; מתעלם מכישלונות</li>
+      </ul>
+      <pre class="out">
+        race winner: fast server
+        any: mirror 2
+        race rejected: Timeout after 100ms
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      Promise.race([
+        sleep(50).then(() =&gt; "fast server"),
+        sleep(500).then(() =&gt; "slow server"),
+      ]).then((winner) =&gt; console.log("race winner:", winner));
+
+      const timeout = sleep(100).then(() =&gt; {
+        throw new Error("Timeout after 100ms");
+      });
+      Promise.race([sleep(300).then(() =&gt; "page loaded"), timeout])
+        .then((v) =&gt; console.log(v))
+        .catch((err: Error) =&gt; console.log("race rejected:", err.message));
+
+      Promise.any([
+        Promise.reject(new Error("mirror 1 down")),
+        sleep(80).then(() =&gt; "mirror 2"),
+        sleep(150).then(() =&gt; "mirror 3"),
+      ]).then((first) =&gt; console.log("any:", first));
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Promise</h2>
+  <ul>
+    <li>פתחו את <code>lessons/08-async-error-handling/exercises/01-promises.ts</code></li>
+    <li>השלימו כל <code>throw new Error("TODO")</code> – <b>בלי</b> async/await: רק then / catch / Promise.all…</li>
+    <li>הפונקציות: <code>delayedValue</code> · <code>runStep</code> · <code>loadDashboard</code> · <code>summarizeSuite</code> · <code>raceWithFallback</code> · <code>myPromiseAll</code> (בונוס)</li>
+    <li>בדיקה עצמית: כל שורה מדפיסה <code>&lt;result&gt; =&gt; expected: &lt;value&gt;</code>; תרגיל שלא נפתר מדפיס <code>✋ TODO</code></li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 08 01     # הרצה ובדיקה עצמית
+    npm run solution -- 08 01     # נתקעתם? הפתרון
+  </pre>
+</section>
+
+<!-- ============================================================ חלק 2 -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>async / await</h1>
+  <p class="subtitle">אותו Promise – קוד שנקרא כמו רצף רגיל. סדרתי מול מקבילי, ומה קורה כששוכחים await</p>
+</section>
+
+<section class="slide">
+  <h2>async / await – אותו דבר, קריא הרבה יותר</h2>
+  <div class="grid2">
+    <div class="card"><h3>עם then</h3>
+      <pre class="lang-ts sm">
+        function profileThen(): Promise&lt;void&gt; {
+          return login("dana")
+            .then((token) =&gt; getProfile(token))
+            .then((user) =&gt; console.log(user.name))
+            .catch((err: Error) =&gt; console.log(err.message));
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>עם async / await</h3>
+      <pre class="lang-ts sm">
+        async function profileAwait(): Promise&lt;void&gt; {
+          try {
+            const token = await login("dana");
+            const user = await getProfile(token);
+            console.log(user.name);
+          } catch (err) {
+            console.log((err as Error).message);
+          }
+        }
+      </pre>
+    </div>
+  </div>
+  <ul>
+    <li><code>async</code> לפני הפונקציה, <code>await</code> לפני כל Promise – והקוד נקרא שורה אחרי שורה</li>
+    <li>שגיאות נתפסות עם <code>try / catch</code> רגיל (חלק 3)</li>
+    <li>מתחת למכסה זה <b>אותו דבר בדיוק</b> – שתי הפונקציות מדפיסות <code>dana</code></li>
+    <li>כך כתובות כל בדיקות Playwright: <code>await page.goto(...)</code>, <code>await page.click(...)</code></li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>async מחזירה תמיד Promise · await "פותח" אותו</h2>
+  <div class="cols">
+    <ul>
+      <li><code>async function</code> <b>תמיד</b> מחזירה Promise – גם אם כתבנו <code>return 200</code></li>
+      <li>לכן הטיפוס: <code>Promise&lt;number&gt;</code> ולא <code>number</code></li>
+      <li><code>await</code> מחכה שה-Promise יסתיים ומחזיר את הערך שבתוכו</li>
+      <li>שכחתם await? מקבלים Promise ולא ערך: <code>getUser(5).name</code> ← ❌ TS2339</li>
+      <li><code>await</code> מותר רק בתוך <code>async</code> – או ב-top-level של מודול ES (בפרויקט שלנו: <code>"type": "module"</code>)</li>
+    </ul>
+    <div class="stack">
+      <pre class="lang-ts">
+        async function getStatus(): Promise&lt;number&gt; {
+          return 200; // נעטף אוטומטית ב-Promise
+        }
+
+        const p = getStatus();
+        console.log(p);
+        console.log(await p);
+      </pre>
+      <pre class="out">
+        Promise { 200 }
+        200
+      </pre>
+      <pre class="lang-ts sm">
+        function notAsync(): void {
+          await getStatus();
+          // ❌ TS1308: 'await' expressions are only allowed
+          //    within async functions and at the top levels
+          //    of modules.
+        }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>await עוצר את הפונקציה – לא את כל התוכנית</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        async function loginTest(): Promise&lt;void&gt; {
+          console.log("2. open login page");
+          await sleep(100); // הפונקציה "נעצרת" כאן
+          console.log("4. page loaded – fill form");
+        }
+
+        console.log("1. start");
+        const done = loginTest(); // לא עוצר את מי שקרא
+        console.log("3. caller keeps running");
+        await done;
+        console.log("5. test finished");
+      </pre>
+      <pre class="out">
+        1. start
+        2. open login page
+        3. caller keeps running
+        4. page loaded – fill form
+        5. test finished
+      </pre>
+    </div>
+    <ul>
+      <li><code>await</code> עוצר <b>רק</b> את הפונקציה שבה הוא כתוב</li>
+      <li>מי שקרא לה ממשיך לרוץ (שורה 3) – ומחזיק Promise</li>
+      <li>כדי לחכות לסיום – גם הקורא צריך <code>await</code> (שורה 5)</li>
+      <li>לכן async "מטפס" למעלה: כל פונקציה שמחכה למשהו היא בעצמה async</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סדרתי: כשכל שלב תלוי בקודם</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כל שלב צריך את התוצאה של הקודם – חייבים לחכות</li>
+        <li>כאן: צריך <code>user.id</code> כדי להביא הזמנות</li>
+        <li>ב-QA: מתחברים, ורק אחרי שקיבלנו token שולחים איתו את הבקשה הבאה</li>
+        <li><code>getUser(404)</code> זורק ← נתפס ב-try/catch של הקורא</li>
+      </ul>
+      <pre class="out sm">
+        user: User1
+        orders: [ 'order-1-1', 'order-1-2' ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      async function getUser(id: number): Promise&lt;User&gt; {
+        await sleep(100); // מדמה זמן תגובה של שרת
+        if (id === 404) throw new Error("User not found");
+        return { id, name: `User${id}` };
+      }
+      async function getOrders(userId: number): Promise&lt;string[]&gt; {
+        await sleep(100);
+        return [`order-${userId}-1`, `order-${userId}-2`];
+      }
+
+      // סדרתי – כל שלב תלוי בקודם
+      async function userFlow(): Promise&lt;void&gt; {
+        const user = await getUser(1);
+        console.log("user:", user.name);
+        const orders = await getOrders(user.id); // צריך את user.id
+        console.log("orders:", orders);
+      }
+      await userFlow();
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סדרתי מול מקבילי – השוואת זמנים</h2>
+  <pre class="lang-ts sm">
+    let start = Date.now();
+    const a = await getUser(1);   // מחכה 100ms...
+    const b = await getUser(2);   // ...ועוד 100ms...
+    const c = await getUser(3);   // ...ועוד 100ms
+    console.log(`sequential: ${Date.now() - start}ms`);
+
+    // מקבילי – פעולות בלתי תלויות: מתחילים את שלושתן, ומחכים לכולן יחד
+    start = Date.now();
+    const [x, y, z] = await Promise.all([getUser(1), getUser(2), getUser(3)]);
+    console.log(`parallel:   ${Date.now() - start}ms`);
+  </pre>
+  <div class="cols">
+    <pre class="out">
+      sequential: 303ms
+      parallel:   102ms
+    </pre>
+    <ul>
+      <li><b>תלויות</b> (צריך תוצאה קודמת) ← await אחד אחרי השני</li>
+      <li><b>בלתי תלויות</b> ← <code>Promise.all</code></li>
+      <li>מקבילי לוקח בערך את הזמן של <b>האיטית</b> ביותר</li>
+      <li>50 בדיקות × 200ms: ברצף 10 שניות, במקביל ~0.2 שניות</li>
+    </ul>
+  </div>
+  <div class="warn">טעות נפוצה: <code>for</code> + <code>await</code> על פעולות בלתי תלויות = רצף איטי. עדיף <code>await Promise.all(ids.map(getUser))</code>. לולאה עם await – רק כש<b>חייבים</b> סדר</div>
+</section>
+
+<section class="slide">
+  <h2>שכחתם await בבדיקה? הבדיקה "עוברת" – בטעות</h2>
+  <pre class="lang-ts sm">
+    async function verifyOrderSaved(): Promise&lt;void&gt; {
+      await sleep(100);
+      throw new Error("Order was not saved!"); // הבדיקה צריכה להיכשל
+    }
+    async function run(test: () =&gt; Promise&lt;void&gt;): Promise&lt;void&gt; {   // "מריץ בדיקות" מיני
+      try { await test(); console.log("✅ PASSED"); }
+      catch (err) { console.log("❌ FAILED:", (err as Error).message); }
+    }
+  </pre>
+  <div class="grid2">
+    <div class="card good"><h3>✅ עם await</h3>
+      <pre class="lang-ts sm">
+        await run(async () =&gt; {
+          await verifyOrderSaved();
+        });
+      </pre>
+      <pre class="out sm">
+        ❌ FAILED: Order was not saved!
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ בלי await</h3>
+      <pre class="lang-ts sm">
+        await run(async () =&gt; {
+          verifyOrderSaved(); // שכחנו await
+        });
+      </pre>
+      <pre class="out sm">
+        ✅ PASSED
+      </pre>
+      <p>ורק <b>אחר כך</b> – קריסה: <code>Error: Order was not saved!</code></p>
+    </div>
+  </div></section>
+
+<section class="slide">
+  <h2>waitFor – לחכות לתנאי במקום sleep (polling)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>במקום <code>sleep(5000)</code> "ליתר ביטחון": בודקים שוב ושוב עד שהתנאי מתקיים</li>
+        <li>ממשיכים <b>ברגע</b> שמוכן – לא מחכים סתם</li>
+        <li>לא מוכן עד ה-timeout? נכשלים עם הודעה ברורה (ולא נתקעים לנצח)</li>
+        <li>כך עובדים <code>expect.poll</code> וה-auto-waiting של Playwright</li>
+      </ul>
+      <pre class="out">
+        job done after ~404ms
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      async function waitFor(
+        check: () =&gt; Promise&lt;boolean&gt;,
+        timeoutMs: number,
+        intervalMs = 100,
+      ): Promise&lt;void&gt; {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() &lt; deadline) {
+          if (await check()) return;   // התנאי התקיים
+          await sleep(intervalMs);     // מחכים ובודקים שוב
+        }
+        throw new Error(`Condition not met within ${timeoutMs}ms`);
+      }
+
+      // "השרת" מסיים job ברקע אחרי 350ms
+      const start = Date.now();
+      const isJobDone = async () =&gt; Date.now() - start &gt; 350;
+      await waitFor(isJobDone, 1000);
+      console.log(`job done after ~${Date.now() - start}ms`);
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – async / await</h2>
+  <ul>
+    <li>פתחו את <code>lessons/08-async-error-handling/exercises/02-async-await.ts</code></li>
+    <li>כתבו עם async / await (ו-try / catch כשצריך). צריכים להמתין? כתבו לעצמכם <code>sleep</code> קטן</li>
+    <li>הפונקציות: <code>getUserLabel</code> · <code>runSequentially</code> · <code>createAndVerifyUser</code> · <code>waitFor</code> · <code>fetchInBatches</code> · <code>runTests</code></li>
+    <li>שימו לב: איפה חייבים סדרתי, ואיפה אפשר במקביל?</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 08 02     # הרצה ובדיקה עצמית
+    npm run solution -- 08 02     # נתקעתם? הפתרון
+  </pre>
+</section>
+
+<!-- ============================================================ חלק 3 -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>טיפול בשגיאות</h1>
+  <p class="subtitle">try / catch / finally, שגיאות מותאמות, retry ו-timeout</p>
+</section>
+
+<section class="slide">
+  <h2>מה קורה כשנזרקת שגיאה?</h2>
+  <div class="flow">
+    <div class="step r"><b>throw</b>הפונקציה נעצרת מיד</div><div class="arrow">←</div>
+    <div class="step y"><b>"מטפסת" למעלה</b>לפונקציה שקראה, ולזו שמעליה...</div><div class="arrow">←</div>
+    <div class="step g"><b>catch</b>מישהו תופס ומטפל</div><div class="arrow">או</div>
+    <div class="step r"><b>אין catch</b>התוכנית קורסת / הטסט נכשל</div>
+  </div>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      function getPrice(item: string): number {
+        if (item === "") throw new Error("item name is empty");
+        return 42;
+      }
+
+      console.log("price:", getPrice("book"));
+      console.log("price:", getPrice(""));   // זורק
+      console.log("never printed");
+    </pre>
+    <pre class="out sm">
+      price: 42
+      .../e01-crash.ts:2
+        if (item === "") throw new Error("item name is empty");
+                                 ^
+
+      Error: item name is empty
+          at getPrice (.../e01-crash.ts:2:26)
+    </pre>
+  </div>
+  <div class="note">בטסט, שגיאה שלא נתפסה = ❌ FAILED + stack trace בדוח. <b>וזה טוב</b> – כך אנחנו יודעים שמשהו נשבר</div>
+</section>
+
+<section class="slide">
+  <h2>try / catch / finally – גם עם await</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>try</code> – הקוד שעלול להיכשל</li>
+        <li><code>catch (err)</code> – הטיפול בשגיאה</li>
+        <li><code>finally</code> – רץ תמיד (גם אחרי <code>return</code>)</li>
+        <li><code>throw</code> – זריקת שגיאה בעצמנו (כאן: <code>baseUrl</code> חסר)</li>
+        <li>עם <code>await</code>, try/catch תופס גם Promise שנכשל – כאן <code>readFile</code> (אין קובץ)</li>
+        <li>ב-catch מחזירים ברירת מחדל – והקוד ממשיך</li>
+      </ul>
+      <div class="warn">בלי <code>await</code> בתוך ה-try – השגיאה "בורחת" ולא נתפסת!</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        async function loadConfig(path: string): Promise&lt;Config&gt; {
+          try {
+            const text = await readFile(path, "utf8");
+            const parsed = JSON.parse(text);
+            if (!parsed.baseUrl) throw new Error("baseUrl is missing");
+            return parsed;
+          } catch (err) {
+            // ב-TS, err הוא unknown – בודקים לפני שימוש
+            const message = err instanceof Error ? err.message : String(err);
+            console.log("config error:", message);
+            return DEFAULT_CONFIG;
+          } finally {
+            console.log("loadConfig done"); // רץ תמיד
+          }
+        }
+        console.log(await loadConfig("missing.json"));
+      </pre>
+      <pre class="out sm">
+        config error: ENOENT: no such file or directory, open 'missing.json'
+        loadConfig done
+        { baseUrl: 'http://localhost:3000' }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>finally – ניקוי שקורה תמיד</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      async function runTest(
+        name: string,
+        body: () =&gt; Promise&lt;void&gt;,
+      ): Promise&lt;void&gt; {
+        console.log(`▶ ${name}: open browser`);
+        try {
+          await body();
+          console.log(`  ✅ passed`);
+        } catch (err) {
+          console.log(`  ❌ failed: ${(err as Error).message}`);
+        } finally {
+          // תמיד – גם אחרי כישלון
+          console.log(`  close browser`);
+        }
+      }
+
+      await runTest("login", async () =&gt; {
+        await sleep(50);
+      });
+      await runTest("checkout", async () =&gt; {
+        await sleep(50);
+        throw new Error("Pay button not found");
+      });
+    </pre>
+    <div class="stack">
+      <pre class="out">
+        ▶ login: open browser
+          ✅ passed
+          close browser
+        ▶ checkout: open browser
+          ❌ failed: Pay button not found
+          close browser
+      </pre>
+      <ul>
+        <li>בלי finally: טסט שנכשל משאיר דפדפן פתוח / משתמש בדיקה ב-DB</li>
+        <li>שימושים: סגירת דפדפן, מחיקת נתוני בדיקה, סגירת שרת</li>
+        <li>כך עובדים <code>afterEach</code> ו-fixtures ב-Playwright</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>throw ואובייקט Error</h2>
+  <div class="cols wide-code">
+    <ul>
+      <li><code>new Error("msg")</code> – אובייקט עם <code>name</code>, <code>message</code>, <code>stack</code></li>
+      <li><code>stack</code> – איפה בקוד זה קרה (מופיע בדוח הטסט)</li>
+      <li>JS זורק בעצמו שגיאות מובנות: <code>SyntaxError</code>, <code>TypeError</code>, <code>RangeError</code> – כולן <code>extends Error</code></li>
+      <li>לא לזרוק מחרוזת: אין לה stack ואין name. תמיד זורקים <code>new Error(...)</code></li>
+    </ul>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const err = new Error("Login button not found");
+        console.log(err.name, "|", err.message, "|", err instanceof Error);
+        try {
+          JSON.parse("oops");              // JSON שבור
+        } catch (e) {
+          if (e instanceof Error) console.log(e.name, "|", e.message);
+        }
+        try {
+          const data = JSON.parse("null"); // השרת החזיר null
+          console.log(data.name);
+        } catch (e) {
+          if (e instanceof Error) console.log(e.name, "|", e.message);
+        }
+      </pre>
+      <pre class="out sm">
+        Error | Login button not found | true
+        SyntaxError | Unexpected token 'o', "oops" is not valid JSON
+        TypeError | Cannot read properties of null (reading 'name')
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שגיאות מותאמות אישית</h2>
+  <div class="cols">
+    <ul>
+      <li><code>extends Error</code> – הורשה מהשגיאה המובנית</li>
+      <li>מידע נוסף: <code>status</code>, <code>ms</code>, request...</li>
+      <li><code>this.name</code> – שם ברור בדוח ובלוג</li>
+      <li><code>instanceof</code> – טיפול שונה לכל סוג</li>
+      <li><b>Rethrow</b>: מטפלים רק במה שמכירים – ואת השאר זורקים הלאה</li>
+    </ul>
+    <pre class="lang-ts">
+      class ApiError extends Error {
+        constructor(
+          public readonly status: number,
+          message: string,
+        ) {
+          super(message);
+          this.name = "ApiError";
+        }
+      }
+
+      class TimeoutError extends Error {
+        constructor(public readonly ms: number) {
+          super(`Operation timed out after ${ms}ms`);
+          this.name = "TimeoutError";
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>unknown</code> ב-catch ו-narrowing עם <code>instanceof</code></h2>
+  <pre class="lang-ts sm">
+    function handle(err: unknown): string {   // return err.message;  ❌ TS18046
+      if (err instanceof ApiError) return `API error ${err.status}: ${err.message}`;
+      if (err instanceof TimeoutError) return `Timeout (${err.ms}ms) – maybe retry?`;
+      if (err instanceof Error) return `Unexpected: ${err.message}`;
+      if (typeof err === "string") return `Thrown string: ${err}`;
+      return JSON.stringify(err);
+    }
+    const thrown: unknown[] = [new ApiError(404, "User not found"), new TimeoutError(5000),
+      new TypeError("x is undefined"), "oops", { code: 500 }];
+    for (const t of thrown) {
+      try { throw t; } catch (err) { console.log(handle(err)); }
+    }
+  </pre>
+  <div class="cols">
+    <pre class="out sm">
+      API error 404: User not found
+      Timeout (5000ms) – maybe retry?
+      Unexpected: x is undefined
+      Thrown string: oops
+      {"code":500}
+    </pre>
+    <ul>
+      <li>אפשר לזרוק <b>כל דבר</b> ← ב-catch, <code>err</code> הוא <code>unknown</code> וגישה ישירה ל-<code>err.message</code> נכשלת</li>
+      <li><b>narrowing</b> עם <code>instanceof</code> / <code>typeof</code>: אחרי <code>instanceof ApiError</code> – <code>err.status</code> קיים</li>
+      <li>מהספציפי לכללי – <code>Error</code> אחרון</li>
+      <li><code>(err as Error)</code> – "סמוך עליי": נוח, בלי בדיקה</li>
+    </ul>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>AssertionError – שגיאה שמספרת מה ציפינו ומה קיבלנו</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      class AssertionError extends Error {
+        constructor(
+          public readonly expected: unknown,
+          public readonly actual: unknown,
+        ) {
+          super(`Expected ${expected}, but got ${actual}`);
+          this.name = "AssertionError";
+        }
+      }
+      function assertEqual&lt;T&gt;(actual: T, expected: T): void {
+        if (actual !== expected) {
+          throw new AssertionError(expected, actual);
+        }
+      }
+      try {
+        assertEqual("Login", "Dashboard"); // בפועל מול צפוי
+      } catch (err) {
+        if (err instanceof AssertionError) {
+          console.log(`${err.name}: ${err.message}`);
+          console.log(err.expected, "vs", err.actual);
+        }
+      }
+    </pre>
+    <div class="stack">
+      <pre class="out sm">
+        AssertionError: Expected Dashboard, but got Login
+        Dashboard vs Login
+      </pre>
+      <ul>
+        <li>בדיוק מה ש-<code>expect(...).toBe(...)</code> עושה מאחורי הקלעים</li>
+        <li>הודעה ברורה בדוח = פחות זמן דיבאג</li>
+        <li>שדות <code>expected</code> / <code>actual</code> – אפשר להציג אותם בדוח HTML</li>
+        <li>בעוד HttpError (חלק 4) נשמור את <code>status</code> של התשובה</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעות נפוצה: "לבלוע" שגיאה – ו-Rethrow</h2>
+  <pre class="lang-ts sm">
+    function checkTitle(title: string): void {
+      if (title !== "Dashboard") throw new Error(`Bad title: ${title}`);
+    }
+    function run(test: () =&gt; void): void {   // "מריץ בדיקות" מיני
+      try { test(); console.log("✅ PASSED"); }
+      catch (err) { console.log("❌ FAILED:", (err as Error).message); }
+    }
+  </pre>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ catch שרק מדפיס</h3>
+      <pre class="lang-ts sm">
+        run(() =&gt; {
+          try { checkTitle("Login"); }
+          catch (err) {
+            console.log("oops:", (err as Error).message);
+          } // השגיאה "נבלעה" כאן
+        });
+      </pre>
+      <pre class="out sm">
+        oops: Bad title: Login
+        ✅ PASSED
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מדפיסים וזורקים הלאה</h3>
+      <pre class="lang-ts sm">
+        run(() =&gt; {
+          try { checkTitle("Login"); }
+          catch (err) {
+            console.log("title check failed – rethrow");
+            throw err; // הטסט ייכשל כמו שצריך
+          }
+        });
+      </pre>
+      <pre class="out sm">
+        title check failed – rethrow
+        ❌ FAILED: Bad title: Login
+      </pre>
+    </div>
+  </div></section>
+
+<section class="slide">
+  <h2>🔁 retry – לנסות שוב כשהתקלה זמנית</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      async function retry&lt;T&gt;(
+        fn: () =&gt; Promise&lt;T&gt;,
+        attempts: number,
+        delayMs: number,
+      ): Promise&lt;T&gt; {
+        let lastError: unknown;
+        for (let i = 1; i &lt;= attempts; i++) {
+          try {
+            return await fn(); // הצליח? יוצאים מיד
+          } catch (err) {
+            lastError = err;
+            const msg = (err as Error).message;
+            console.log(`  attempt ${i} failed: ${msg}`);
+            if (i &lt; attempts) await sleep(delayMs);
+          }
+        }
+        throw lastError; // כל הניסיונות נכשלו
+      }
+    </pre>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        let calls = 0;
+        async function flakyService(): Promise&lt;string&gt; {
+          calls++;
+          if (calls &lt; 3) {
+            throw new Error("503 Service Unavailable");
+          }
+          return "OK";
+        }
+        const result = await retry(flakyService, 5, 50);
+        console.log("Retry result:", result);
+      </pre>
+      <pre class="out sm">
+        attempt 1 failed: 503 Service Unavailable
+        attempt 2 failed: 503 Service Unavailable
+      Retry result: OK
+      </pre>
+      <div class="note"><code>return await fn()</code> – ה-await חשוב: בלעדיו ה-catch לא יתפוס את הכישלון</div>
+    </div>
+  </div>
+  <div class="warn">retry – לתקלה <b>זמנית</b> בתשתית (503, שרת שעולה), לא כדי "להשתיק" בדיקה שנכשלת: זה מסתיר באגים</div>
+</section>
+
+<section class="slide">
+  <h2>⏱️ timeout עם Promise.race – לא לחכות לנצח</h2>
+  <div class="cols wide-text">
+    <pre class="lang-ts sm">
+      function withTimeout&lt;T&gt;(promise: Promise&lt;T&gt;, ms: number): Promise&lt;T&gt; {
+        const timeout = new Promise&lt;never&gt;((_, reject) =&gt;
+          setTimeout(() =&gt; reject(new TimeoutError(ms)), ms));
+        return Promise.race([promise, timeout]);
+      }
+
+      const page = sleep(50).then(() =&gt; "page loaded");
+      console.log(await withTimeout(page, 200));
+      try {
+        await withTimeout(sleep(500).then(() =&gt; "done"), 100);
+      } catch (err) {
+        if (err instanceof TimeoutError) {
+          console.log(err.name, "–", err.message);
+        }
+      }
+    </pre>
+    <div class="stack">
+      <pre class="out sm">
+        page loaded
+        TimeoutError – Operation timed out after 100ms
+      </pre>
+      <ul>
+        <li>בקשה "תקועה" יכולה לתקוע את כל ה-CI – מגדירים זמן מקסימלי ונכשלים עם הודעה ברורה</li>
+        <li>הפעולה מול טיימר: מי שמסתיים ראשון – מנצח</li>
+        <li><code>Promise&lt;never&gt;</code> – Promise שלעולם לא מצליח, רק נכשל</li>
+        <li>ב-Playwright: <code>timeout</code> לכל בדיקה ולכל expect</li>
+      </ul>
+    </div>
+  </div>
+  <p>ביחד: בדיקת health עם timeout לכל ניסיון, ועד 5 ניסיונות:</p>
+  <pre class="lang-ts">
+    const health = await retry(() =&gt; withTimeout(fetch(`${url}/health`), 2000), 5, 500);
+  </pre>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – טיפול בשגיאות</h2>
+  <ul>
+    <li>פתחו את <code>lessons/08-async-error-handling/exercises/03-error-handling.ts</code></li>
+    <li>זכרו: ב-catch הטיפוס של <code>err</code> הוא <code>unknown</code> – בדקו אותו (<code>instanceof</code>) לפני שימוש</li>
+    <li>התרגילים: <code>AssertionError</code> · <code>assertEqual</code> · <code>getErrorMessage</code> · <code>runWithFixture</code> · <code>retryIf</code> · <code>SoftAssertionError</code> + <code>softAssertAll</code></li>
+    <li>שימו לב לפורמט המדויק של הודעות השגיאה שמופיע בהוראות</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 08 03     # הרצה ובדיקה עצמית
+    npm run solution -- 08 03     # נתקעתם? הפתרון
+  </pre>
+</section>
+
+<!-- ============================================================ חלק 4 -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>fetch אמיתי מול שרת ה-Mock</h1>
+  <p class="subtitle">GET, POST, DELETE, קודי סטטוס, res.ok ו-res.json – ואימות התשובה</p>
+</section>
+
+<section class="slide">
+  <h2>שרת ה-Mock – המערכת שאנחנו בודקים</h2>
+  <table>
+    <tr><th>בקשה</th><th>תשובה</th></tr>
+    <tr><td><code>GET /health</code></td><td><code>200 { status: "ok" }</code></td></tr>
+    <tr><td><code>GET /users</code></td><td><code>200</code> רשימת משתמשים (Dana, Yossi, Noa)</td></tr>
+    <tr><td><code>GET /users/:id</code></td><td><code>200</code> משתמש · <code>404 { error: "User &lt;id&gt; not found" }</code></td></tr>
+    <tr><td><code>POST /users</code></td><td><code>201</code> המשתמש החדש · <code>400 { error: "name and email are required" }</code></td></tr>
+    <tr><td><code>DELETE /users/:id</code></td><td><code>204</code> (בלי גוף) · <code>404</code></td></tr>
+    <tr><td><code>GET /slow?ms=N</code></td><td><code>200 { waited: N }</code> אחרי N מילישניות</td></tr>
+  </table>
+  <pre class="lang-ts sm">
+    import { startMockApi } from "../../../shared/mock-api/server.ts";
+    const server = await startMockApi();  // שרת מקומי על פורט פנוי – בלי אינטרנט
+    const baseUrl = server.url;           // למשל "http://127.0.0.1:54321"
+    // ... הבדיקות ...
+    await server.close();                 // תמיד לסגור בסוף
+  </pre>
+  <div class="tip">לשחק ידנית: <code>npm run mock-api</code> ← פתחו בדפדפן <code>http://127.0.0.1:3000/users</code></div>
+</section>
+
+<section class="slide">
+  <h2>GET עם fetch – שני await</h2>
+  <div class="flow">
+    <div class="step"><b><bdi>fetch(url)</bdi></b>שולח בקשה</div><div class="arrow">←</div>
+    <div class="step y"><b>await</b>Response: status, ok, headers</div><div class="arrow">←</div>
+    <div class="step y"><b><bdi>await res.json()</bdi></b>קורא ומפענח את הגוף</div><div class="arrow">←</div>
+    <div class="step g"><b>data</b>אובייקט JS רגיל</div>
+  </div>
+  <div class="cols wide-code">
+    <ul>
+      <li><code>fetch</code> מובנה ב-Node 18+ ובדפדפן – אין מה להתקין</li>
+      <li><code>res.status</code> – קוד הסטטוס (למשל 200 או 404)</li>
+      <li><code>res.ok</code> – <code>true</code> רק אם הסטטוס בין 200 ל-299</li>
+      <li><code>res.headers.get(...)</code> – כותרות התשובה</li>
+      <li><code>res.json()</code> מחזיר <b>Promise</b> (של <code>any</code>), ואפשר לקרוא את הגוף <b>פעם אחת</b> בלבד</li>
+    </ul>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const res = await fetch(`${baseUrl}/users/1`);   // await 1: התשובה
+        console.log(res.status, res.ok);
+        console.log(res.headers.get("content-type"));
+        const user: User = await res.json();             // await 2: הגוף (any)
+        console.log(user);
+
+        const all = await fetch(`${baseUrl}/users`);
+        const users: User[] = await all.json();
+        console.log(users.map((u) =&gt; u.name).join(", "));
+      </pre>
+      <pre class="out sm">
+        200 true
+        application/json
+        { id: 1, name: 'Dana Levi', email: 'dana@example.com', role: 'admin' }
+        Dana Levi, Yossi Cohen, Noa Mizrahi
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>קודי סטטוס – מה השרת אומר לנו</h2>
+  <table>
+    <tr><th>קוד</th><th>שם</th><th>משמעות</th><th><code>res.ok</code></th></tr>
+    <tr><td><code>200</code></td><td>OK</td><td>הצליח, יש גוף</td><td>✅ true</td></tr>
+    <tr><td><code>201</code></td><td>Created</td><td>נוצר משאב חדש (אחרי POST)</td><td>✅ true</td></tr>
+    <tr><td><code>204</code></td><td>No Content</td><td>הצליח, <b>בלי גוף</b> (למשל אחרי DELETE)</td><td>✅ true</td></tr>
+    <tr><td><code>400</code></td><td>Bad Request</td><td>הבקשה שגויה – חסר שדה, JSON שבור</td><td>❌ false</td></tr>
+    <tr><td><code>401 / 403</code></td><td>Unauthorized / Forbidden</td><td>לא מחובר / אין הרשאה</td><td>❌ false</td></tr>
+    <tr><td><code>404</code></td><td>Not Found</td><td>המשאב לא קיים</td><td>❌ false</td></tr>
+    <tr><td><code>500 / 503</code></td><td>Server Error / Unavailable</td><td>תקלה בשרת – לפעמים זמנית (retry)</td><td>❌ false</td></tr>
+  </table>
+  <div class="note">2xx = הצלחה · 4xx = הלקוח טעה (גם בדיקות שליליות!) · 5xx = השרת נפל</div>
+</section>
+
+<section class="slide">
+  <h2>fetch לא זורק על 404!</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts">
+        const res = await fetch(`${baseUrl}/users/999`);
+        console.log("status:", res.status);
+        console.log("ok:", res.ok);
+        console.log("body:", await res.json());
+      </pre>
+      <pre class="out">
+        status: 404
+        ok: false
+        body: { error: 'User 999 not found' }
+      </pre>
+    </div>
+    <div class="stack">
+      <ul>
+        <li>מבחינת fetch: <b>התקבלה תשובה</b> = הצלחה – גם אם היא 404 או 500</li>
+        <li>fetch זורק רק כשאין תשובה בכלל: שרת כבוי, אין רשת, כתובת שגויה</li>
+        <li>לכן <b>אנחנו</b> צריכים לבדוק <code>res.ok</code> / <code>res.status</code></li>
+      </ul>
+      <div class="warn">בלי הבדיקה, הטסט ממשיך עם <code>{ error: ... }</code> כאילו זה User – ונכשל במקום אחר, עם הודעה מבלבלת</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>getJson – פונקציית עזר שזורקת HttpError</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      class HttpError extends Error {
+        constructor(
+          public readonly status: number,
+          public readonly body: unknown,
+        ) {
+          super(`HTTP ${status}`);
+          this.name = "HttpError";
+        }
+      }
+
+      async function getJson&lt;T&gt;(url: string): Promise&lt;T&gt; {
+        const res = await fetch(url);
+        const body = await res.json();
+        if (!res.ok) throw new HttpError(res.status, body);
+        return body as T;
+      }
+    </pre>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const user = await getJson&lt;User&gt;(`${baseUrl}/users/2`);
+        console.log("GET /users/2 -&gt;", user.name);
+        try {
+          await getJson&lt;User&gt;(`${baseUrl}/users/999`);
+        } catch (err) {
+          if (err instanceof HttpError) {
+            console.log(`expected error ${err.status}`, err.body);
+          }
+        }
+      </pre>
+      <pre class="out sm">
+        GET /users/2 -&gt; Yossi Cohen
+        expected error 404 { error: 'User 999 not found' }
+      </pre>
+      <ul>
+        <li>4xx / 5xx הופכים לשגיאה עם <code>status</code> ו-<code>body</code></li>
+        <li>בדיקה שלילית = מצפים ל-HttpError מסוים</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>POST – יצירת משאב</h2>
+  <pre class="lang-ts sm">
+    async function createUser(data: unknown): Promise&lt;Response&gt; {
+      return fetch(`${baseUrl}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },   // "אני שולח JSON"
+        body: JSON.stringify(data),                        // אובייקט ← טקסט JSON
+      });
+    }
+
+    const ok = await createUser({ name: "Avi", email: "avi@example.com" });
+    console.log(ok.status, await ok.json());
+
+    const bad = await createUser({ name: "No email" });     // בדיקה שלילית: חסר שדה חובה
+    console.log(bad.status, await bad.json());
+  </pre>
+  <pre class="out sm">
+    201 { id: 4, name: 'Avi', email: 'avi@example.com', role: 'tester' }
+    400 { error: 'name and email are required' }
+  </pre>
+  <div class="note">201 + המשתמש עם <code>id</code> שהשרת הקצה · 400 – השרת דחה בקשה לא תקינה, <b>וזה בדיוק הצפוי</b> בבדיקה שלילית</div>
+</section>
+
+<section class="slide">
+  <h2>DELETE ו-204 – תשובה בלי גוף</h2>
+  <pre class="lang-ts sm">
+    const del = await fetch(`${baseUrl}/users/3`, { method: "DELETE" });
+    console.log("DELETE:", del.status, "body:", JSON.stringify(await del.text()));
+
+    const after = await fetch(`${baseUrl}/users/3`);                  // אימות: באמת נמחק?
+    console.log("GET after delete:", after.status, await after.json());
+
+    const again = await fetch(`${baseUrl}/users/3`, { method: "DELETE" });
+    console.log("DELETE again:", again.status);
+  </pre>
+  <div class="cols">
+    <pre class="out sm">
+      DELETE: 204 body: ""
+      GET after delete: 404 { error: 'User 3 not found' }
+      DELETE again: 404
+    </pre>
+    <ul>
+      <li>תבנית בדיקה: פעולה ← <b>אימות</b> דרך GET</li>
+      <li>204 = הגוף ריק (מחרוזת ריקה)</li>
+    </ul>
+  </div>
+  <div class="warn">קריאה ל-<code>res.json()</code> על תשובת 204 זורקת <code>SyntaxError</code> (Unexpected end of JSON input) – בדקו את הסטטוס קודם</div>
+</section>
+
+<section class="slide">
+  <h2>אימות מבנה התשובה – לא לסמוך על <code>as User</code></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>res.json()</code> מחזיר <code>any</code> – TS <b>לא בודק</b> מה השרת באמת שלח</li>
+        <li>type guard (<code>data is User</code>) בודק בזמן ריצה – ואחריו TS יודע שזה User</li>
+        <li>זו בדיקת <b>contract</b>: שדה חסר או טיפוס שגוי = באג בשרת</li>
+      </ul>
+      <pre class="out sm">
+        valid user: yossi@example.com tester
+        health is a user? false { status: 'ok' }
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      function isUser(data: unknown): data is User {
+        if (typeof data !== "object" || data === null) return false;
+        const u = data as Record&lt;string, unknown&gt;;
+        return (
+          typeof u.id === "number" &amp;&amp;
+          typeof u.name === "string" &amp;&amp;
+          typeof u.email === "string" &amp;&amp; u.email.includes("@") &amp;&amp;
+          ["admin", "tester", "developer"].includes(u.role as string)
+        );
+      }
+
+      const res = await fetch(`${baseUrl}/users/2`);
+      const data: unknown = await res.json();
+      if (!isUser(data)) throw new Error("Response does not match User");
+      console.log("valid user:", data.email, data.role); // data הוא User
+
+      const health: unknown = await (await fetch(`${baseUrl}/health`)).json();
+      console.log("health is a user?", isUser(health), health);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מקבילי + timeout מול שרת איטי</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>בקשות בלתי תלויות ← <code>Promise.all</code></li>
+        <li><code>/slow?ms=N</code> מדמה שרת איטי</li>
+        <li><code>withTimeout</code> מחלק 3 עובד גם על fetch</li>
+      </ul>
+      <pre class="out sm">
+        Dana Levi &amp; Noa Mizrahi | ok
+        slow?ms=50 -&gt; 200 { waited: 50 }
+        Operation timed out after 200ms
+      </pre>
+      <div class="note">ב-fetch אפשר גם להעביר <code>signal</code> עם <code>AbortSignal.timeout(ms)</code> – וזה מבטל את הבקשה עצמה</div>
+    </div>
+    <pre class="lang-ts sm">
+      const [u1, u3, health] = await Promise.all([
+        fetch(`${baseUrl}/users/1`).then((r) =&gt; r.json()),
+        fetch(`${baseUrl}/users/3`).then((r) =&gt; r.json()),
+        fetch(`${baseUrl}/health`).then((r) =&gt; r.json()),
+      ]);
+      console.log(u1.name, "&amp;", u3.name, "|", health.status);
+
+      const fast = await withTimeout(fetch(`${baseUrl}/slow?ms=50`), 1000);
+      console.log("slow?ms=50 -&gt;", fast.status, await fast.json());
+
+      try {
+        await withTimeout(fetch(`${baseUrl}/slow?ms=800`), 200);
+      } catch (err) {
+        if (err instanceof TimeoutError) console.log(err.message);
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות ב-fetch</h2>
+  <table>
+    <tr><th>טעות</th><th>מה קורה</th><th>הפתרון</th></tr>
+    <tr><td>לא בודקים <code>res.ok</code></td><td>404 / 500 נראים כמו הצלחה</td><td><code>if (!res.ok) throw ...</code></td></tr>
+    <tr><td>שוכחים <code>await</code> לפני <code>res.json()</code></td><td>מקבלים Promise במקום נתונים</td><td><code>const data = await res.json()</code></td></tr>
+    <tr><td><code>res.json()</code> על 204</td><td><code>SyntaxError</code> – אין JSON לקרוא</td><td>לבדוק את הסטטוס קודם</td></tr>
+    <tr><td><code>body: data</code> (אובייקט)</td><td>TS מתריע. בלי TS נשלח הטקסט <code>[object Object]</code> והשרת מחזיר 400</td><td><code>body: JSON.stringify(data)</code></td></tr>
+    <tr><td>לא סוגרים את השרת</td><td>התהליך לא מסתיים / הפורט נשאר תפוס</td><td><code>await server.close()</code> בתוך <code>finally</code></td></tr>
+  </table>
+  <div class="tip">בדיקת API טובה בודקת: סטטוס ← מבנה התשובה ← ערכים ← ואז מנקה אחריה</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – fetch מול שרת ה-Mock</h2>
+  <ul>
+    <li>פתחו את <code>lessons/08-async-error-handling/exercises/04-fetch-real-api.ts</code></li>
+    <li>הבדיקה העצמית מפעילה את שרת ה-Mock לבד ומעבירה לכם את הכתובת ב-<code>baseUrl</code></li>
+    <li>התרגילים: <code>checkHealth</code> · <code>getUserById</code> · <code>validateUser</code> · <code>HttpError</code> + <code>createUser</code> · <code>deleteAndVerify</code> · <code>getJsonWithTimeout</code></li>
+    <li>רוצים לנסות ידנית? <code>npm run mock-api</code> ובדפדפן / Postman</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 08 04     # הרצה ובדיקה עצמית
+    npm run solution -- 08 04     # נתקעתם? הפתרון
+  </pre>
+</section>
+
+<!-- ============================================================ סיום -->
+<section class="slide practice">
+  <h2>תרגול – שיעור 8 (תרגילי סיכום)</h2>
+  <ul>
+    <li><code>sleep(ms)</code> · <code>ApiError</code> עם <code>isServerError</code></li>
+    <li><code>safeJsonParse</code> – בלי לזרוק שגיאה החוצה</li>
+    <li><code>retry(fn, attempts, delayMs)</code> · <code>withTimeout(promise, ms)</code></li>
+    <li><code>fetchAll(ids, getUser)</code> במקביל עם <code>Promise.allSettled</code></li>
+    <li>קובץ: <code>lessons/08-async-error-handling/exercises/exercises.ts</code></li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 08        # הרצה ובדיקה עצמית של תרגילי הסיכום
+    npm run solution -- 08        # הפתרון של תרגילי הסיכום
+    npm run solution -- 08 03     # הפתרון של נושא אחד (01–04)
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>סיכום – וסיום חלק ה-TypeScript</h2>
+  <ul>
+    <li>Promise · then/catch/finally · <code>all</code> / <code>allSettled</code> / <code>race</code></li>
+    <li><code>async</code> / <code>await</code> – סדרתי כשצריך, מקבילי כשאפשר · לא לשכוח <code>await</code>!</li>
+    <li>try/catch/finally · <code>err: unknown</code> · שגיאות מותאמות · rethrow · retry ו-timeout</li>
+    <li>fetch: <code>res.ok</code>, <code>res.status</code>, <code>res.json()</code> – ולאמת את מבנה התשובה</li>
+    <li><b>סיימנו את יסודות TypeScript</b>: טיפוסים ← פונקציות ← OOP ← Generics ← Async</li>
+    <li>בהמשך: <b>Git ו-GitHub</b>, ואחר כך Playwright, תשתית ו-CI/CD</li>
+  </ul>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

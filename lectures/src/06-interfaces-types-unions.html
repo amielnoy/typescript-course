@@ -1,0 +1,1552 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 6 – ממשקים וטיפוסים מותאמים</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="6">
+
+<!-- ============================================================ פתיחה -->
+<section class="slide title">
+  <div class="badge">שיעור 6</div>
+  <h1>ממשקים וטיפוסים מותאמים</h1>
+  <p class="subtitle">Interfaces, Type Aliases, Union Types</p>
+  <div class="chips"><span>Interfaces</span><span>implements</span><span>Type Aliases</span><span>Utility Types</span><span>Union Types</span><span>Narrowing</span></div>
+  <div class="meta">26.11 · יום ה' · 09:00–16:00 · ZOOM · תיקייה בפרויקט: lessons/06-interfaces-types-unions</div>
+</section>
+
+<section class="slide">
+  <h2>מה בתוכנית היום</h2>
+  <div class="flow">
+    <div class="step"><b>חלק 1</b>Interfaces<br />חוזה לצורת אובייקט</div><div class="arrow">←</div>
+    <div class="step"><b>חלק 2</b>Type Aliases<br />literal, tuple, &amp;, utility</div><div class="arrow">←</div>
+    <div class="step y"><b>חלק 3</b>Union Types<br />ו-Narrowing</div><div class="arrow">←</div>
+    <div class="step g"><b>חלק 4</b>interface או type?<br />מתי לבחור מה</div>
+  </div>
+  <ul>
+    <li>עד עכשיו כתבנו טיפוסים "קטנים": <code>string</code>, <code>number</code>, מחלקות</li>
+    <li>היום נלמד לתאר <b>מבני נתונים אמיתיים</b>: תשובות API, נתוני בדיקה, קונפיגורציות, תוצאות ריצה</li>
+    <li>המטרה: שהקומפיילר יתפוס טעות <b>לפני</b> שהטסט רץ – ולא באמצע ריצה ב-CI</li>
+    <li>בסוף כל חלק – תרגול קצר. הדוגמאות מהשקפים נמצאות ב-<code>examples/</code></li>
+  </ul>
+</section>
+
+<!-- ============================================================ חלק 1: Interfaces -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>Interfaces – ממשקים</h1>
+  <p class="subtitle">חוזה שמתאר את הצורה של אובייקט · examples/01-interfaces.ts</p>
+</section>
+
+<section class="slide">
+  <h2>Interface – תיאור הצורה של אובייקט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>חוזה</b>: אילו שדות חייבים להיות ומה הטיפוס שלהם</li>
+        <li>קיים רק בזמן קומפילציה – אין לו קוד, ואין לו קיום בזמן ריצה</li>
+        <li><code>?</code> אופציונלי · <code>readonly</code> לקריאה בלבד</li>
+        <li><code>extends</code> – הרחבת ממשק</li>
+        <li>מושלם לתיאור <b>תשובות API</b> ונתוני בדיקה</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface User {
+          readonly id: number;    // לא ניתן לשינוי
+          name: string;
+          email: string;
+          phone?: string;         // אופציונלי
+        }
+
+        const dana: User = { id: 1, name: "Dana", email: "dana@example.com" };
+        // dana.id = 2;                          ❌ readonly
+        // const bad: User = { id: 2, name: "x" };  ❌ missing email
+        console.log("User:", dana);
+
+        interface Admin extends User {
+          permissions: string[];
+        }
+      </pre>
+      <pre class="out sm">
+        User: { id: 1, name: 'Dana', email: 'dana@example.com' }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>למה זה חשוב? ארבע טעויות שהקומפיילר תופס מיד</h2>
+  <pre class="lang-ts sm">
+    const a: User = { id: 2, name: "x" };                               // 1. missing required field
+    // ❌ Property 'email' is missing in type '{ id: number; name: string; }' but required in type 'User'.
+
+    const b: User = { id: 3, name: "Noa", email: "n@qa.io", age: 30 };  // 2. field not in the contract
+    // ❌ Object literal may only specify known properties, and 'age' does not exist in type 'User'.
+
+    const c: User = { id: "4", name: "Noa", email: "n@qa.io" };         // 3. wrong field type
+    // ❌ Type 'string' is not assignable to type 'number'.
+
+    function welcome(user: User) { return `Hi ${user.nmae}`; }          // 4. typo in a field name
+    // ❌ Property 'nmae' does not exist on type 'User'.
+  </pre>
+  <ul>
+    <li>כל שורה כאן <b>לא מתקמפלת</b> – <code>npx tsc --noEmit</code> מדפיס בדיוק את ההודעות האלה</li>
+    <li>איך קוראים הודעה: <i>"Type X is not assignable to type Y"</i> = "נתת X, אבל החוזה דורש Y"</li>
+    <li>ועם <code>any</code>? אותה שגיאת כתיב (<code>user: any</code> ו-<code>user.nmae</code>) מתקמפלת, רצה ומדפיסה <code>Hi undefined</code> – והבאג מגיע לדוח</li>
+  </ul>
+  <div class="tip">טיפוסים הם "בדיקה" שרצה על קוד הבדיקות עצמו – וב-VS Code רואים אותה מיד בקו האדום, בלי להריץ כלום.</div>
+</section>
+
+<section class="slide">
+  <h2>שדות אופציונליים – <code>?</code></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>phone?: string</code> = השדה <b>יכול</b> לא להופיע</li>
+        <li>הטיפוס שלו בפועל: <code>string | undefined</code></li>
+        <li>לכן TS <b>מחייב</b> לבדוק אותו לפני שימוש</li>
+        <li>דרכים לטפל: <code>if</code>, או ברירת מחדל עם <code>??</code></li>
+        <li>שימושי לשדות שהשרת מחזיר רק לפעמים</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function contactLine(user: User): string {
+          // return user.phone.trim();
+          // ❌ 'user.phone' is possibly 'undefined'.
+          if (user.phone) {
+            return `${user.name}: ${user.phone}`;
+          }
+          return `${user.name}: (no phone)`;
+        }
+        console.log(contactLine(dana));
+        console.log(contactLine({ ...dana, phone: "050-1234567" }));
+        console.log(dana.phone ?? "N/A");
+      </pre>
+      <pre class="out sm">
+        Dana: (no phone)
+        Dana: 050-1234567
+        N/A
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>readonly</code> – לקריאה בלבד</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>שדה שנקבע פעם אחת ולא משתנה: <code>id</code> מהשרת, מזהה ריצה</li>
+        <li><code>readonly string[]</code> – גם המערך עצמו לא ניתן לשינוי (אין <code>push</code>)</li>
+        <li>שדה רגיל (<code>status</code>) – מותר לשנות</li>
+      </ul>
+      <div class="note">ההגנה היא בזמן קומפילציה בלבד – ב-JavaScript שנוצר אין שום נעילה.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface TestRun {
+          readonly runId: string;
+          readonly tags: readonly string[];
+          status: string;
+        }
+        const run: TestRun = {
+          runId: "R-17", tags: ["smoke"], status: "running",
+        };
+        run.status = "done";     // ✅ מותר
+
+        run.runId = "R-18";
+        // ❌ Cannot assign to 'runId' because it is a read-only property.
+        run.tags.push("ui");
+        // ❌ Property 'push' does not exist on type 'readonly string[]'.
+
+        console.log(run);
+      </pre>
+      <pre class="out sm">
+        { runId: 'R-17', tags: [ 'smoke' ], status: 'done' }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Interface לתשובת API</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מתארים את ה-JSON <b>פעם אחת</b> – ומקבלים השלמה אוטומטית בכל הבדיקות</li>
+        <li>interface יכול להכיל interface אחר, מערכים ואובייקטים מקוננים</li>
+        <li>טעות בשם שדה נתפסת – כולל הצעה לתיקון</li>
+      </ul>
+      <div class="warn"><code>JSON.parse</code> מחזיר <code>any</code>: הטיפוס הוא <b>הבטחה</b> שלנו, לא בדיקה. בדיקה אמיתית בזמן ריצה – type guard (חלק 3).</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface UserDto {
+          id: number;
+          name: string;
+          email: string;
+        }
+        interface UsersPage {
+          data: UserDto[];
+          meta: { page: number; total: number };
+        }
+        const body: UsersPage = JSON.parse(raw); // raw = response body (text)
+        console.log(body.meta.total, body.data.map((u) =&gt; u.name));
+
+        body.data[0].mail;
+        // ❌ Property 'mail' does not exist on type 'UserDto'.
+        //    Did you mean 'email'?
+      </pre>
+      <pre class="out sm">
+        2 [ 'Dana', 'Avi' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Interface לנתוני בדיקה (Data-Driven)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>טבלת מקרי בדיקה = מערך של אובייקטים מאותה צורה: <code>LoginCase[]</code></li>
+        <li>שכחתם שדה במקרה ה-20? הקומפיילר יגיד לכם איפה</li>
+        <li>שדה אופציונלי (<code>expectError?</code>) מבדיל בין מקרה חיובי לשלילי</li>
+      </ul>
+      <div class="tip">אותו interface משמש גם את הנתונים וגם את הפונקציה שמריצה אותם.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface LoginCase {
+          title: string;
+          username: string;
+          password: string;
+          expectError?: string;
+        }
+        const cases: LoginCase[] = [
+          { title: "valid user", username: "dana", password: "Secret1!" },
+          { title: "wrong password", username: "dana", password: "x",
+            expectError: "Invalid credentials" },
+          { title: "empty username", username: "", password: "x",
+            expectError: "Username is required" },
+        ];
+        for (const c of cases) {
+          const expected = c.expectError ?? "login succeeds";
+          console.log(`${c.title.padEnd(15)} -&gt; ${expected}`);
+        }
+      </pre>
+      <pre class="out sm">
+        valid user      -&gt; login succeeds
+        wrong password  -&gt; Invalid credentials
+        empty username  -&gt; Username is required
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Index signature – מפתחות שלא ידועים מראש</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>[name: string]: string</code> – "כל מפתח מסוג string, וכל ערך string"</li>
+        <li>מתאים ל-headers, שגיאות ולידציה, query params</li>
+        <li><code>Record&lt;string, string&gt;</code> – אותו דבר בכתיב קצר</li>
+        <li>גם הערך נבדק: מספר במקום מחרוזת – שגיאה</li>
+      </ul>
+      <div class="warn">מפתח שלא קיים מחזיר <code>undefined</code> בזמן ריצה – אף שהטיפוס אומר <code>string</code>.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface HttpHeaders {
+          [name: string]: string;
+        }
+        const headers: HttpHeaders = { "content-type": "application/json" };
+        headers["x-request-id"] = "abc-123";
+        console.log(Object.keys(headers), headers["x-trace"]);
+        // headers["retries"] = 3;
+        // ❌ Type 'number' is not assignable to type 'string'.
+
+        interface ApiError {
+          status: number;
+          message: string;
+          details?: Record&lt;string, string&gt;; // מילון
+        }
+        const err: ApiError = { status: 400, message: "Validation failed",
+          details: { email: "is required" } };
+        console.log(`Error ${err.status}: ${err.message}`, err.details);
+      </pre>
+      <pre class="out sm">
+        [ 'content-type', 'x-request-id' ] undefined
+        Error 400: Validation failed { email: 'is required' }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>extends</code> – הרחבת ממשק</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Admin</code> מקבל את כל השדות של <code>User</code> + שדות משלו</li>
+        <li>Admin <b>הוא גם</b> User – אפשר להעביר אותו לכל פונקציה שמצפה ל-User</li>
+        <li>אפשר להרחיב כמה ממשקים בבת אחת: <code>extends A, B</code></li>
+        <li>שימוש בבדיקות: <code>ApiError</code> בסיסי ו-<code>ValidationError</code> שמוסיף שדות</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface Admin extends User {
+          permissions: string[];
+        }
+        const admin: Admin = {
+          id: 2, name: "Avi", email: "avi@example.com",
+          permissions: ["delete-users"],
+        };
+        function welcome(user: User): string {
+          return `Hi ${user.name}`;
+        }
+        console.log("Admin permissions:", admin.permissions);
+        console.log(welcome(admin));   // an Admin is also a User
+
+        interface Timestamped { createdAt: string; }
+        interface AuditedAdmin extends Admin, Timestamped {}
+        const audited: AuditedAdmin = { ...admin, createdAt: "2026-11-24" };
+        console.log(Object.keys(audited));
+      </pre>
+      <pre class="out sm">
+        Admin permissions: [ 'delete-users' ]
+        Hi Avi
+        [ 'id', 'name', 'email', 'permissions', 'createdAt' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>implements</code> – מחלקה שמתחייבת לחוזה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>interface יכול לתאר גם <b>מתודות</b>, לא רק שדות</li>
+        <li><code>implements</code> – הקומפיילר בודק שהמחלקה מימשה הכול</li>
+        <li>כל מחלקה מממשת אחרת: אחת מדפיסה, אחת שומרת בזיכרון</li>
+        <li>שכחתם מתודה? שגיאה כבר בשורת ה-<code>class</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface Logger {
+          info(message: string): void;
+          error(message: string): void;
+        }
+        class ConsoleLogger implements Logger {
+          info(message: string) { console.log(`ℹ️  ${message}`); }
+          error(message: string) { console.log(`❌ ${message}`); }
+        }
+        class MemoryLogger implements Logger {
+          readonly lines: string[] = [];
+          info(message: string) { this.lines.push(`INFO ${message}`); }
+          error(message: string) { this.lines.push(`ERROR ${message}`); }
+        }
+
+        class HalfLogger implements Logger {
+          info(message: string) { console.log(message); }
+        }
+        // ❌ Class 'HalfLogger' incorrectly implements interface 'Logger'.
+        //    Property 'error' is missing in type 'HalfLogger'
+        //    but required in type 'Logger'.
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תלוי בחוזה, לא במימוש – Structural typing</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>runSmokeTest</code> מקבלת <b>כל</b> Logger – פולימורפיזם דרך ממשק, בלי הורשה</li>
+        <li><code>MemoryLogger</code> מצוין לבדיקות של התשתית עצמה: אפשר לבדוק מה נרשם</li>
+        <li>TS בודק <b>צורה</b>, לא שם: כל אובייקט עם <code>info</code> + <code>error</code> מתאים – גם בלי <code>class</code> ו-<code>implements</code> ("Duck typing")</li>
+        <li>שימושי מאוד ליצירת אובייקטים מזויפים (fakes) בבדיקות</li>
+      </ul>
+      <div class="note">אז למה בכלל <code>implements</code>? כדי שהשגיאה תופיע <b>במחלקה</b> עצמה, ולא רק במקום שבו משתמשים בה.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function runSmokeTest(logger: Logger): void {
+          logger.info("Opening home page");
+          logger.error("Logo not found");
+        }
+        runSmokeTest(new ConsoleLogger());
+        const mem = new MemoryLogger();   // great for testing the framework
+        runSmokeTest(mem);
+        console.log(mem.lines);
+        const inlineLogger = {            // no class, no implements
+          info: (m: string) =&gt; console.log("inline:", m),
+          error: (m: string) =&gt; console.log("inline ERR:", m),
+        };
+        runSmokeTest(inlineLogger);   // ✅ fits Logger
+      </pre>
+      <pre class="out sm">
+        ℹ️  Opening home page
+        ❌ Logo not found
+        [ 'INFO Opening home page', 'ERROR Logo not found' ]
+        inline: Opening home page
+        inline ERR: Logo not found
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחלקה יכולה לממש כמה ממשקים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>implements Logger, Closable</code> – מתחייבת לשני החוזים</li>
+        <li>בניגוד ל-<code>extends</code> של מחלקות (רק הורה אחד) – ממשקים אפשר לממש כמה שרוצים</li>
+        <li>כל פונקציה רואה רק את ה"חלק" שמעניין אותה: <code>finish</code> רואה רק <code>close()</code></li>
+      </ul>
+      <div class="tip">ממשקים קטנים וממוקדים (Logger, Closable) קלים יותר לשימוש חוזר.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface Closable {
+          close(): void;
+        }
+        class BrowserSession implements Logger, Closable {
+          info(m: string) { console.log(`[browser] ${m}`); }
+          error(m: string) { console.log(`[browser] ERROR ${m}`); }
+          close() { console.log("[browser] closed"); }
+        }
+
+        function finish(resource: Closable): void {
+          resource.close();
+        }
+        const session = new BrowserSession();
+        session.info("started");
+        finish(session);
+      </pre>
+      <pre class="out sm">
+        [browser] started
+        [browser] closed
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – Interfaces</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ any לתשובה – אין הגנה</h3>
+      <pre class="lang-ts sm">
+        const body: any = await res.json();
+        body.data[0].mail;   // undefined, no warning
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ טיפוס לתשובה</h3>
+      <pre class="lang-ts sm">
+        const body: UsersPage = await res.json();
+        body.data[0].email;  // autocomplete + checked
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ instanceof על interface</h3>
+      <pre class="lang-ts sm">
+        if (x instanceof Logger) { }
+        // ❌ 'Logger' only refers to a type,
+        //    but is being used as a value here.
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ interface לא קיים בזמן ריצה</h3>
+      <pre class="lang-ts sm">
+        if (x instanceof ConsoleLogger) { } // a class
+        if ("info" in x) { }  // field check (part 3)
+      </pre>
+    </div>
+  </div>
+  <div class="warn">ושוב: שדה אופציונלי (<code>?</code>) – תמיד לבדוק או לתת ברירת מחדל עם <code>??</code> לפני שימוש.</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Interfaces</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <p>בתיקיית השיעור, פתחו את <code>exercises/01-interfaces.ts</code></p>
+      <ol>
+        <li><code>createTestUser</code> – factory עם <code>readonly</code> ושדה אופציונלי</li>
+        <li><code>resolveOptions</code> – ערכי ברירת מחדל לשדות אופציונליים</li>
+        <li><code>summarizeValidationError</code> – הרחבה עם <code>extends</code></li>
+        <li><code>CountingReporter</code> – מחלקה עם <code>implements</code></li>
+        <li><code>FakeBrowser</code> – מימוש כמה ממשקים</li>
+        <li>(בונוס) <code>createMemoryLogger</code> – structural typing</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 06 01
+      </pre>
+      <pre class="out sm">
+        --- Exercise 1: createTestUser ---
+          ✋ TODO
+
+        --- Exercise 2: resolveOptions ---
+          ✋ TODO
+      </pre>
+      <p class="small">תרגיל שפתרתם מדפיס את התוצאה שלכם מול הצפוי, למשל: <code>false =&gt; expected: false</code></p>
+      <p class="small">אחרי שניסיתם – הפתרון:</p>
+      <pre class="lang-bash">
+        npm run solution -- 06 01
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 2: Type Aliases -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>Type Aliases – שמות לטיפוסים</h1>
+  <p class="subtitle">literal types, tuple, intersection (&amp;) ו-Utility Types · examples/02-type-aliases.ts</p>
+</section>
+
+<section class="slide">
+  <h2><code>type</code> – שם לכל טיפוס</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>type</code> נותן <b>שם</b> לטיפוס – כל טיפוס: פרימיטיבי, אובייקט, פונקציה</li>
+        <li><code>timeout: Milliseconds</code> אומר יותר מ-<code>timeout: number</code></li>
+        <li>טיפוס פונקציה: מגדירים פעם אחת את החתימה, ו-TS מסיק את הפרמטרים</li>
+      </ul>
+      <div class="note">alias הוא רק <b>שם נוסף</b>: <code>UserId</code> ו-<code>number</code> הם אותו טיפוס – והבדיקה היא של <code>number</code>.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type UserId = number;
+        type Url = string;
+        type Milliseconds = number;
+        type Point = { x: number; y: number };             // אובייקט
+        type Assertion = (actual: unknown, expected: unknown) =&gt; boolean;
+
+        function fetchUser(id: UserId, base: Url, timeout: Milliseconds) {
+          return `GET ${base}/users/${id} (timeout ${timeout}ms)`;
+        }
+        const click: Point = { x: 120, y: 340 };
+        const strictEquals: Assertion = (a, e) =&gt; a === e;  // a, e: unknown
+
+        console.log(fetchUser(7, "http://localhost:3000", 5000));
+        console.log("Click at", click, strictEquals(1, "1"));
+
+        const uid: UserId = "7";
+        // ❌ Type 'string' is not assignable to type 'number'.
+      </pre>
+      <pre class="out sm">
+        GET http://localhost:3000/users/7 (timeout 5000ms)
+        Click at { x: 120, y: 340 } false
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Literal types – רק ערכים מסוימים מותרים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>טיפוס יכול להיות <b>ערך מדויק</b>: <code>"GET"</code>, <code>200</code>, <code>true</code></li>
+        <li>איחוד של literals עם <code>|</code> = רשימה סגורה של ערכים חוקיים</li>
+        <li>טעות כתיב נתפסת <b>מיד</b> – גם הבדל של אות גדולה/קטנה</li>
+        <li>VS Code משלים אוטומטית את האפשרויות</li>
+      </ul>
+      <div class="tip">מתאים ל: שיטות HTTP, דפדפנים, סביבות, סטטוסים של טסט, רמות חומרה.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+        type Browser = "chromium" | "firefox" | "webkit";
+
+        function request(method: HttpMethod, path: string): string {
+          return `${method} ${path}`;
+        }
+        console.log(request("POST", "/users"));
+        console.log(request("DELETE", "/users/7"));
+
+        request("FETCH", "/users");     // טעות כתיב נתפסת מיד
+        // ❌ Argument of type '"FETCH"' is not assignable
+        //    to parameter of type 'HttpMethod'.
+        request("get", "/users");
+        // ❌ Argument of type '"get"' is not assignable
+        //    to parameter of type 'HttpMethod'.
+      </pre>
+      <pre class="out sm">
+        POST /users
+        DELETE /users/7
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מלכודת נפוצה: <code>let</code> "מרחיב" ל-string</h2>
+  <div class="cols">
+    <div class="stack">
+      <table>
+        <tr><th>הצהרה</th><th>הטיפוס ש-TS מסיק</th></tr>
+        <tr><td style="white-space:nowrap"><code>let m = "GET"</code></td><td><code>string</code> (אפשר לשנות לכל מחרוזת)</td></tr>
+        <tr><td><code>const m = "GET"</code></td><td><code>"GET"</code> (לא ישתנה לעולם)</td></tr>
+        <tr><td style="white-space:nowrap"><code>let m: HttpMethod = "GET"</code></td><td><code>HttpMethod</code></td></tr>
+      </table>
+      <ul>
+        <li><code>let</code> בלי טיפוס = "מחרוזת כלשהי" – ולכן לא מתאים ל-<code>HttpMethod</code></li>
+        <li>הפתרון: <code>const</code>, או טיפוס מפורש</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        let method = "GET";
+        request(method, "/users");
+        // ❌ Argument of type 'string' is not
+        //    assignable to parameter of type 'HttpMethod'.
+
+        const m2 = "GET";              // ✅ type is "GET"
+        let m3: HttpMethod = "GET";    // ✅ explicit type
+        m3 = "PUT";                    // ✅ still HttpMethod
+        console.log(request(m2, "/a"), request(m3, "/b"));
+
+        m3 = "OPTIONS";
+        // ❌ Type '"OPTIONS"' is not assignable
+        //    to type 'HttpMethod'.
+      </pre>
+      <pre class="out sm">
+        GET /a PUT /b
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Union של literals + <code>Record</code> – מילון שלם</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Record&lt;Browser, number&gt;</code> = אובייקט עם <b>בדיוק</b> מפתח לכל דפדפן</li>
+        <li>שכחתם דפדפן? שגיאה. הוספתם מפתח שלא קיים? שגיאה</li>
+        <li>הוספתם <code>"edge"</code> ל-<code>Browser</code>? TS יראה לכם כל מקום שצריך לעדכן</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const timeouts: Record&lt;Browser, number&gt; = {
+          chromium: 30_000,
+          firefox: 45_000,
+          webkit: 60_000,
+        };
+        function timeoutFor(browser: Browser): string {
+          return `${browser}: ${timeouts[browser] / 1000}s`;
+        }
+        console.log(timeoutFor("webkit"));
+        const all: Browser[] = ["chromium", "firefox", "webkit"];
+        console.log(all.map(timeoutFor).join(" | "));
+
+        const t1: Record&lt;Browser, number&gt; = {
+          chromium: 30_000, firefox: 45_000 };
+        // ❌ Property 'webkit' is missing in type
+        //    '{ chromium: number; firefox: number; }'
+        //    but required in type 'Record&lt;Browser, number&gt;'.
+      </pre>
+      <pre class="out sm">
+        webkit: 60s
+        chromium: 30s | firefox: 45s | webkit: 60s
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Tuple – מערך באורך וסדר קבועים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>[code: number, text: string]</code> – בדיוק 2 איברים, בסדר הזה</li>
+        <li>השמות (<code>code</code>, <code>text</code>) רק לתיעוד – מופיעים בהשלמה האוטומטית</li>
+        <li>נוח להחזרת <b>כמה ערכים</b> מפונקציה + פירוק (destructuring)</li>
+        <li>אורך שגוי או סדר הפוך – נתפסים</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type StatusLine = [code: number, text: string];
+        const ok: StatusLine = [200, "OK"];
+        const [code, text] = ok;
+        console.log(`Status ${code} ${text}`);
+
+        function minMax(durations: number[]): [min: number, max: number] {
+          return [Math.min(...durations), Math.max(...durations)];
+        }
+        const [fastest, slowest] = minMax([820, 310, 1450, 640]);
+        console.log(`fastest ${fastest}ms, slowest ${slowest}ms`);
+
+        const a: StatusLine = [200];
+        // ❌ Type '[number]' is not assignable to type 'StatusLine'.
+        //    Source has 1 element(s) but target requires 2.
+        const b: StatusLine = ["OK", 200];
+        // ❌ Type 'string' is not assignable to type 'number'.
+      </pre>
+      <pre class="out sm">
+        Status 200 OK
+        fastest 310ms, slowest 1450ms
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Intersection (<code>&amp;</code>) – שילוב טיפוסים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>A &amp; B</code> = אובייקט שיש בו <b>גם</b> את כל השדות של A <b>וגם</b> של B</li>
+        <li>בונים טיפוסים מ"חלקים" קטנים לשימוש חוזר: <code>WithTimestamps</code>, <code>WithAuth</code></li>
+        <li>זה ה"<code>extends</code>" של <code>type</code></li>
+      </ul>
+      <div class="note">אל תתבלבלו: <code>|</code> = <b>אחד מ</b>-, <code>&amp;</code> = <b>כולם יחד</b>.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type WithTimestamps = { createdAt: string; updatedAt: string };
+        type Bug = { id: number; title: string };
+        type StoredBug = Bug &amp; WithTimestamps;
+
+        const stored: StoredBug = {
+          id: 1, title: "Broken link",
+          createdAt: "2026-11-01", updatedAt: "2026-11-02",
+        };
+        type WithAuth = { token: string };
+        type AuthedRequest = { method: HttpMethod; path: string } &amp; WithAuth;
+        const req: AuthedRequest = {
+          method: "GET", path: "/me", token: "t0k3n" };
+        console.log(Object.keys(stored));
+        console.log(Object.keys(req));
+
+        const s: StoredBug = { id: 1, title: "x", createdAt: "2026-11-01" };
+        // ❌ Property 'updatedAt' is missing in type '{ ... }'
+        //    but required in type 'WithTimestamps'.
+      </pre>
+      <pre class="out sm">
+        [ 'id', 'title', 'createdAt', 'updatedAt' ]
+        [ 'method', 'path', 'token' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Utility Types מובנים</h2>
+  <p>"פונקציות" שמקבלות טיפוס ומחזירות טיפוס חדש – בלי להעתיק שדות ידנית:</p>
+  <table>
+    <tr><th>Utility</th><th>מה הוא עושה</th><th>שימוש בבדיקות</th></tr>
+    <tr><td><code>Partial&lt;T&gt;</code></td><td>כל השדות אופציונליים</td><td>עדכון חלקי: <code>PATCH /users/1</code></td></tr>
+    <tr><td><code>Required&lt;T&gt;</code></td><td>כל השדות חובה</td><td>ולידציה של אובייקט מלא</td></tr>
+    <tr><td><code>Pick&lt;T, K&gt;</code></td><td>רק השדות שנבחרו</td><td><code>Pick&lt;User, "id" | "name"&gt;</code></td></tr>
+    <tr><td><code>Omit&lt;T, K&gt;</code></td><td>בלי השדות שנבחרו</td><td>Body ליצירה: <code>Omit&lt;User, "id"&gt;</code></td></tr>
+    <tr><td><code>Readonly&lt;T&gt;</code></td><td>הכול readonly</td><td>נתוני בדיקה קבועים</td></tr>
+    <tr><td><code>Record&lt;K, V&gt;</code></td><td>מילון עם מפתחות ידועים</td><td><code>Record&lt;Browser, number&gt;</code></td></tr>
+  </table>
+  <div class="tip">היתרון: משנים את ה-interface המקורי במקום אחד – וכל הטיפוסים הנגזרים מתעדכנים לבד.</div>
+</section>
+
+<section class="slide">
+  <h2><code>Omit</code> + <code>Partial</code>: גוף בקשה ל-POST ול-PATCH</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>ב-POST אין <code>id</code> – השרת מייצר אותו → <code>Omit&lt;TestCase, "id"&gt;</code></li>
+        <li>ב-PATCH שולחים רק את מה שמשתנה → <code>Partial&lt;...&gt;</code></li>
+        <li>אפשר לשרשר: <code>Partial&lt;Omit&lt;T, "id"&gt;&gt;</code></li>
+        <li>שלחתם <code>id</code> ב-POST בטעות? נתפס</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface TestCase {
+          id: string; title: string; steps: string[]; owner: string;
+        }
+        type NewTestCase = Omit&lt;TestCase, "id"&gt;;        // POST body
+        type TestCasePatch = Partial&lt;NewTestCase&gt;;      // PATCH body
+
+        function createCase(body: NewTestCase): TestCase {
+          return { id: "TC-1", ...body };
+        }
+        function describePatch(patch: TestCasePatch): string {
+          return `PATCH fields: ${Object.keys(patch).join(", ")}`;
+        }
+        console.log(createCase({ title: "Login", steps: [], owner: "dana" }));
+        console.log(describePatch({ title: "Login v2", steps: [] }));
+        const bad: NewTestCase =
+          { id: "TC-1", title: "x", steps: [], owner: "d" };
+        // ❌ Object literal may only specify known properties,
+        //    and 'id' does not exist in type 'NewTestCase'.
+      </pre>
+      <pre class="out sm">
+        { id: 'TC-1', title: 'Login', steps: [], owner: 'dana' }
+        PATCH fields: title, steps
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>Pick</code>, <code>Readonly</code>, <code>Record</code> בפעולה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Pick</code> – תצוגה מקוצרת (למשל שורה בטבלת דוח)</li>
+        <li><code>Readonly</code> – נתוני בדיקה שאסור שטסט אחד ישנה לטסט אחר</li>
+        <li><code>Record</code> – ספירת תוצאות לפי דפדפן</li>
+        <li>גם שמות השדות ב-<code>Pick</code>/<code>Omit</code> נבדקים!</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type TestCasePreview = Pick&lt;TestCase, "id" | "title"&gt;;
+        const preview: TestCasePreview = { id: "TC-1", title: "Login" };
+        type P2 = Pick&lt;TestCase, "id" | "titel"&gt;;
+        // ❌ Type '"titel"' is not assignable to type 'keyof TestCase'.
+        //    Did you mean '"title"'?
+
+        const frozen: Readonly&lt;TestCase&gt; =
+          { id: "TC-3", title: "x", steps: [], owner: "dana" };
+        frozen.owner = "avi";
+        // ❌ Cannot assign to 'owner' because it is a read-only property.
+
+        type ResultsByBrowser = Record&lt;Browser, number&gt;;
+        const results: ResultsByBrowser =
+          { chromium: 40, firefox: 38, webkit: 37 };
+        const total = results.chromium + results.firefox + results.webkit;
+        console.log(preview);
+        console.log(results, total);
+      </pre>
+      <pre class="out sm">
+        { id: 'TC-1', title: 'Login' }
+        { chromium: 40, firefox: 38, webkit: 37 } 115
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Type Aliases</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <p>בתיקיית השיעור, פתחו את <code>exercises/02-type-aliases.ts</code></p>
+      <ol>
+        <li><code>between</code> – טיפוס לפונקציה</li>
+        <li><code>buildUrl</code> – literal types + <code>Record</code></li>
+        <li><code>parseStatusLine</code> – Tuple</li>
+        <li><code>stampBug</code> / <code>touchBug</code> – Intersection (<code>&amp;</code>)</li>
+        <li><code>applyDraft</code> / <code>toPreview</code> – <code>Partial</code>, <code>Omit</code>, <code>Pick</code></li>
+        <li>(בונוס) <code>aggregateByBrowser</code> – Record + Tuple + Literal יחד</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 06 02
+      </pre>
+      <p class="small">קראו את הטיפוסים בקובץ בעיון – הם מתארים בדיוק מה להחזיר. תרגיל שלא הושלם מודפס <code>✋ TODO</code>.</p>
+      <p class="small">הפתרון:</p>
+      <pre class="lang-bash">
+        npm run solution -- 06 02
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 3: Union Types -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>Union Types</h1>
+  <p class="subtitle">"זה או זה" – ואיך TypeScript יודע מה יש לנו ביד · examples/03-union-types-narrowing.ts</p>
+</section>
+
+<section class="slide">
+  <h2>Union – "זה או זה"</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>A | B</code> – ערך שיכול להיות אחד מכמה טיפוסים</li>
+        <li>בלי בדיקה, מותר להשתמש רק במה ש<b>משותף לכולם</b></li>
+        <li><b>Narrowing</b> – צמצום הטיפוס בתוך תנאי: אחרי <code>typeof</code>, TS יודע בדיוק מה יש ביד</li>
+        <li>הקוד לא משתנה בזמן ריצה – רק ההבנה של הקומפיילר</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type Id = string | number;
+
+        function shout(id: Id): string {
+          return id.toUpperCase();
+        }
+        // ❌ Property 'toUpperCase' does not exist on type 'Id'.
+        //    Property 'toUpperCase' does not exist on type 'number'.
+
+        function normalizeId(id: Id): string {
+          if (typeof id === "number") {
+            return `ID-${id.toFixed(0)}`;   // here id: number
+          }
+          return id.toUpperCase();          // here id: string
+        }
+        console.log(normalizeId(42), normalizeId("tc-7"));
+      </pre>
+      <pre class="out sm">
+        ID-42 TC-7
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Narrowing צעד אחר צעד</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function describeValue(v: string | number | null): string {
+          // ① v: string | number | null
+          if (v === null) {
+            return "(empty)";     // ② v: null
+          }
+          // ③ v: string | number
+          if (typeof v === "number") {
+            return v.toFixed(2);  // ④ v: number
+          }
+          return v.trim();        // ⑤ v: string
+        }
+        console.log(describeValue(null),
+          describeValue(3.14159), describeValue("  ok  "));
+      </pre>
+      <pre class="out sm">
+        (empty) 3.14 ok
+      </pre>
+    </div>
+    <div class="stack">
+      <table>
+        <tr><th>נקודה</th><th>הטיפוס של v</th><th>למה</th></tr>
+        <tr><td>①</td><td><code>string | number | null</code></td><td>כל האפשרויות</td></tr>
+        <tr><td>②</td><td><code>null</code></td><td>עבר <code>=== null</code></td></tr>
+        <tr><td>③</td><td><code>string | number</code></td><td>null כבר "יצא" ב-return</td></tr>
+        <tr><td>④</td><td><code>number</code></td><td>עבר <code>typeof</code></td></tr>
+        <tr><td>⑤</td><td><code>string</code></td><td>רק זה נשאר</td></tr>
+      </table>
+      <div class="tip">ב-VS Code: עמדו עם העכבר על <code>v</code> בכל שורה – ותראו את הטיפוס משתנה.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>T | null</code> – "אולי אין ערך"</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>פונקציה שאולי לא מוצאת: <code>string | null</code></li>
+        <li>TS <b>חובה לטפל</b> ב-null לפני שימוש</li>
+        <li><code>?.</code> – "אם יש ערך, המשך; אחרת undefined"</li>
+        <li><code>??</code> – ערך ברירת מחדל ל-null/undefined</li>
+        <li>או בדיקה רגילה: <code>if (x !== null)</code></li>
+      </ul>
+      <div class="note">זה בדיוק הבאג הקלאסי "Cannot read properties of null" – שנתפס כאן בקומפילציה.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function findUserName(id: number): string | null {
+          return id === 1 ? "Dana" : null;
+        }
+
+        const name = findUserName(2);
+        name.toUpperCase();
+        // ❌ 'name' is possibly 'null'.
+
+        console.log(name?.toUpperCase() ?? "user not found");
+
+        const n1 = findUserName(1);
+        if (n1 !== null) {
+          console.log(n1.toUpperCase());   // n1: string
+        }
+      </pre>
+      <pre class="out sm">
+        user not found
+        DANA
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>Array.isArray</code> – ערך אחד או רשימה?</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>API-ים רבים מקבלים "אחד או כמה": נמען אחד או רשימת נמענים</li>
+        <li><code>typeof</code> לא עוזר כאן – <code>typeof []</code> הוא <code>"object"</code></li>
+        <li><code>Array.isArray(x)</code> מצמצם ל-מערך, וה-else ל-שאר</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function countItems(input: string | string[]): number {
+          return Array.isArray(input) ? input.length : 1;
+        }
+        console.log(countItems("one"), countItems(["a", "b", "c"]));
+
+        function joinRecipients(to: string | string[]): string {
+          if (Array.isArray(to)) {
+            return to.join("; ");   // to: string[]
+          }
+          return to;                // to: string
+        }
+        console.log(joinRecipients("qa@shop.test"));
+        console.log(joinRecipients(["dana@shop.test", "avi@shop.test"]));
+
+        // without the check: to.join(...)
+        // ❌ Property 'join' does not exist on type 'string | string[]'.
+      </pre>
+      <pre class="out sm">
+        1 3
+        qa@shop.test
+        dana@shop.test; avi@shop.test
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>האופרטור <code>in</code> – לפי שדה שקיים באובייקט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>"token" in auth</code> – האם יש לאובייקט שדה בשם הזה?</li>
+        <li>מתאים כששתי הצורות שונות לגמרי ואין שדה "סוג" משותף</li>
+        <li>אחרי ה-if – TS יודע איזו צורה נשארה</li>
+      </ul>
+      <pre class="lang-ts sm">
+        type Cat = { meow: () =&gt; string };
+        type Dog = { bark: () =&gt; string };
+        function speak(a: Cat | Dog): string {
+          return "meow" in a ? a.meow() : a.bark();
+        }
+        speak({ bark: () =&gt; "woof" });  // "woof"
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type TokenAuth = { token: string };
+        type BasicAuth = { username: string; password: string };
+        function authHeader(auth: TokenAuth | BasicAuth): string {
+          if ("token" in auth) {
+            return `Bearer ${auth.token}`;       // TokenAuth
+          }
+          const encoded = Buffer.from(`${auth.username}:${auth.password}`)
+            .toString("base64");                 // BasicAuth
+          return `Basic ${encoded}`;
+        }
+        console.log(authHeader({ token: "t0k3n" }));
+        console.log(authHeader({ username: "qa", password: "123" }));
+
+        // without the check: return auth.token;
+        // ❌ Property 'token' does not exist on type 'TokenAuth | BasicAuth'.
+        //    Property 'token' does not exist on type 'BasicAuth'.
+      </pre>
+      <pre class="out sm">
+        Bearer t0k3n
+        Basic cWE6MTIz
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>instanceof</code> – לפי מחלקה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>x instanceof Class</code> – האם האובייקט נוצר מהמחלקה (או מתת-מחלקה שלה)?</li>
+        <li>הכי שימושי ב-<code>catch</code>: השגיאה היא <code>unknown</code>, ואין לדעת מה נזרק</li>
+        <li>סוגי שגיאות שונים ← טיפול שונה (retry מול fail)</li>
+        <li>הסדר חשוב: הספציפי (<code>TimeoutError</code>) לפני הכללי (<code>Error</code>)</li>
+      </ul>
+      <div class="warn">בלי בדיקה, גישה ל-<code>err.message</code> נכשלת:<br /><code>'err' is of type 'unknown'.</code></div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class TimeoutError extends Error {
+          constructor(readonly ms: number) { super(`Timed out after ${ms}ms`); }
+        }
+        function explain(err: unknown): string {
+          if (err instanceof TimeoutError) {
+            return `retry (waited ${err.ms}ms)`;   // err: TimeoutError
+          }
+          if (err instanceof Error) {
+            return `fail: ${err.message}`;         // err: Error
+          }
+          return `unknown: ${String(err)}`;        // still unknown
+        }
+        console.log(explain(new TimeoutError(5000)));
+        console.log(explain(new Error("Button not found")));
+        console.log(explain("oops"));
+      </pre>
+      <pre class="out sm">
+        retry (waited 5000ms)
+        fail: Button not found
+        unknown: oops
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שוויון (<code>===</code>) – מול ערך מדויק</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>השוואה ל-literal מצמצמת את ה-union לערך הזה</li>
+        <li>ב-else נשארות רק שאר האפשרויות</li>
+        <li><code>switch</code> הוא בעצם אותו דבר – סדרה של <code>===</code></li>
+        <li>בונוס: השוואה לערך שבכלל לא אפשרי (302) נתפסת כטעות</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type StatusCode = 200 | 201 | 404 | 500;
+
+        function category(code: StatusCode): string {
+          if (code === 200 || code === 201) {
+            return `${code} ok`;               // code: 200 | 201
+          }
+          if (code === 404) {
+            return `${code} client error`;     // code: 404
+          }
+          return `${code} server error`;       // code: 500
+        }
+        const codes: StatusCode[] = [201, 404, 500];
+        console.log(codes.map(category));
+
+        const isRedirect = (code: StatusCode) =&gt; code === 302;
+        // ❌ This comparison appears to be unintentional because
+        //    the types 'StatusCode' and '302' have no overlap.
+      </pre>
+      <pre class="out sm">
+        [ '201 ok', '404 client error', '500 server error' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Discriminated Union – הדפוס החשוב ביותר</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>שדה משותף (<code>kind</code>) עם ערך קבוע לכל אפשרות</li>
+        <li><code>switch</code> על <code>kind</code> ← TS יודע אילו שדות קיימים (<code>data</code> רק בהצלחה)</li>
+        <li><code>never</code> ב-default – מקרה שלא טופל? שגיאת קומפילציה</li>
+        <li>גישה ל-<code>r.data</code> <b>לפני</b> בדיקת <code>kind</code> – נחסמת:<br /><code class="small wrap">Property 'data' does not exist on type 'ApiResult'.</code></li>
+      </ul>
+      <pre class="out sm">
+        ✔ 200: got user Dana
+        ⚠ 404: User not found
+        ✘ network: ECONNREFUSED
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        type ApiResult =
+          | { kind: "success"; status: 200 | 201;
+              data: { id: number; name: string } }
+          | { kind: "client-error"; status: 400 | 401 | 404; message: string }
+          | { kind: "network-error"; reason: string };
+        function describe(r: ApiResult): string {
+          switch (r.kind) {
+            case "success": return `✔ ${r.status}: got user ${r.data.name}`;
+            case "client-error": return `⚠ ${r.status}: ${r.message}`;
+            case "network-error": return `✘ network: ${r.reason}`;
+            default: { const never: never = r; return never; }
+          }
+        }
+        const samples: ApiResult[] = [
+          { kind: "success", status: 200, data: { id: 1, name: "Dana" } },
+          { kind: "client-error", status: 404, message: "User not found" },
+          { kind: "network-error", reason: "ECONNREFUSED" },
+        ];
+        samples.forEach((s) =&gt; console.log(describe(s)));
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Exhaustive check עם <code>never</code> – אף מקרה לא נשכח</h2>
+  <div class="flow">
+    <div class="step"><b>1. מוסיפים מקרה</b>מישהו מוסיף <code>"timeout"</code> ל-ApiResult</div><div class="arrow">←</div>
+    <div class="step r"><b>2. שגיאת קומפילציה</b>בשורת ה-<code>never</code> שבתוך ה-default</div><div class="arrow">←</div>
+    <div class="step g"><b>3. מתקנים</b>מוסיפים <code>case "timeout"</code> – והשגיאה נעלמת</div>
+  </div>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      type ApiResult =
+        | { kind: "success"; ... }
+        | { kind: "client-error"; ... }
+        | { kind: "network-error"; reason: string }
+        | { kind: "timeout"; ms: number };      // new!
+
+      // in describe(): same switch, no new case
+      default: {
+        const never: never = r;
+        // ❌ Type '{ kind: "timeout"; ms: number; }'
+        //    is not assignable to type 'never'.
+      }
+    </pre>
+    <div class="stack">
+      <ul>
+        <li><code>never</code> = "טיפוס שאין לו אף ערך"</li>
+        <li>אם טיפלנו בכל המקרים – ב-<code>default</code> לא נשאר כלום, ולכן <code>r</code> הוא <code>never</code></li>
+        <li>נשאר מקרה? הוא "נופל" ל-default – ו-TS צועק <b>ומראה איזה</b></li>
+        <li>גם בלי <code>default</code> (כשטיפוס ההחזרה <code>string</code>) TS מתריע:<br /><code class="small wrap">Function lacks ending return statement and return type does not include 'undefined'.</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Type Guard מותאם אישית</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>value is T</code> – פונקציה שמלמדת את TS על טיפוס</li>
+        <li>שימושי לנתונים שמגיעים מבחוץ: API, קבצים, JSON</li>
+        <li>ככה בודקים <code>unknown</code> בצורה בטוחה</li>
+        <li>הפונקציה מחזירה <code>boolean</code> רגיל – וה-<code>if</code> מצמצם את הטיפוס</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface TestFailure {
+          test: string;
+          error: string;
+        }
+
+        function isFailure(value: unknown): value is TestFailure {
+          return typeof value === "object" &amp;&amp; value !== null
+            &amp;&amp; "test" in value &amp;&amp; "error" in value;
+        }
+
+        const fromReport: unknown =
+          JSON.parse('{"test":"login","error":"timeout"}');
+
+        if (isFailure(fromReport)) {
+          console.log(`Failure in ${fromReport.test}: ${fromReport.error}`);
+        }
+        console.log(isFailure(JSON.parse('{"test":"login"}')));
+      </pre>
+      <pre class="out sm">
+        Failure in login: timeout
+        false
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Type guard במקום <code>as</code></h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ גישה ישירה / <code>as</code></h3>
+      <pre class="lang-ts sm">
+        fromReport.test;
+        // ❌ 'fromReport' is of type 'unknown'.
+
+        const f = fromReport as TestFailure;
+        f.error.length;  // compiles... and crashes
+                         // at runtime if it is missing
+      </pre>
+      <p><code>as</code> רק "משתיק" את הקומפיילר – אין שום בדיקה.</p>
+    </div>
+    <div class="card good"><h3>✅ type guard גם ב-filter</h3>
+      <pre class="lang-ts sm">
+        const mixed: (string | number)[] =
+          ["TC-1", 7, "TC-9", 12];
+        const numbers = mixed.filter(
+          (x): x is number =&gt; typeof x === "number",
+        );   // numbers: number[]
+        console.log(numbers,
+          numbers.reduce((a, b) =&gt; a + b, 0));
+      </pre>
+      <pre class="out sm">
+        [ 7, 12 ] 19
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ארגז הכלים של Narrowing</h2>
+  <table>
+    <tr><th>כלי</th><th>מתי משתמשים</th><th>דוגמה</th></tr>
+    <tr><td><code>typeof</code></td><td>פרימיטיבים: string / number / boolean</td><td><code>typeof id === "number"</code></td></tr>
+    <tr><td><code>=== null</code> / <code>?.</code> / <code>??</code></td><td>"אולי אין ערך"</td><td><code>name ?? "N/A"</code></td></tr>
+    <tr><td><code>Array.isArray</code></td><td>אחד או רשימה</td><td><code>Array.isArray(to)</code></td></tr>
+    <tr><td><code>in</code></td><td>צורות שונות בלי שדה סוג</td><td><code>"token" in auth</code></td></tr>
+    <tr><td><code>instanceof</code></td><td>מופעים של מחלקות (שגיאות)</td><td><code>err instanceof TimeoutError</code></td></tr>
+    <tr><td><code>===</code> על literal</td><td>ערכים מדויקים</td><td><code>code === 404</code></td></tr>
+    <tr><td><code>switch</code> על <code>kind</code></td><td>Discriminated union + <code>never</code></td><td><code>case "success":</code></td></tr>
+    <tr><td><code>x is T</code></td><td>נתונים מבחוץ (<code>unknown</code>)</td><td><code>isFailure(value)</code></td></tr>
+  </table>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Union Types ו-Narrowing</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <p>פתחו את <code>exercises/03-union-types-narrowing.ts</code></p>
+      <ol>
+        <li><code>formatCell</code> – narrowing עם <code>typeof</code> ו-null</li>
+        <li><code>normalizeTags</code> – <code>Array.isArray</code> (וגם undefined/null)</li>
+        <li><code>userNamesOrThrow</code> – האופרטור <code>in</code></li>
+        <li><code>describeStep</code> – discriminated union + <code>never</code></li>
+        <li><code>isTestFailure</code> / <code>collectFailures</code> – type guard</li>
+        <li>(בונוס) <code>summarizeRun</code> – סיכום ריצה מאירועים</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 06 03
+      </pre>
+      <p class="small">בכל תרגיל הקלט הוא union – צמצמו אותו <b>לפני</b> שניגשים לשדות.</p>
+      <p class="small">הפתרון:</p>
+      <pre class="lang-bash">
+        npm run solution -- 06 03
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 4: interface מול type -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>interface או type?</h1>
+  <p class="subtitle">שני כלים עם חפיפה גדולה – מתי לבחור מה · examples/04-interface-vs-type.ts</p>
+</section>
+
+<section class="slide">
+  <h2>אותה צורה – בשתי דרכים</h2>
+  <div class="grid2">
+    <div class="card"><h3>interface</h3>
+      <pre class="lang-ts sm">
+        interface UserI {
+          name: string;
+        }
+        interface AdminI extends UserI {
+          level: number;
+        }
+      </pre>
+    </div>
+    <div class="card"><h3>type</h3>
+      <pre class="lang-ts sm">
+        type UserT = { name: string };
+        type AdminT = UserT &amp; { level: number };
+      </pre>
+    </div>
+  </div>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      const x: AdminI = { name: "Avi", level: 2 };
+      const y: AdminT = x;    // ✅ same shape = compatible
+      console.log(y);
+    </pre>
+    <pre class="out sm">
+      { name: 'Avi', level: 2 }
+    </pre>
+  </div>
+  <p><b>הבדל אחד:</b> מה קורה כששדה "מתנגש"? <code>extends</code> מתריע מיד, <code>&amp;</code> יוצר בשקט <code>never</code>:</p>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      interface Base { id: number; }
+      interface Wrong extends Base { id: string; }
+      // ❌ Interface 'Wrong' incorrectly extends
+      //    interface 'Base'. Types of property
+      //    'id' are incompatible.
+    </pre>
+    <pre class="lang-ts sm">
+      type W2 = Base &amp; { id: string };  // id: never
+      const w: W2 = { id: 1 };
+      // ❌ Type 'number' is not assignable
+      //    to type 'never'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Declaration merging – רק ל-interface</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>interface עם אותו שם שמוגדר <b>פעמיים</b> – מתמזג לאחד</li>
+        <li>כך ספריות (למשל Playwright) מאפשרות "להוסיף שדות" לטיפוסים שלהן</li>
+        <li><code>type</code> עם אותו שם פעמיים – שגיאה</li>
+      </ul>
+      <pre class="lang-ts sm">
+        type EnvT = { baseUrl: string };
+        type EnvT = { apiKey: string };
+        // ❌ Duplicate identifier 'EnvT'.
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface Env {
+          baseUrl: string;
+        }
+        interface Env {              // אותו שם – מתמזג
+          apiKey: string;
+        }
+        const env: Env = {           // שני השדות נדרשים
+          baseUrl: "http://localhost:3000",
+          apiKey: "xyz",
+        };
+        console.log(env);
+
+        const partial: Env = { baseUrl: "http://localhost:3000" };
+        // ❌ Property 'apiKey' is missing in type
+        //    '{ baseUrl: string; }' but required in type 'Env'.
+      </pre>
+      <pre class="out sm">
+        { baseUrl: 'http://localhost:3000', apiKey: 'xyz' }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><code>implements</code> – עם interface וגם עם type</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מחלקה יכולה לממש <code>type</code> – כל עוד הוא <b>צורת אובייקט</b></li>
+        <li>union אי אפשר לממש: מחלקה לא יכולה להיות "זה או זה"</li>
+        <li>ולהפך: <code>interface</code> לא יכול להיות union / literal / tuple</li>
+      </ul>
+      <pre class="lang-ts sm">
+        type Status =
+          "passed" | "failed" | "skipped";
+        // interface Status = ...  ❌
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class Tester implements UserI {
+          constructor(public name: string) {}
+        }
+        class Lead implements AdminT {            // a type works too
+          constructor(public name: string, public level: number) {}
+        }
+        const s: Status = "passed";
+        console.log({ s, tester: new Tester("Noa"),
+          lead: new Lead("Dana", 3) });
+
+        class Bad implements Status {}
+        // ❌ A class can only implement an object type or intersection
+        //    of object types with statically known members.
+      </pre>
+      <pre class="out sm">
+        {
+          s: 'passed',
+          tester: Tester { name: 'Noa' },
+          lead: Lead { name: 'Dana', level: 3 }
+        }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>interface או type?</h2>
+  <table>
+    <tr><th></th><th>interface</th><th>type</th></tr>
+    <tr><td>צורת אובייקט</td><td>✅</td><td>✅</td></tr>
+    <tr><td>הרחבה</td><td><code>extends</code></td><td><code>&amp;</code></td></tr>
+    <tr><td><code>implements</code> במחלקה</td><td>✅</td><td>✅ (אם זו צורת אובייקט)</td></tr>
+    <tr><td>Union / Literal / Tuple</td><td>❌</td><td>✅</td></tr>
+    <tr><td>טיפוס פונקציה / Utility types</td><td>אפשרי, מסורבל</td><td>✅</td></tr>
+    <tr><td>Declaration merging</td><td>✅</td><td>❌</td></tr>
+  </table>
+  <div class="note">כלל אצבע: <b>interface</b> למודלים של אובייקטים ומחלקות, <b>type</b> ל-unions, literals ופונקציות</div>
+  <div class="tip">בפרויקט אמיתי משלבים את שניהם: interface לתשובת השרת, ובתוכו type לסטטוסים (union) ולשילובים (<code>Pick</code>, <code>&amp;</code>).</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – interface מול type</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <p>בתיקיית השיעור, פתחו את <code>exercises/04-interface-vs-type.ts</code></p>
+      <ol>
+        <li><code>toCiConfig</code> – <code>extends</code> מול <code>&amp;</code>: שתי דרכים לאותה צורה</li>
+        <li><code>createContext</code> / <code>describeContext</code> – declaration merging</li>
+        <li><code>classifyAttempts</code> / <code>toRecord</code> – type ל-union, interface לאובייקט</li>
+        <li><code>FakeClock</code> / <code>StopWatch</code> – מחלקות שמממשות type ו-interface</li>
+        <li>(בונוס) <code>pageInfo</code> – הכלי הנכון לכל משימה</li>
+      </ol>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 06 04
+      </pre>
+      <p class="small">בכל תרגיל שימו לב <b>איזה</b> כלי נבחר (interface או type) – ולמה.</p>
+      <p class="small">הפתרון:</p>
+      <pre class="lang-bash">
+        npm run solution -- 06 04
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ סיום -->
+<section class="slide practice">
+  <h2>תרגול – שיעור 6</h2>
+  <div class="cols wide-text">
+    <div class="stack">
+      <p>תרגילי הסיכום בתיקיית השיעור: <code>exercises/exercises.ts</code></p>
+      <ul>
+        <li>הגדירו <code>Severity</code>, <code>BugStatus</code> ו-<code>interface Bug</code></li>
+        <li><code>urgentBugs</code> – סינון ומיון · <code>parseBugId(id: string | number)</code></li>
+        <li><code>outcomeLine</code> – Discriminated union של תוצאות בדיקה</li>
+        <li><code>InMemoryBugTracker implements BugTracker</code></li>
+      </ul>
+      <div class="tip">מומלץ לפתור קודם את ארבעת קובצי הנושאים (01–04), ורק אז את הסיכום.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 06
+      </pre>
+      <p class="small">הפתרון (<code>solutions/solutions.ts</code>):</p>
+      <pre class="lang-bash">
+        npm run solution -- 06
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סיכום</h2>
+  <ul>
+    <li><b>interface</b> – חוזה לצורת אובייקט · <code>implements</code> – מחלקה מתחייבת לחוזה</li>
+    <li><b>type</b> – שם לטיפוס, literal types, <code>&amp;</code>, tuples · Utility types</li>
+    <li><b>Union</b> + <b>Narrowing</b> – עבודה בטוחה עם ערכים מכמה סוגים</li>
+    <li><b>Discriminated unions</b> + <code>never</code> – אף מקרה לא נשכח</li>
+    <li>הקומפיילר הוא "בודק" נוסף: טעויות כתיב, שדות חסרים ו-null נתפסים <b>לפני</b> הריצה</li>
+    <li>בשיעור הבא: <b>Generics</b> ותרגול OOP מסכם</li>
+  </ul>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

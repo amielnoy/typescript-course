@@ -1,0 +1,72 @@
+# Lesson 11 – Topic 06: Nightly Regression – schedule, inputs and concurrency (Exercises)
+# Topic: examples/workflows/04-nightly-regression.yml
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/06-nightly-regression.yml
+#
+# Tasks:
+#  1. Two schedules under schedule (UTC time):
+#       "0 2 * * 1-5"   – 02:00, Monday to Friday
+#       "0 6 * * 6"     – 06:00 on Saturday
+#  2. workflow_dispatch with two inputs:
+#       browser – type: choice, options: chromium, firefox, webkit, default: chromium
+#       debug   – type: boolean, default: false
+#  3. Using the input (a schedule run has no inputs – so add a default with ||):
+#       install:  npx playwright install --with-deps ${{ inputs.browser || 'chromium' }}
+#       run:      npx playwright test --project=${{ inputs.browser || 'chromium' }}
+#  4. A step that runs only when debug is checked (if: ${{ inputs.debug }}) and sets an environment variable for all the steps after it:
+#       echo "DEBUG=pw:api" >> "$GITHUB_ENV"
+#     (this step must come before running the tests)
+#  5. Workflow-level concurrency:  group: nightly-${{ github.ref }}  and cancel-in-progress: true
+#     (a new run cancels a previous run on the same branch that has not finished yet)
+#  6. (Bonus) A job named notify (runs-on: ubuntu-latest) that runs after regression (needs),
+#     and only if it failed in a scheduled run:
+#       if: ${{ failure() && github.event_name == 'schedule' }}
+
+name: Nightly Plus
+
+on:
+  # TODO: schedule (two crons)
+  # TODO: workflow_dispatch with inputs
+
+# TODO: concurrency
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # TODO: install the selected browser
+      # TODO: debug step
+      # TODO: run the tests
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-report-${{ github.run_number }}
+          path: playwright-report/
+
+  # TODO (Bonus): a job named notify
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] Under on → schedule, two crons (in quotes):  "0 2 * * 1-5"  and  "0 6 * * 6"
+# [ ] workflow_dispatch with inputs
+# [ ] An input named browser:  type: choice,  options: chromium, firefox, webkit,  default: chromium
+# [ ] An input named debug:  type: boolean,  default: false
+# [ ] Browser install:  npx playwright install --with-deps ${{ inputs.browser || 'chromium' }}
+# [ ] Test run:  npx playwright test --project=${{ inputs.browser || 'chromium' }}
+# [ ] A step with  if: ${{ inputs.debug }}  that runs  echo "DEBUG=pw:api" >> "$GITHUB_ENV"  – before running the tests
+# [ ] Top-level concurrency with  group: nightly-${{ github.ref }}  and  cancel-in-progress: true
+# [ ] (Bonus) A job named notify with  needs: regression,  runs-on: ubuntu-latest
+#         and  if: ${{ failure() && github.event_name == 'schedule' }}
+#
+# Compare with the solution: solutions/06-nightly-regression.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/06-nightly-regression.yml

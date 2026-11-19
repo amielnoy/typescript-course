@@ -1,0 +1,53 @@
+# שיעור 11 – Workflow 4: רגרסיה לילית (schedule) + הפעלה ידנית עם פרמטרים
+name: Nightly Regression
+
+on:
+  schedule:
+    # cron בזמן UTC: דקה שעה יום-בחודש חודש יום-בשבוע
+    # "0 0 * * 0-4" = כל לילה בחצות UTC (02:00/03:00 בישראל), ראשון עד חמישי
+    - cron: "0 0 * * 0-4"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [qa, staging]
+        default: qa
+      tags:
+        description: "Test tags to run (grep)"
+        type: string
+        default: "@regression"
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'qa' }} # ב-schedule אין inputs → ברירת מחדל qa
+    env:
+      BASE_URL: ${{ vars.BASE_URL }} # מוגדר בנפרד לכל Environment (Settings → Environments)
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Run regression
+        run: npx playwright test --grep "${{ inputs.tags || '@regression' }}"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Write summary
+        if: always()
+        run: |
+          echo "## 🌙 Nightly regression" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: **${{ inputs.environment || 'qa' }}**" >> $GITHUB_STEP_SUMMARY
+          echo "- Result: **${{ job.status }}**" >> $GITHUB_STEP_SUMMARY

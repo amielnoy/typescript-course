@@ -1,0 +1,23 @@
+# שמרו כ-.gitignore בשורש פרויקט אוטומציה ב-TypeScript
+node_modules/
+dist/
+
+# דוחות ותוצרי ריצה
+reports/
+test-results/
+playwright-report/
+allure-results/
+allure-report/
+*.log
+
+# סודות והגדרות מקומיות – לעולם לא לגיט!
+.env
+.env.*
+!.env.example
+
+# מערכת הפעלה ועורכים
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

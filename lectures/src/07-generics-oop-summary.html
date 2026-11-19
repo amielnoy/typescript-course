@@ -1,0 +1,1500 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 7 – Generics ותרגול OOP מסכם</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="7">
+
+<!-- ============================================================ -->
+<!-- פתיחה -->
+<!-- ============================================================ -->
+<section class="slide title">
+  <div class="badge">שיעור 7</div>
+  <h1>Generics ותרגול OOP מסכם</h1>
+  <p class="subtitle">קוד אחד שעובד עם כל טיפוס – בלי לאבד בטיחות</p>
+  <div class="chips"><span>Generic functions</span><span>Generic interfaces</span><span>Generic classes</span><span>Constraints</span><span>keyof</span><span>OOP summary</span></div>
+  <div class="meta">27.11 · יום ו' · 09:00–14:00 · ZOOM · תיקייה בפרויקט: lessons/07-generics-oop-summary</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום</h2>
+  <table>
+    <tr><th>חלק</th><th>נושא</th><th>קובץ דוגמה</th></tr>
+    <tr><td>1</td><td>פונקציות גנריות: <code>&lt;T&gt;</code>, הסקת טיפוסים, כמה פרמטרי טיפוס, callbacks</td><td><code>examples/01-generic-functions.ts</code></td></tr>
+    <tr><td>2</td><td>ממשקים ומחלקות גנריים, <code>extends</code>, <code>keyof</code>, טיפוסים גנריים מובנים</td><td><code>examples/02-generic-interfaces-classes.ts</code></td></tr>
+    <tr><td>3</td><td>תרגול OOP מסכם: מיני-תשתית בדיקות API שמשלבת הכול</td><td><code>examples/03-oop-summary-mini-framework.ts</code></td></tr>
+  </table>
+  <ul>
+    <li>כבר השתמשתם ב-generics בלי לשים לב: <code>Array&lt;string&gt;</code>, <code>Map&lt;number, User&gt;</code>, <code>Promise&lt;User&gt;</code></li>
+    <li>היום נלמד <b>לכתוב</b> כאלה בעצמנו – ונחבר את כל עקרונות ה-OOP לתשתית אחת</li>
+  </ul>
+  <pre class="lang-bash">
+    npx tsx lessons/07-generics-oop-summary/examples/01-generic-functions.ts   # הרצת דוגמה
+  </pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- חלק 1: פונקציות גנריות -->
+<!-- ============================================================ -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>פונקציות גנריות</h1>
+  <p class="subtitle">פרמטר-טיפוס &lt;T&gt; · הסקת טיפוסים · כמה פרמטרים · callbacks</p>
+  <div class="chips"><span>examples/01-generic-functions.ts</span></div>
+</section>
+
+<section class="slide">
+  <h2>הבעיה: פונקציה אחת – הרבה טיפוסים</h2>
+  <p>רוצים פונקציה <code>first</code> שמחזירה את האיבר הראשון במערך – של מספרים, של מחרוזות, של משתמשים... יש שלוש דרכים:</p>
+  <div class="grid3">
+    <div class="card bad">
+      <h3>❌ לשכפל</h3>
+      <p>בטוח – אבל אותו קוד שוב ושוב. באג? מתקנים בכל העותקים.</p>
+    </div>
+    <div class="card bad">
+      <h3>❌ any</h3>
+      <p>פונקציה אחת – אבל TS "שוכח" מה חזר. אין בדיקה, אין השלמה.</p>
+    </div>
+    <div class="card good">
+      <h3>✅ <span dir="ltr">Generics &lt;T&gt;</span></h3>
+      <p>פונקציה אחת – ו-TS יודע בדיוק איזה טיפוס חזר.</p>
+    </div>
+  </div>
+  <p><b>ניסיון 1 – שכפול:</b></p>
+  <pre class="lang-ts">
+    function firstNumber(items: number[]): number | undefined { return items[0]; }
+    function firstString(items: string[]): string | undefined { return items[0]; }
+    function firstUser(items: User[]): User | undefined { return items[0]; }
+    // ...and for every new type – another copy 😩
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>הבעיה: any מאבד את הטיפוס</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>any</code> = "תכבה את בדיקת הטיפוסים כאן"</li>
+        <li>TS לא יודע ש-<code>id</code> הוא מספר – ולכן <b>לא עוצר</b> אותנו</li>
+        <li>הבאג מתגלה רק <b>בזמן ריצה</b> – בדיוק מה שרצינו למנוע</li>
+      </ul>
+      <div class="warn">בבדיקות: באג כזה ב-helper = בדיקה שנופלת מסיבה לא נכונה (או גרוע – עוברת)</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts">
+        function firstAny(items: any[]): any {
+          return items[0];
+        }
+
+        const id = firstAny([101, 102, 103]); // id: any
+        const upper = id.toUpperCase();       // compiles! 😱
+        console.log(upper);
+      </pre>
+      <pre class="out">
+        TypeError: id.toUpperCase is not a function
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הפתרון: פרמטר טיפוס <span dir="ltr">&lt;T&gt;</span></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <p>פונקציה אחת · כל טיפוס · בטיחות מלאה – בדרך כלל TS מסיק את T לבד:</p>
+      <pre class="out">
+        10 chromium
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      function first&lt;T&gt;(items: T[]): T | undefined {
+        return items[0];
+      }
+
+      const n = first([10, 20, 30]);    // number | undefined
+      const s = first(["chromium"]);    // string | undefined
+      console.log(n, s);
+    </pre>
+  </div>
+  <table class="small">
+    <tr><th>חלק</th><th>משמעות</th></tr>
+    <tr><td><code>first&lt;T&gt;</code></td><td><b>פרמטר טיפוס</b> – "משתנה" שמייצג טיפוס; מכריזים עליו פעם אחת, אחרי שם הפונקציה</td></tr>
+    <tr><td><code>(items: T[])</code></td><td>הקלט: מערך של "משהו" – כל האיברים מאותו טיפוס T</td></tr>
+    <tr><td><code>: T | undefined</code></td><td>הפלט: <b>אותו</b> T (או undefined אם המערך ריק) – כאן נמצא כל הקסם</td></tr>
+    <tr><td><code>first([10, 20])</code></td><td>בקריאה TS מציב T = number ו"מחליף" כל T בחתימה ב-number</td></tr>
+  </table>
+  <div class="note small">פרמטר רגיל מקבל <b>ערך</b> (<code>items</code>), פרמטר טיפוס מקבל <b>טיפוס</b> (<code>T</code>). השם T הוא מוסכמה – אפשר גם <code>Item</code>. מוכר לכם כבר: <code>Array&lt;string&gt;</code>, <code>Promise&lt;User&gt;</code>.</div>
+</section>
+
+<section class="slide">
+  <h2>הסקת טיפוסים (Type Inference)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>TS מסתכל על הארגומנטים ו<b>מסיק</b> את T</li>
+        <li>מערך מעורב → T הוא union</li>
+        <li>מערך ריק → אין ממה להסיק (never)</li>
+        <li>ציון מפורש <code>first&lt;string&gt;</code> – כשאין ממה להסיק, או כדי ש-TS יבדוק אותנו</li>
+      </ul>
+      <div class="tip">ברוב המקרים – לא כותבים את T. נותנים ל-TS להסיק.</div>
+    </div>
+    <pre class="lang-ts sm">
+      first([10, 20, 30]);       // T = number
+      first(["login", "cart"]);  // T = string
+      first([1, "two"]);         // T = string | number
+      first([]);                 // T = never → returns undefined
+      first&lt;string&gt;([]);         // explicit: T = string
+
+      const n = first([10, 20, 30]);
+      n?.toUpperCase();
+      // ❌ Property 'toUpperCase' does not exist on type 'number'.
+
+      first&lt;string&gt;([1, 2]);
+      // ❌ Type 'number' is not assignable to type 'string'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>כמה פרמטרי טיפוס</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>מפרידים בפסיק: <code>&lt;K, V&gt;</code> – כל אחד נקבע בנפרד</li>
+        <li>כל ארגומנט "מלמד" את TS על הטיפוס שלו</li>
+      </ul>
+      <table>
+        <tr><th>שם מקובל</th><th>משמעות</th></tr>
+        <tr><td><code>T</code></td><td>Type – הטיפוס הכללי</td></tr>
+        <tr><td><code>K</code>, <code>V</code></td><td>Key, Value – מפתח וערך</td></tr>
+        <tr><td><code>R</code></td><td>Return – טיפוס התוצאה</td></tr>
+        <tr><td><code>E</code></td><td>Error – טיפוס השגיאה</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function pair&lt;K, V&gt;(key: K, value: V): [K, V] {
+          return [key, value];
+        }
+
+        const p1 = pair("timeout", 5000);  // [string, number]
+        const p2 = pair("headless", true); // [string, boolean]
+        const p3 = pair(404, "Not Found"); // [number, string]
+        console.log(p1, p2);
+        console.log(p3);
+      </pre>
+      <pre class="out">
+        [ 'timeout', 5000 ] [ 'headless', true ]
+        [ 404, 'Not Found' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Generic עם callback – הטיפוס "זורם" מהקלט לפלט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>T</code> – טיפוס האיברים בקלט</li>
+        <li><code>R</code> – מה שה-callback מחזיר</li>
+        <li>TS מסיק את <code>R</code> מגוף ה-callback</li>
+        <li>בדיוק כך עובד <code>array.map</code> המובנה</li>
+      </ul>
+      <pre class="out">
+        lengths: [ 5, 8 ]
+        verdicts: [ 'OK', 'FAIL', 'FAIL' ]
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function mapValues&lt;T, R&gt;(items: T[], fn: (item: T) =&gt; R): R[] {
+          const out: R[] = [];
+          for (const item of items) out.push(fn(item));
+          return out;
+        }
+
+        // number[]
+        const lengths = mapValues(["login", "checkout"], (n) =&gt; n.length);
+        // ("OK" | "FAIL")[]
+        const verdicts = mapValues([200, 404, 500], (s) =&gt;
+          s &lt; 400 ? "OK" : "FAIL");
+        console.log("lengths:", lengths);
+        console.log("verdicts:", verdicts);
+      </pre>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="step"><b dir="ltr">items: string[]</b>T = string</div><div class="arrow">←</div>
+    <div class="step y"><b dir="ltr">fn: (name: string) =&gt; number</b>R = number</div><div class="arrow">←</div>
+    <div class="step g"><b dir="ltr">number[]</b>הפלט: <span dir="ltr">R[]</span></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>readonly, as const ו-arrow function גנרית</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>readonly T[]</code> – הפונקציה מבטיחה לא לשנות את המערך, ולכן מקבלת גם מערכים קבועים</li>
+        <li><code>as const</code> – שומר את הערכים המדויקים: T = <code>"chromium" | "firefox" | "webkit"</code></li>
+        <li>בלי <code>as const</code> – T היה סתם <code>string</code></li>
+        <li>arrow function: ה-<code>&lt;T&gt;</code> נכתב לפני הסוגריים</li>
+      </ul>
+      <pre class="out">
+        Random browser for this run: firefox
+        last: 3
+        last: regression
+      </pre>
+      <p class="small muted">(הדפדפן משתנה מריצה לריצה – זו בחירה אקראית)</p>
+    </div>
+    <pre class="lang-ts sm">
+      function randomItem&lt;T&gt;(items: readonly T[]): T {
+        return items[Math.floor(Math.random() * items.length)];
+      }
+
+      const ALL = ["chromium", "firefox", "webkit"] as const;
+      const browser = randomItem(ALL);
+      console.log("Random browser for this run:", browser);
+
+      let b2 = browser;
+      b2 = "edge";
+      // ❌ Type '"edge"' is not assignable to type
+      //    '"chromium" | "firefox" | "webkit"'.
+
+      const last = &lt;T&gt;(items: T[]): T | undefined =&gt;
+        items[items.length - 1];
+      console.log("last:", last([1, 2, 3]));
+      console.log("last:", last(["smoke", "regression"]));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>דוגמה מעולם הבדיקות: <span dir="ltr">retry&lt;T&gt;</span></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>בדיקות "מהבהבות" (flaky) – מנסים שוב כמה פעמים</li>
+        <li><code>retry</code> לא יודעת מה הפעולה מחזירה – וגם לא צריכה</li>
+        <li>מה שה-action מחזיר – זה מה ש-retry מחזירה: כאן T = number</li>
+        <li>עובד גם ל-<code>string</code>, ל-<code>User</code>, לכל דבר</li>
+      </ul>
+      <pre class="out">
+        attempt 1 failed: 503 Service Unavailable
+        attempt 2 failed: 503 Service Unavailable
+        status: 200 after 3 calls
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      function retry&lt;T&gt;(action: () =&gt; T, attempts: number): T {
+        let lastError: unknown;
+        for (let i = 1; i &lt;= attempts; i++) {
+          try {
+            return action();
+          } catch (err) {
+            lastError = err;
+            console.log(`attempt ${i} failed: ${(err as Error).message}`);
+          }
+        }
+        throw lastError;
+      }
+
+      let calls = 0;
+      const status = retry(() =&gt; {
+        calls++;
+        if (calls &lt; 3) throw new Error("503 Service Unavailable");
+        return 200;
+      }, 5); // status: number
+      console.log("status:", status, "after", calls, "calls");
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – פונקציות גנריות</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ T בלי חיבור בין קלט לפלט</h3>
+      <pre class="lang-ts sm">
+        function logName&lt;T&gt;(name: string): void {
+          console.log(name); // T never used
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ generic רק כשהטיפוס "עובר דרך"</h3>
+      <pre class="lang-ts sm">
+        function logName(name: string): void {
+          console.log(name);
+        }
+      </pre>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ להבטיח T כשאולי אין ערך</h3>
+      <pre class="lang-ts sm">
+        function firstBad&lt;T&gt;(items: T[]): T {
+          return items[0];
+        }
+        const x = firstBad&lt;string&gt;([]); // "string"?
+        console.log(x, typeof x); // undefined undefined
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ להיות כנים: T | undefined</h3>
+      <pre class="lang-ts sm">
+        function first&lt;T&gt;(items: T[]): T | undefined {
+          return items[0];
+        }
+        // TS forces a check before use:
+        // first(names)?.toUpperCase()
+      </pre>
+    </div>
+  </div>
+  <div class="note">כלל אצבע: T צריך להופיע <b>לפחות פעמיים</b> – למשל בקלט ובפלט. אחרת הוא לא מוסיף כלום.</div>
+</section>
+
+<section class="slide">
+  <h2>השוואה: שכפול · any · unknown · Generics</h2>
+  <table>
+    <tr><th></th><th>שכפול פונקציות</th><th><code>any</code></th><th><code>unknown</code></th><th>Generics <code>&lt;T&gt;</code></th></tr>
+    <tr><td><b>שימוש חוזר</b></td><td>❌ עותק לכל טיפוס</td><td>✅</td><td>✅</td><td>✅</td></tr>
+    <tr><td><b>בדיקת טיפוסים</b></td><td>✅</td><td>❌ כבויה</td><td>✅ אבל חייבים לבדוק / cast</td><td>✅</td></tr>
+    <tr><td><b>השלמה אוטומטית</b></td><td>✅</td><td>❌</td><td>❌ עד שמצמצמים</td><td>✅</td></tr>
+    <tr><td><b>מה חוזר מ-<code>first([1,2])</code></b></td><td><code>number</code></td><td><code>any</code></td><td><code>unknown</code></td><td><code>number | undefined</code></td></tr>
+    <tr><td><b>מתי להשתמש</b></td><td>כמעט אף פעם</td><td>לא בקוד שלנו</td><td>קלט לא ידוע (JSON חיצוני)</td><td>כשהטיפוס "עובר דרך" הפונקציה</td></tr>
+  </table>
+  <div class="tip">Generics = הגמישות של any + הבטיחות של טיפוס מפורש</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 01: פונקציות גנריות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>פתחו את <code>exercises/01-generic-functions.ts</code></li>
+        <li><code>firstOr</code> · <code>partition</code> · <code>zip</code> · <code>chunk</code> · <code>uniqueBy</code></li>
+        <li>בונוס: <code>cycle</code> – רוטציה קבועה (round-robin) של דפדפנים</li>
+        <li>בסוף הקובץ – בדיקה עצמית: תוצאה <code>=&gt; expected:</code> ערך צפוי</li>
+        <li>תרגיל שעוד לא פתרתם מסומן ב-<code>✋ TODO</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 07 01    # הרצה + בדיקה עצמית
+        npm run solution -- 07 01    # הפתרון
+      </pre>
+      <pre class="out">
+        --- Exercise 1: firstOr ---
+        chromium => expected: chromium
+        webkit => expected: webkit
+
+        --- Exercise 2: partition ---
+          ✋ TODO
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- חלק 2: ממשקים ומחלקות גנריים -->
+<!-- ============================================================ -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>ממשקים ומחלקות גנריים</h1>
+  <p class="subtitle"><span dir="ltr">ApiResponse&lt;T&gt; · Queue&lt;T&gt; · Repository&lt;T&gt; · extends · keyof</span> · טיפוסים מובנים</p>
+  <div class="chips"><span>examples/02-generic-interfaces-classes.ts</span></div>
+</section>
+
+<section class="slide">
+  <h2>Generic Interface – תשובת API</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מבנה אחיד לכל תשובות ה-API</li>
+        <li>רק <code>data</code> משתנה – לפי ה-endpoint</li>
+        <li>ממשק אחד במקום <code>UserResponse</code>, <code>ProductResponse</code>, ...</li>
+        <li>בדיוק כך בנויים לקוחות API באוטומציה (Axios, Playwright request)</li>
+      </ul>
+      <div class="note small">T מוחלף בכל מקום שהוא מופיע: ב-<code>ApiResponse&lt;User&gt;</code> השדה <code>data</code> הוא <code>User</code> – לכן שדה שגוי או חסר בתשובה נתפס עוד לפני ההרצה.</div>
+      <pre class="out">
+        Dana 19.9
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      interface ApiResponse&lt;T&gt; {
+        status: number;
+        data: T;
+        durationMs: number;
+      }
+      interface User { id: number; name: string }
+      interface Product { sku: string; price: number }
+
+      const userRes: ApiResponse&lt;User&gt; = {
+        status: 200, data: { id: 1, name: "Dana" }, durationMs: 85,
+      };
+      const listRes: ApiResponse&lt;Product[]&gt; = {
+        status: 200, data: [{ sku: "A-1", price: 19.9 }], durationMs: 120,
+      };
+      console.log(userRes.data.name, listRes.data[0].price);
+
+      userRes.data.price;
+      // ❌ Property 'price' does not exist on type 'User'.
+      const bad: ApiResponse&lt;User&gt; = {
+        status: 200, data: { id: 1 }, durationMs: 5,
+      };
+      // ❌ Property 'name' is missing in type '{ id: number; }'
+      //    but required in type 'User'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><span dir="ltr">ApiResponse&lt;T&gt; + Promise&lt;T&gt;</span> – איך זה נראה בפרויקט אמיתי</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>פונקציה גנרית שמחזירה ממשק גנרי עטוף ב-Promise גנרי</li>
+        <li>הקורא מחליט מה מצפים לקבל: <code>getJson&lt;User&gt;</code></li>
+        <li>מכאן והלאה – השלמה אוטומטית ובדיקה על <code>res.data</code></li>
+      </ul>
+      <div class="note"><code>async</code>/<code>await</code> ו-<code>Promise</code> – בהרחבה בשיעור הבא. כרגע רק שימו לב איך הטיפוסים "משורשרים".</div>
+    </div>
+    <pre class="lang-ts">
+      declare function getJson&lt;T&gt;(
+        url: string,
+      ): Promise&lt;ApiResponse&lt;T&gt;&gt;;
+
+      async function checkUser(): Promise&lt;void&gt; {
+        const res = await getJson&lt;User&gt;("/users/1");
+        const name: string = res.data.name; // ✅ string
+      }
+    </pre>
+  </div>
+  <div class="flow">
+    <div class="step"><b dir="ltr">getJson&lt;User&gt;</b>הקורא בוחר T</div><div class="arrow">←</div>
+    <div class="step y"><b dir="ltr">Promise&lt;ApiResponse&lt;User&gt;&gt;</b>מה שחוזר</div><div class="arrow">←</div>
+    <div class="step g"><b dir="ltr">res.data: User</b>אחרי await</div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ערך ברירת מחדל לפרמטר טיפוס: <span dir="ltr">Page&lt;T = string&gt;</span></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>&lt;T = string&gt;</code> – אם לא ציינו T, הוא <code>string</code></li>
+        <li><code>Page</code> לבד = <code>Page&lt;string&gt;</code></li>
+        <li><code>Page&lt;User&gt;</code> – דורס את ברירת המחדל</li>
+        <li>שימושי לתשובות API עם עימוד (<code>?page=2</code>)</li>
+      </ul>
+      <pre class="out">
+        tags: [ 'smoke', 'regression' ] 2
+        Dana page 3
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      interface Page&lt;T = string&gt; {
+        items: T[];
+        page: number;
+        total: number;
+      }
+
+      const tags: Page = {
+        items: ["smoke", "regression"], page: 1, total: 2,
+      };
+      const users: Page&lt;User&gt; = {
+        items: [{ id: 21, name: "Dana" }],
+        page: 3,
+        total: 41,
+      };
+      console.log("tags:", tags.items, tags.total);
+      console.log(users.items[0].name, "page", users.page);
+
+      const badTags: Page = { items: [1, 2], page: 1, total: 2 };
+      // ❌ Type 'number' is not assignable to type 'string'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><span dir="ltr">Result&lt;T, E&gt;</span> – הצלחה או כישלון, עם טיפוסים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>union גנרי: או <code>value</code> מסוג T, או <code>error</code> מסוג E</li>
+        <li><code>E = string</code> – ברירת מחדל לשגיאה</li>
+        <li>אחרי <code>if (r.ok)</code> – TS יודע באיזה צד אנחנו (narrowing)</li>
+        <li>מחזירים כישלון כערך – בלי לזרוק שגיאה</li>
+      </ul>
+      <pre class="out">
+        value: 201
+        error: invalid status: abc
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      type Result&lt;T, E = string&gt; =
+        | { ok: true; value: T }
+        | { ok: false; error: E };
+
+      function parseStatus(raw: string): Result&lt;number&gt; {
+        const code = Number(raw);
+        if (Number.isInteger(code) &amp;&amp; code &gt;= 100 &amp;&amp; code &lt;= 599) {
+          return { ok: true, value: code };
+        }
+        return { ok: false, error: `invalid status: ${raw}` };
+      }
+
+      for (const raw of ["200", "abc"]) {
+        const r = parseStatus(raw);
+        if (r.ok) console.log("value:", r.value + 1); // number
+        else console.log("error:", r.error);          // string
+      }
+      parseStatus("1").value;
+      // ❌ Property 'value' does not exist on type 'Result&lt;number, string&gt;'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><span dir="ltr">Generic Class – Queue&lt;T&gt;</span></h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>מבנה נתונים שעובד עם כל טיפוס</li>
+        <li>T נקבע ב-<code>new Queue&lt;string&gt;()</code> – ונשאר קבוע לכל חיי האובייקט</li>
+        <li>כל מתודה במחלקה "מכירה" את אותו T</li>
+        <li>שימוש בבדיקות: תור קבצי בדיקה להרצה</li>
+      </ul>
+      <pre class="out">
+        Next test: login.spec.ts | remaining: 1
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class Queue&lt;T&gt; {
+        private items: T[] = [];
+
+        enqueue(item: T): void {
+          this.items.push(item);
+        }
+        dequeue(): T | undefined {
+          return this.items.shift();
+        }
+        get size(): number {
+          return this.items.length;
+        }
+      }
+
+      const testQueue = new Queue&lt;string&gt;();
+      testQueue.enqueue("login.spec.ts");
+      testQueue.enqueue("cart.spec.ts");
+      console.log("Next test:", testQueue.dequeue(),
+        "| remaining:", testQueue.size);
+      testQueue.enqueue(42);
+      // ❌ Argument of type 'number' is not
+      //    assignable to parameter of type 'string'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Constraints – למה צריך להגביל את T?</h2>
+  <p>בתוך פונקציה גנרית, T יכול להיות <b>כל דבר</b> – גם מספר. לכן TS לא מרשה לגשת לשדות שלא בטוח שקיימים:</p>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ T בלי הגבלה</h3>
+      <pre class="lang-ts sm">
+        function getId&lt;T&gt;(item: T): number {
+          return item.id;
+          // ❌ Property 'id' does not exist
+          //    on type 'T'.
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ T extends HasId</h3>
+      <pre class="lang-ts sm">
+        interface HasId { id: number }
+
+        function getId&lt;T extends HasId&gt;(item: T): number {
+          return item.id; // ✅ T surely has id
+        }
+        getId({ id: 7, name: "Dana" }); // 7
+      </pre>
+    </div>
+  </div>
+  <div class="note"><code>T extends HasId</code> = "T יכול להיות כל טיפוס – <b>בתנאי</b> שיש לו <code>id: number</code>". שדות נוספים (כמו <code>name</code>) מותרים.</div>
+</section>
+
+<section class="slide">
+  <h2>Constraints – מה ההגבלה מונעת</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const product = { sku: "A-1", price: 19.9 };
+        getId(product);
+        // ❌ Argument of type '{ sku: string; price: number; }'
+        //    is not assignable to parameter of type 'HasId'.
+        //    Property 'id' is missing in type
+        //    '{ sku: string; price: number; }'
+        //    but required in type 'HasId'.
+      </pre>
+      <ul>
+        <li>אפשר גם הגבלה inline:<br/><code>T extends { id: number }</code></li>
+        <li>או מבנה כללי: "כל דבר עם <code>length</code>" – מחרוזת, מערך...</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function longest&lt;T extends { length: number }&gt;(
+          a: T,
+          b: T,
+        ): T {
+          return a.length &gt;= b.length ? a : b;
+        }
+
+        console.log(longest("login", "checkout")); // string
+        console.log(longest([1, 2, 3], [4]));     // number[]
+        longest(10, 20);
+        // ❌ Argument of type 'number' is not assignable
+        //    to parameter of type '{ length: number; }'.
+      </pre>
+      <pre class="out">
+        checkout
+        [ 1, 2, 3 ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><span dir="ltr">Repository&lt;T extends HasId&gt;</span> – מחלקה גנרית עם constraint</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>class Queue&lt;T&gt;</code> – מבנה נתונים לכל טיפוס</li>
+        <li><code>T extends HasId</code> – הגבלה: רק טיפוסים עם id</li>
+        <li>בזכות ה-constraint מותר <code>entity.id</code></li>
+        <li><code>Partial&lt;T&gt;</code> – משתלב עם utility types: עדכון חלקי</li>
+        <li>שימושי ל: test data builders, caches, clients</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      interface HasId { id: number }
+
+      class Repository&lt;T extends HasId&gt; {
+        private store = new Map&lt;number, T&gt;();
+
+        save(entity: T): void {
+          this.store.set(entity.id, entity); // OK: constraint
+        }
+        findById(id: number): T | undefined {
+          return this.store.get(id);
+        }
+        findAll(): T[] {
+          return [...this.store.values()];
+        }
+        update(id: number, changes: Partial&lt;T&gt;): T | undefined {
+          const existing = this.store.get(id);
+          if (!existing) return undefined;
+          const updated = { ...existing, ...changes };
+          this.store.set(id, updated);
+          return updated;
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><span dir="ltr">Repository&lt;User&gt;</span> בפעולה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Repository&lt;User&gt;</code> – מאגר משתמשים לבדיקות</li>
+        <li><code>update</code> מקבל רק חלק מהשדות – אבל מהטיפוס הנכון</li>
+        <li><code>Product</code> בלי id – נדחה כבר בהגדרה</li>
+      </ul>
+    </div>
+    <div class="stack">
+    <pre class="lang-ts sm">
+      const users = new Repository&lt;User&gt;();
+      users.save({ id: 1, name: "Dana" });
+      users.save({ id: 2, name: "Yossi" });
+      users.update(2, { name: "Yossi Cohen" });
+      console.log("All users:", users.findAll());
+      console.log("user 3:", users.findById(3));
+
+      new Repository&lt;Product&gt;();
+      // ❌ Type 'Product' does not satisfy the constraint 'HasId'.
+      //    Property 'id' is missing in type 'Product'
+      //    but required in type 'HasId'.
+
+      users.update(2, { name: 5 });
+      // ❌ Type 'number' is not assignable to type 'string'.
+    </pre>
+    <pre class="out sm">
+      All users: [ { id: 1, name: 'Dana' }, { id: 2, name: 'Yossi Cohen' } ]
+      user 3: undefined
+    </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>keyof ו-T[K] – הטיפוסים של שמות השדות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>keyof T</code> – איחוד של כל שמות השדות של T</li>
+        <li><code>T[K]</code> – הטיפוס של השדה K בתוך T ("indexed access")</li>
+        <li>טעות בשם שדה = שגיאת קומפילציה, לא באג בבדיקה</li>
+      </ul>
+      <table>
+        <tr><th>ביטוי</th><th>התוצאה</th></tr>
+        <tr><td><code>keyof User</code></td><td><code>"id" | "name" | "role"</code></td></tr>
+        <tr><td><code>User["name"]</code></td><td><code>string</code></td></tr>
+        <tr><td><code>User["role"]</code></td><td><code>"admin" | "tester"</code></td></tr>
+      </table>
+    </div>
+    <pre class="lang-ts sm">
+      interface User {
+        id: number;
+        name: string;
+        role: "admin" | "tester";
+      }
+
+      type UserKey = keyof User;    // "id" | "name" | "role"
+      type NameType = User["name"]; // string
+      type RoleType = User["role"]; // "admin" | "tester"
+
+      let key: UserKey = "name";    // ✅
+      key = "email";
+      // ❌ Type '"email"' is not assignable
+      //    to type 'keyof User'.
+
+      const r: RoleType = "guest";
+      // ❌ Type '"guest"' is not assignable
+      //    to type '"admin" | "tester"'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>K extends keyof T – גישה בטוחה לשדות</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function getProp&lt;T, K extends keyof T&gt;(
+          obj: T,
+          key: K,
+        ): T[K] {
+          return obj[key];
+        }
+
+        const user = { id: 1, name: "Dana", active: true };
+        const n = getProp(user, "name");   // string
+        const a = getProp(user, "active"); // boolean
+        console.log(n, a);
+        getProp(user, "email");
+        // ❌ Argument of type '"email"' is not assignable
+        //    to parameter of type '"name" | "id" | "active"'.
+      </pre>
+      <pre class="out">
+        Dana true
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        function pluck&lt;T, K extends keyof T&gt;(
+          items: T[],
+          key: K,
+        ): T[K][] {
+          return items.map((item) =&gt; item[key]);
+        }
+
+        const users = [
+          { id: 1, name: "Dana", role: "admin" },
+          { id: 2, name: "Yossi", role: "tester" },
+        ];
+        pluck(users, "name"); // string[]  → ["Dana", "Yossi"]
+        pluck(users, "id");   // number[]  → [1, 2]
+        pluck(users, "email");
+        // ❌ Argument of type '"email"' is not assignable
+        //    to parameter of type '"name" | "role" | "id"'.
+      </pre>
+      <div class="note">טיפוס הפלט נקבע לפי השדה שבחרנו – בלי לכתוב אותו בעצמנו</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2><span dir="ltr">TestDataBuilder&lt;T&gt;</span> – בונה נתוני בדיקה עם טיפוסים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li>ברירת מחדל ב-constructor; <code>Partial&lt;T&gt;</code> – רק השדות שדרסנו</li>
+        <li><code>with&lt;K extends keyof T&gt;</code> + <code>value: T[K]</code> – שדה קיים, ערך מהטיפוס שלו</li>
+        <li><code>: this</code> – מחזיר את הבונה עצמו → אפשר לשרשר</li>
+      </ul>
+      <pre class="lang-ts sm">
+        class TestDataBuilder&lt;T extends object&gt; {
+          private overrides: Partial&lt;T&gt; = {};
+
+          constructor(private readonly defaults: T) {}
+
+          with&lt;K extends keyof T&gt;(key: K, value: T[K]): this {
+            this.overrides[key] = value;
+            return this;
+          }
+
+          build(): T {
+            return { ...this.defaults, ...this.overrides };
+          }
+        }
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const users = new TestDataBuilder({
+          name: "Dana", role: "tester", active: true,
+        }); // T inferred from the defaults
+        const admin = users
+          .with("role", "admin")
+          .with("active", false)
+          .build();
+        console.log(admin);
+
+        users.with("role", 123);
+        // ❌ Argument of type 'number' is not assignable
+        //    to parameter of type 'string'.
+        users.with("email", "x");
+        // ❌ Argument of type '"email"' is not assignable
+        //    to parameter of type '"name" | "role" | "active"'.
+      </pre>
+      <pre class="out sm">
+        { name: 'Dana', role: 'admin', active: false }
+      </pre>
+      <div class="note small">בתרגיל 5 של נושא 02 – גרסה מלאה עם <code>reset()</code> ואובייקט חדש בכל <code>build()</code></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Generics מובנים – כבר מכירים אותם</h2>
+  <table>
+    <tr><th>טיפוס</th><th>משמעות</th><th>דוגמה מעולם הבדיקות</th></tr>
+    <tr><td><code>Array&lt;T&gt;</code> = <code>T[]</code></td><td>מערך של T</td><td><code>Array&lt;string&gt;</code> – רשימת דפדפנים</td></tr>
+    <tr><td><code>Promise&lt;T&gt;</code></td><td>ערך מסוג T שיגיע בעתיד</td><td><code>Promise&lt;ApiResponse&lt;User&gt;&gt;</code></td></tr>
+    <tr><td><code>Map&lt;K, V&gt;</code></td><td>מפתח מסוג K → ערך מסוג V</td><td><code>Map&lt;string, number&gt;</code> – ניסיונות חוזרים לכל קובץ</td></tr>
+    <tr><td><code>Record&lt;K, V&gt;</code></td><td>אובייקט שכל המפתחות K וכל הערכים V</td><td><code>Record&lt;string, number&gt;</code> – timeouts</td></tr>
+    <tr><td><code>Partial&lt;T&gt;</code></td><td>כל השדות של T – אופציונליים</td><td>עדכון חלקי / דריסת נתוני בדיקה</td></tr>
+    <tr><td><code>Readonly&lt;T&gt;</code></td><td>אי אפשר לשנות שדות</td><td>נתוני בדיקה "קפואים" שלא ישתנו בטעות</td></tr>
+    <tr><td><code>Pick&lt;T, K&gt;</code></td><td>רק השדות K מתוך T</td><td>השוואה רק של השדות שחשובים לנו</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>Generics מובנים – בקוד</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>אותו רעיון בדיוק כמו <code>Queue&lt;T&gt;</code> שכתבנו</li>
+        <li>TS עצמו מוגדר עם generics</li>
+        <li><code>Promise</code> מגיע מאוחר יותר → ההדפסה שלו אחרונה</li>
+      </ul>
+      <pre class="out sm">
+        2 5000 2
+        { name: 'Dana Levi' } { id: 1, name: 'Dana' }
+        resolved: 200
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const browsers: Array&lt;string&gt; = ["chromium", "webkit"]; // = string[]
+      const timeouts: Record&lt;string, number&gt; = { login: 5000, cart: 10000 };
+      const retries = new Map&lt;string, number&gt;();
+      retries.set("cart", 2);
+      const patch: Partial&lt;User&gt; = { name: "Dana Levi" };
+      const frozen: Readonly&lt;User&gt; = { id: 1, name: "Dana" };
+      const later: Promise&lt;number&gt; = Promise.resolve(200);
+
+      console.log(browsers.length, timeouts.login, retries.get("cart"));
+      console.log(patch, frozen);
+      later.then((s) =&gt; console.log("resolved:", s));
+
+      frozen.name = "x";
+      // ❌ Cannot assign to 'name' because it is a read-only property.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Record ו-Partial – מה הם תופסים</h2>
+  <div class="cols">
+    <div class="stack">
+      <p><b>Record עם מפתחות מ-union</b> – חייבים את כולם:</p>
+      <pre class="lang-ts sm">
+        type Suite = "smoke" | "regression";
+
+        const suites: Record&lt;Suite, string[]&gt; = {
+          smoke: ["login.spec.ts"],
+          regression: ["login.spec.ts", "cart.spec.ts"],
+        };
+
+        const bad: Record&lt;Suite, string[]&gt; = { smoke: [] };
+        // ❌ Property 'regression' is missing in type
+        //    '{ smoke: never[]; }' but required in type
+        //    'Record&lt;Suite, string[]&gt;'.
+      </pre>
+    </div>
+    <div class="stack">
+      <p><b>Partial</b> – הכול אופציונלי, אבל רק שדות אמיתיים:</p>
+      <pre class="lang-ts sm">
+        const p1: Partial&lt;User&gt; = {};               // ✅
+        const p2: Partial&lt;User&gt; = { name: "Dana" }; // ✅
+
+        const p3: Partial&lt;User&gt; = { email: "x" };
+        // ❌ Object literal may only specify known
+        //    properties, and 'email' does not exist
+        //    in type 'Partial&lt;User&gt;'.
+      </pre>
+      <div class="tip">הוספתם suite חדש ל-union? TS יראה לכם כל מקום שצריך לעדכן.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – מחלקות ו-keyof</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ new בלי טיפוס → unknown</h3>
+      <pre class="lang-ts sm">
+        const q = new Queue();     // Queue&lt;unknown&gt;
+        q.enqueue("login.spec.ts");
+        q.enqueue(42);             // no error!
+        q.dequeue().toUpperCase();
+        // ❌ Object is of type 'unknown'.
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מציינים T כשאין ממה להסיק</h3>
+      <pre class="lang-ts sm">
+        const q = new Queue&lt;string&gt;();
+        q.enqueue("login.spec.ts"); // ✅
+        q.enqueue(42);              // ❌ caught
+      </pre>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ key: string – שגיאת כתיב עוברת</h3>
+      <pre class="lang-ts sm">
+        function pluckLoose(items: object[], key: string) {
+          return items.map((i) =&gt; (i as any)[key]);
+        }
+        pluckLoose(users, "nmae"); // [ undefined, undefined ]
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ K extends keyof T</h3>
+      <pre class="lang-ts sm">
+        pluck(users, "nmae");
+        // ❌ Argument of type '"nmae"' is not assignable...
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 02: ממשקים ומחלקות גנריים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li class="small">פתחו את <code>exercises/02-generic-interfaces-classes.ts</code></li>
+        <li><code>unwrap</code> – "פתיחת" <code>ApiResponse&lt;T&gt;</code> או זריקת שגיאה</li>
+        <li><code>pick</code> עם <code>keyof</code> · <code>paginate</code> → <code>Page&lt;T&gt;</code></li>
+        <li><code>RingBuffer&lt;T&gt;</code> – שומר רק N שורות לוג אחרונות</li>
+        <li><code>TestDataBuilder&lt;T&gt;</code> – כולל <code>reset()</code></li>
+        <li>בונוס: <code>diffFields</code> – צפוי מול בפועל, שדה-שדה</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 07 02    # הרצה + בדיקה עצמית
+        npm run solution -- 07 02    # הפתרון
+      </pre>
+      <div class="tip">רמז ל-<code>pick</code>: <code>Pick&lt;T, K&gt;</code> הוא טיפוס מובנה – "רק השדות K מתוך T"</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- חלק 3: תרגול OOP מסכם -->
+<!-- ============================================================ -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>תרגול OOP מסכם</h1>
+  <p class="subtitle">מיני-תשתית בדיקות API שמשלבת את כל מה שלמדנו</p>
+  <div class="chips"><span>examples/03-oop-summary-mini-framework.ts</span></div>
+</section>
+
+<section class="slide">
+  <h2>הארכיטקטורה – מי קורא למי</h2>
+  <div class="flow">
+    <div class="step"><b>TestSuite</b>מריץ רשימת בדיקות<br/>Polymorphism</div><div class="arrow">←</div>
+    <div class="step y"><b dir="ltr">BaseApiTest.run()</b>try / catch אחיד<br/>Abstract · Template</div><div class="arrow">←</div>
+    <div class="step"><b dir="ltr">test()</b>כל מחלקה – בדיקה אחרת<br/>Inheritance</div><div class="arrow">←</div>
+    <div class="step y"><b dir="ltr">client.get&lt;T&gt;()</b>"שרת" מדומה<br/>Encapsulation</div><div class="arrow">←</div>
+    <div class="step g"><b dir="ltr">expectEqual&lt;T&gt;</b>assertion גנרי<br/>Generics</div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>1. חוזים</h3><p><code>ApiResponse&lt;T&gt;</code>, <code>User</code>, <code>TestResult</code> – interface, type, union</p></div>
+    <div class="card"><h3>2. רכיבים</h3><p><code>HttpClientMock</code>, <code>expectEqual</code>, <code>BaseApiTest</code> ומחלקות הבדיקה</p></div>
+    <div class="card"><h3>3. הרצה</h3><p><code>TestSuite</code> אוסף בדיקות, מריץ ומדפיס דוח <code>3/4 passed</code></p></div>
+  </div>
+  <div class="note">נבנה את התשתית שלב אחר שלב – כל שלב מדגים עיקרון אחד.</div>
+</section>
+
+<section class="slide">
+  <h2>מה יש בתשתית – ואיזה עיקרון כל חלק מדגים</h2>
+  <table>
+    <tr><th>רכיב</th><th>עיקרון / כלי</th></tr>
+    <tr><td><code>ApiResponse&lt;T&gt;</code>, <code>User</code>, <code>TestResult</code> (union)</td><td>Interfaces · Generics · Discriminated union</td></tr>
+    <tr><td><code>HttpClientMock</code> עם נתונים פרטיים</td><td>Encapsulation</td></tr>
+    <tr><td><code>expectEqual&lt;T&gt;(actual, expected)</code></td><td>Generic function · Custom error</td></tr>
+    <tr><td><code>abstract class BaseApiTest</code> עם <code>run()</code> ו-<code>abstract test()</code></td><td>Abstraction · Template method</td></tr>
+    <tr><td><code>GetAllUsersTest</code>, <code>GetUserByIdTest</code>, <code>NotFoundTest</code></td><td>Inheritance</td></tr>
+    <tr><td><code>TestSuite</code> שמריץ <code>BaseApiTest[]</code></td><td>Polymorphism</td></tr>
+  </table>
+  <div class="note">הקובץ המלא: <code>examples/03-oop-summary-mini-framework.ts</code> – הריצו אותו ונתחו כל חלק</div>
+</section>
+
+<section class="slide">
+  <h2>שלב 1: חוזים – interface, type ו-union</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>ApiResponse&lt;T&gt;</code> – כל תשובה: סטטוס + גוף מטיפוס T</li>
+        <li><code>role</code> – union של מחרוזות: רק שני ערכים חוקיים</li>
+        <li><code>TestResult</code> – discriminated union: <code>reason</code> קיים <b>רק</b> כש-<code>status</code> הוא <code>"failed"</code></li>
+        <li>עוד לפני שורת קוד אחת – הגדרנו מה כל חלק מקבל ומחזיר</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      interface ApiResponse&lt;T&gt; {
+        status: number;
+        body: T;
+      }
+
+      interface User {
+        id: number;
+        name: string;
+        role: "admin" | "tester";
+      }
+
+      type TestResult =
+        | { name: string; status: "passed" }
+        | { name: string; status: "failed"; reason: string };
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שלב 2: Encapsulation – "שרת" מדומה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li><code>private users</code> – הנתונים מוסתרים; רק <code>get</code> חשוף</li>
+        <li><code>get&lt;T&gt;</code> – הבדיקה מחליטה מה מצפים לקבל; <code>as T</code> – ה-mock "מבטיח" את הטיפוס</li>
+      </ul>
+      <pre class="lang-ts sm">
+        const client = new HttpClientMock();
+        const r = client.get&lt;User[]&gt;("/users");
+        console.log(r.status, r.body.length,
+          r.body[0].name);
+        console.log(client.get&lt;User&gt;("/users/999"));
+
+        client.users;
+        // ❌ Property 'users' is private and
+        //    only accessible within class
+        //    'HttpClientMock'.
+      </pre>
+      <pre class="out sm">
+        200 2 Dana
+        { status: 404, body: { error: 'not found' } }
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class HttpClientMock {
+        private users: User[] = [
+          { id: 1, name: "Dana", role: "admin" },
+          { id: 2, name: "Yossi", role: "tester" },
+        ];
+
+        get&lt;T&gt;(path: string): ApiResponse&lt;T&gt; {
+          if (path === "/users") {
+            return { status: 200, body: this.users as T };
+          }
+          const match = path.match(/^\/users\/(\d+)$/);
+          if (match) {
+            const user = this.users.find((u) =&gt; u.id === Number(match[1]));
+            return user
+              ? { status: 200, body: user as T }
+              : { status: 404, body: { error: "not found" } as T };
+          }
+          return { status: 404, body: {} as T };
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שלב 3: assertion גנרי – <span dir="ltr">expectEqual&lt;T&gt;</span></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>T מוסק מ-<code>actual</code> – ו-<code>expected</code> חייב להיות מאותו טיפוס</li>
+        <li>השוואת מספר למחרוזת = באג בבדיקה → נתפס בקומפילציה</li>
+        <li><code>AssertionError</code> – שגיאה מותאמת (ירושה מ-<code>Error</code>)</li>
+      </ul>
+      <pre class="out">
+        true users count: expected 3, got 2
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class AssertionError extends Error {}
+
+      function expectEqual&lt;T&gt;(actual: T, expected: T, label: string): void {
+        if (actual !== expected) {
+          throw new AssertionError(
+            `${label}: expected ${String(expected)}, got ${String(actual)}`,
+          );
+        }
+      }
+
+      try {
+        expectEqual(2, 3, "users count");
+      } catch (e) {
+        console.log(e instanceof AssertionError, (e as Error).message);
+      }
+
+      expectEqual(200, "200", "status");
+      // ❌ Argument of type 'string' is not assignable
+      //    to parameter of type 'number'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שלב 4: Abstract class + Template Method</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>run()</code> – ה"תבנית": אותו try/catch לכל הבדיקות</li>
+        <li><code>abstract test()</code> – ה"חור" שכל בדיקה ממלאת</li>
+        <li><code>protected client</code> – זמין לבנים, מוסתר מבחוץ</li>
+        <li>אי אפשר ליצור מופע של מחלקה אבסטרקטית</li>
+      </ul>
+      <pre class="lang-ts sm">
+        new BaseApiTest("x", client);
+        // ❌ Cannot create an instance
+        //    of an abstract class.
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      abstract class BaseApiTest {
+        constructor(
+          public readonly name: string,
+          protected client: HttpClientMock,
+        ) {}
+
+        protected abstract test(): void;
+
+        run(): TestResult {
+          try {
+            this.test();
+            return { name: this.name, status: "passed" };
+          } catch (err) {
+            return { name: this.name, status: "failed",
+                     reason: (err as Error).message };
+          }
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שלב 5: Inheritance – כל בדיקה היא מחלקה</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class GetAllUsersTest extends BaseApiTest {
+          protected test(): void {
+            const res = this.client.get&lt;User[]&gt;("/users");
+            expectEqual(res.status, 200, "status");
+            expectEqual(res.body.length, 2, "users count");
+          }
+        }
+
+        class NotFoundTest extends BaseApiTest {
+          protected test(): void {
+            const status = this.client.get("/users/999").status;
+            expectEqual(status, 404, "status");
+          }
+        }
+      </pre>
+      <ul class="small">
+        <li>יורשות את <code>run()</code>, <code>name</code>, <code>client</code> – כותבות רק את <code>test()</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class GetUserByIdTest extends BaseApiTest {
+          constructor(
+            client: HttpClientMock,
+            private id: number,
+            private expectedName: string,
+          ) {
+            super(
+              `GET /users/${id} returns ${expectedName}`,
+              client,
+            );
+          }
+
+          protected test(): void {
+            const res = this.client.get&lt;User&gt;(`/users/${this.id}`);
+            expectEqual(res.status, 200, "status");
+            expectEqual(res.body.name, this.expectedName, "name");
+          }
+        }
+      </pre>
+      <ul class="small">
+        <li>constructor משלה + <code>super(...)</code> – השם נבנה מהפרמטרים</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שלב 6: <span dir="ltr">Polymorphism – TestSuite</span></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>הסוויטה מחזיקה <code>BaseApiTest[]</code> – לא יודעת איזה סוג בדיקה היא מריצה</li>
+        <li><code>t.run()</code> – כל אובייקט מריץ את ה-<code>test()</code> <b>שלו</b></li>
+        <li><code>add(...): this</code> – מחזיר את הסוויטה → שרשור</li>
+        <li><code>r.reason</code> מותר רק אחרי בדיקת <code>status</code> (narrowing)</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      class TestSuite {
+        private tests: BaseApiTest[] = [];
+
+        add(...tests: BaseApiTest[]): this {
+          this.tests.push(...tests);
+          return this; // enables chaining
+        }
+
+        run(): void {
+          const results = this.tests.map((t) =&gt; t.run());
+          for (const r of results) {
+            console.log(r.status === "passed"
+              ? `✔ ${r.name}` : `✘ ${r.name} -&gt; ${r.reason}`);
+          }
+          const passed = results.filter((r) =&gt; r.status === "passed").length;
+          console.log(`\n${passed}/${results.length} passed`);
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחברים הכול – והרצה</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      const client = new HttpClientMock();
+      const allUsers = "GET /users returns 2 users";
+      const notFound = "GET unknown user returns 404";
+
+      new TestSuite()
+        .add(new GetAllUsersTest(allUsers, client))
+        .add(new GetUserByIdTest(client, 1, "Dana"))
+        .add(new GetUserByIdTest(client, 2, "Noa")) // fails
+        .add(new NotFoundTest(notFound, client))
+        .run();
+    </pre>
+    <pre class="out sm">
+      ✔ GET /users returns 2 users
+      ✔ GET /users/1 returns Dana
+      ✘ GET /users/2 returns Noa -> name: expected Noa, got Yossi
+      ✔ GET unknown user returns 404
+
+      3/4 passed
+    </pre>
+  </div>
+  <p><b>מה קרה בבדיקה שנכשלה?</b></p>
+  <div class="flow">
+    <div class="step"><b dir="ltr">suite.run()</b>קורא ל-<span dir="ltr">t.run()</span></div><div class="arrow">←</div>
+    <div class="step"><b dir="ltr">BaseApiTest.run()</b>קורא ל-<span dir="ltr">this.test()</span></div><div class="arrow">←</div>
+    <div class="step y"><b>expectEqual</b><span dir="ltr">"Yossi" !== "Noa"</span></div><div class="arrow">←</div>
+    <div class="step r"><b>throw</b>AssertionError</div><div class="arrow">←</div>
+    <div class="step g"><b>catch ב-<span dir="ltr">run()</span></b>מחזיר <span dir="ltr">status: "failed"</span></div>
+  </div>
+  <div class="tip">בדיקה שנכשלה לא מפילה את הריצה – הסוויטה ממשיכה לבדיקה הבאה ומדווחת בסוף.</div>
+</section>
+
+<section class="slide">
+  <h2>הרחבת התשתית: סוג בדיקה חדש = מחלקה חדשה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>הוספנו בדיקה – <b>בלי לגעת</b> ב-<code>TestSuite</code> או ב-<code>BaseApiTest</code></li>
+        <li>זה הכוח של abstract + polymorphism: "פתוח להרחבה, סגור לשינוי"</li>
+        <li><code>expectEqual</code> הסיק את T מהטיפוס של <code>role</code> – שגיאת כתיב כמו <code>"admn"</code> הייתה נתפסת</li>
+      </ul>
+      <pre class="out">
+        ✔ user 1 is admin
+        ✔ GET unknown user returns 404
+
+        2/2 passed
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class AdminRoleTest extends BaseApiTest {
+        protected test(): void {
+          const res = this.client.get&lt;User&gt;("/users/1");
+          expectEqual(res.status, 200, "status");
+          expectEqual(res.body.role, "admin", "role");
+        }
+      }
+
+      new TestSuite()
+        .add(new AdminRoleTest("user 1 is admin", client))
+        .add(new NotFoundTest("GET unknown user returns 404", client))
+        .run();
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מה הקומפיילר שומר עלינו בתשתית</h2>
+  <table>
+    <tr><th>מה ניסינו</th><th>השגיאה (tsc)</th><th>העיקרון</th></tr>
+    <tr><td><code>client.users</code></td><td class="small" dir="ltr">Property 'users' is private and only accessible within class 'HttpClientMock'.</td><td>Encapsulation</td></tr>
+    <tr><td><code>new BaseApiTest("x", client)</code></td><td class="small" dir="ltr">Cannot create an instance of an abstract class.</td><td>Abstraction</td></tr>
+    <tr><td><code>class EmptyTest extends BaseApiTest {}</code></td><td class="small" dir="ltr">Non-abstract class 'EmptyTest' does not implement inherited abstract member test from class 'BaseApiTest'.</td><td>Abstract contract</td></tr>
+    <tr><td>דריסת <code>run()</code> בלי <code>override</code></td><td class="small" dir="ltr">This member must have an 'override' modifier because it overrides a member in the base class 'BaseApiTest'.</td><td>Inheritance</td></tr>
+    <tr><td><code>someTest.test()</code> מבחוץ</td><td class="small" dir="ltr">Property 'test' is protected and only accessible within class 'NotFoundTest' and its subclasses.</td><td>Encapsulation</td></tr>
+    <tr><td><code>expectEqual(200, "200", ...)</code></td><td class="small" dir="ltr">Argument of type 'string' is not assignable to parameter of type 'number'.</td><td>Generics</td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – תכנון התשתית</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ בודקים "איזה סוג" עם instanceof</h3>
+      <pre class="lang-ts sm">
+        run(): void {
+          for (const t of this.tests) {
+            if (t instanceof GetAllUsersTest) { /* ... */ }
+            else if (t instanceof NotFoundTest) { /* ... */ }
+            // new test type = another else-if 😩
+          }
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ Polymorphism – כל אחד יודע לרוץ</h3>
+      <pre class="lang-ts sm">
+        run(): void {
+          const results = this.tests.map((t) =&gt; t.run());
+          // ...print results
+        }
+      </pre>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ try/catch מועתק לכל בדיקה</h3>
+      <p>כל מחלקה כותבת <code>run()</code> משלה עם אותו try/catch ואותו מבנה תוצאה – שינוי בפורמט = 20 קבצים.</p>
+    </div>
+    <div class="card good"><h3>✅ Template Method במחלקת הבסיס</h3>
+      <p><code>run()</code> אחד ב-<code>BaseApiTest</code>; הבנים כותבים רק <code>protected test()</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סיכום OOP – כל העקרונות במקום אחד</h2>
+  <table class="small">
+    <tr><th>עיקרון</th><th>במשפט אחד</th><th>דוגמה בשורה אחת</th><th>איפה בתשתית</th></tr>
+    <tr><td><b>Encapsulation</b></td><td>מסתירים מצב פנימי, חושפים מתודות</td><td><code>private users: User[]</code></td><td><code>HttpClientMock</code></td></tr>
+    <tr><td><b>Inheritance</b></td><td>מחלקה יורשת התנהגות ומרחיבה</td><td><code>class NotFoundTest extends BaseApiTest</code></td><td>מחלקות הבדיקה</td></tr>
+    <tr><td><b>Polymorphism</b></td><td>אותה קריאה – התנהגות לפי האובייקט</td><td><code>tests.map((t) =&gt; t.run())</code></td><td><code>TestSuite</code></td></tr>
+    <tr><td><b>Abstract class</b></td><td>תבנית חלקית שאי אפשר ליצור ישירות</td><td><code>protected abstract test(): void</code></td><td><code>BaseApiTest</code></td></tr>
+    <tr><td><b>Interface</b></td><td>חוזה: מה צורה של אובייקט</td><td><code>interface User { id: number }</code></td><td><code>User</code>, <code>ApiResponse</code></td></tr>
+    <tr><td><b>Union type</b></td><td>אחד מכמה מצבים מוגדרים</td><td><code>status: "passed" | "failed"</code></td><td><code>TestResult</code></td></tr>
+    <tr><td><b>Generics</b></td><td>קוד אחד לכל טיפוס – בבטיחות</td><td><code>expectEqual&lt;T&gt;(a: T, e: T)</code></td><td><code>get&lt;T&gt;</code>, <code>expectEqual</code></td></tr>
+  </table>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – נושא 03: מיני-תשתית בדיקות API</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li class="small">פתחו את <code>exercises/03-oop-summary-mini-framework.ts</code></li>
+        <li><code>formatResult</code> – union + narrowing</li>
+        <li><code>Result&lt;T,E&gt;</code> – <code>mapResult</code> · <code>combineResults</code></li>
+        <li><code>MockHttpClient</code> – מממש <code>HttpClient</code> + יומן קריאות</li>
+        <li><code>ApiCheck&lt;T&gt;</code> אבסטרקטית + <code>StatusCheck</code></li>
+        <li><code>TestRunner</code> – מריץ כל <code>Runnable</code>, כולל <code>grep</code></li>
+        <li>בונוס: <code>BodyFieldCheck&lt;T, K extends keyof T&gt;</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 07 03    # הרצה + בדיקה עצמית
+        npm run solution -- 07 03    # הפתרון
+      </pre>
+      <div class="tip">פתרו לפי הסדר – הבונוס נשען על <code>run()</code> מתרגיל 4.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- סיכום -->
+<!-- ============================================================ -->
+<section class="slide practice">
+  <h2>תרגול – שיעור 7</h2>
+  <ul>
+    <li>פונקציות גנריות: <code>last&lt;T&gt;</code>, <code>groupBy&lt;T&gt;</code>, <code>pluck&lt;T, K extends keyof T&gt;</code></li>
+    <li>מחלקה גנרית <code>Stack&lt;T&gt;</code></li>
+    <li><code>Repository&lt;T extends HasId&gt;</code> – add / getById / update / remove / where</li>
+    <li><code>tryCatch&lt;T&gt;</code> שמחזיר <code>Result&lt;T&gt;</code> (discriminated union)</li>
+    <li>בונוס: הוסיפו לתשתית המסכמת סוג בדיקה חדש – <code>CreateUserTest</code></li>
+  </ul>
+  <div class="grid2">
+    <pre class="lang-bash">
+      # exercises/exercises.ts – תרגילי הסיכום
+      npm run exercise -- 07
+      npm run solution -- 07
+    </pre>
+    <pre class="lang-bash">
+      # תרגילי נושא + הפתרונות שלהם
+      npm run exercise -- 07 01    # 02, 03
+      npm run solution -- 07 01    # 02, 03
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סיכום</h2>
+  <ul>
+    <li><b>Generics</b> = קוד לשימוש חוזר עם בטיחות טיפוסים מלאה</li>
+    <li>פונקציות, ממשקים ומחלקות גנריים · <code>extends</code> להגבלה · <code>keyof</code> לשדות</li>
+    <li>טיפוסים מובנים: <code>Array&lt;T&gt;</code>, <code>Promise&lt;T&gt;</code>, <code>Record&lt;K, V&gt;</code>, <code>Partial&lt;T&gt;</code></li>
+    <li>כל עקרונות ה-OOP עובדים יחד בתשתית אוטומציה אמיתית</li>
+    <li>בשיעור הבא: <b>קוד אסינכרוני</b> – Promise, async/await וטיפול בשגיאות</li>
+  </ul>
+  <div class="tip">לפני השיעור הבא: הריצו את שלוש הדוגמאות, ופתרו לפחות את תרגילי הנושא 01–03.</div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

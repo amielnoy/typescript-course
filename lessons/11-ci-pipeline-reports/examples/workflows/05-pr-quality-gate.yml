@@ -1,0 +1,46 @@
+# שיעור 11 – Workflow 5: Quality Gate ל-Pull Request – שלבים תלויים (needs) ו-sharding
+# בשילוב Branch Protection ("Require status checks to pass") – אי אפשר למזג PR אם הבדיקות נכשלו.
+name: PR Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+
+  api-tests:
+    needs: lint-and-types # רץ רק אחרי שהשלב הקודם עבר
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright test tests/api
+
+  ui-tests:
+    needs: lint-and-types
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [1, 2, 3] # מחלקים את בדיקות ה-UI ל-3 מכונות במקביל
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test tests/ui --shard=${{ matrix.shard }}/3
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ui-results-shard-${{ matrix.shard }}
+          path: test-results/

@@ -1,0 +1,54 @@
+# Lesson 11 – Topic 07 Solution: A Quality Gate for Pull Requests
+name: PR Gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "lessons/**"
+      - package-lock.json
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+
+  tests:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run solutions
+
+  quality-gate:
+    needs: [lint, tests]
+    if: always() # must run even when one of the jobs failed – otherwise it is "skipped" and the PR may be treated as passing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write summary
+        run: |
+          echo "### Quality gate" >> "$GITHUB_STEP_SUMMARY"
+          echo "- lint: ${{ needs.lint.result }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- tests: ${{ needs.tests.result }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if a required job failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "A required job failed or was cancelled"
+          exit 1

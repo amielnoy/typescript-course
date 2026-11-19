@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 5 – עקרונות ה-OOP (חלק ג'): Abstract Classes</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="5">
+
+<!-- ===================== פתיחה ===================== -->
+<section class="slide title">
+  <div class="badge">שיעור 5</div>
+  <h1>עקרונות ה-OOP – חלק ג'</h1>
+  <p class="subtitle">Abstract Classes</p>
+  <div class="chips"><span>Abstract classes</span><span>Abstract methods</span><span>protected abstract</span><span>Template Method</span><span>BasePage</span></div>
+  <div class="meta">24.11 · יום ג' · 09:00–11:30 · ZOOM · תיקייה בפרויקט: lessons/05-oop-abstract-classes</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>חלק 1 – Abstract Classes</h3>
+      <ul>
+        <li>מחלקה שאי אפשר ליצור ממנה מופע</li>
+        <li>מתודות abstract = חוזה</li>
+        <li><code>protected abstract</code></li>
+        <li>BasePage – הבסיס ל-POM</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>חלק 2 – מיני-פריימוורק</h3>
+      <ul>
+        <li>בונים פריימוורק בדיקות צעד-צעד</li>
+        <li>Template Method</li>
+        <li>setup → execute → teardown</li>
+        <li>Reporters</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">כל חלק מסתיים בשקף תרגול ✍️ עם קובץ תרגילים משלו ב-<code>exercises/</code> – מומלץ לפתור מיד אחרי החלק.</div>
+  <div class="tip">הדוגמאות המלאות להרצה: <code>npx tsx lessons/05-oop-abstract-classes/examples/01-abstract-classes.ts</code> (וכך גם 02)</div>
+</section>
+
+<section class="slide">
+  <h2>תזכורת משיעור 4: פולימורפיזם</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>מחלקות בנות <b>דורסות</b> (<code>override</code>) מתודה של האב</li>
+        <li>מערך מסוג הבסיס – וכל איבר מריץ את <b>המימוש שלו</b></li>
+        <li>אבל: מה בדיוק אמור לעשות <code>new Notifier()</code> "סתם"? ה-<code>LOG</code> הוא ברירת מחדל שאין לה משמעות</li>
+        <li>היום: <b>abstract</b> – מחלקת בסיס שמגדירה <b>חוזה</b> ולא מימוש מזויף</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class Notifier {
+          notify(msg: string): string {
+            return `LOG: ${msg}`;
+          }
+        }
+        class SlackNotifier extends Notifier {
+          override notify(msg: string): string {
+            return `#qa-alerts: ${msg}`;
+          }
+        }
+        const all: Notifier[] = [
+          new Notifier(),
+          new SlackNotifier(),
+        ];
+        for (const n of all) {
+          console.log(n.notify("3 tests failed"));
+        }
+      </pre>
+      <pre class="out">
+        LOG: 3 tests failed
+        #qa-alerts: 3 tests failed
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== חלק 1: Abstract Classes ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>Abstract Classes – מחלקות מופשטות</h1>
+  <p class="subtitle">חוזה + קוד משותף · examples/01-abstract-classes.ts</p>
+</section>
+
+<section class="slide">
+  <h2>הבעיה: ברירת מחדל מסוכנת</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>במחלקת בסיס רגילה חייבים לכתוב גוף לכל מתודה – גם כשאין מימוש הגיוני</li>
+        <li>אז כותבים "ברירת מחדל" כמו <code>return true</code></li>
+        <li>מחלקה בת ששכחה לדרוס – <b>מקבלת אותה בשקט</b></li>
+        <li>ובדיקות? עוברות, למרות שאף אחד לא בדק שהעמוד נטען 😱</li>
+      </ul>
+      <div class="warn">באוטומציה זה הכי מסוכן: <b>False Positive</b> – בדיקה ירוקה שלא בודקת כלום.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class UnsafeBasePage {
+          isLoaded(): boolean {
+            return true; // ברירת מחדל "זמנית"...
+          }
+        }
+        // שכחנו לממש isLoaded – ואין שום אזהרה
+        class CartPage extends UnsafeBasePage {}
+
+        console.log("cart loaded?", new CartPage().isLoaded());
+      </pre>
+      <pre class="out">
+        cart loaded? true
+      </pre>
+      <div class="note">ועוד בעיה: אפשר ליצור "עמוד כללי" חסר משמעות – <code>new UnsafeBasePage()</code>.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחלקה מופשטת</h2>
+  <ul>
+    <li><b>אי אפשר</b> ליצור ממנה אובייקט ישירות: <code>new BasePage()</code> ❌</li>
+    <li>יכולה להכיל <b>קוד משותף</b> – מתודות ושדות רגילים</li>
+    <li>מגדירה <b>מתודות abstract</b> – בלי מימוש. כל בת <b>חייבת</b> לממש אותן</li>
+    <li>הקומפיילר מוודא שלא שכחתם לממש – "חוזה" שנאכף</li>
+    <li>השימוש הקלאסי באוטומציה: <b>BasePage</b> ב-<b>Page Object Model</b>, <b>BaseTest</b>, <b>BaseApiClient</b></li>
+  </ul>
+  <div class="flow">
+    <div class="step"><b>abstract class</b>שלד: מה משותף + מה חסר</div><div class="arrow">←</div>
+    <div class="step y"><b>class X extends</b>הבת ממלאת את החסר</div><div class="arrow">←</div>
+    <div class="step g"><b dir="ltr">new X()</b>רק מהבת אפשר ליצור אובייקט</div>
+  </div>
+  <div class="note">אנלוגיה: תבנית של מסמך תוכנית בדיקות – הכותרות והמבנה קבועים, אבל את התוכן כל פיצ'ר ממלא בעצמו. את התבנית הריקה עצמה לא מגישים.</div>
+</section>
+
+<section class="slide">
+  <h2>התחביר: abstract class ו-abstract method</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>abstract class</code> – לפני המילה <code>class</code></li>
+        <li><code>abstract baseUrl(): string;</code> – חתימה בלבד, <b>בלי גוף</b>, מסתיימת ב-<code>;</code></li>
+        <li><code>abstract readonly name</code> – גם שדה יכול להיות abstract</li>
+        <li><code>describe()</code> – קוד משותף שמשתמש בחלקים המופשטים</li>
+        <li>במימוש של חבר abstract בבת <b>לא חובה</b> לכתוב <code>override</code> (מותר)</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        abstract class Environment {
+          abstract readonly name: string;
+          abstract baseUrl(): string;
+
+          describe(): string {
+            return `${this.name} -&gt; ${this.baseUrl()}`;
+          }
+        }
+        class DevEnv extends Environment {
+          readonly name = "dev";
+          baseUrl(): string { return "http://localhost:3000"; }
+        }
+        class StagingEnv extends Environment {
+          readonly name = "staging";
+          baseUrl(): string { return "https://staging.shop.test"; }
+        }
+        const envs: Environment[] = [new DevEnv(), new StagingEnv()];
+        for (const env of envs) console.log(env.describe());
+      </pre>
+      <pre class="out">
+        dev -&gt; http://localhost:3000
+        staging -&gt; https://staging.shop.test
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הקומפיילר אוכף את החוזה</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ ליצור מופע מהמחלקה המופשטת</h3>
+      <pre class="lang-ts sm">
+        abstract class BasePage {
+          constructor(protected baseUrl: string) {}
+          abstract readonly path: string;
+          abstract isLoaded(): boolean;
+        }
+
+        const p = new BasePage("x");
+        // error TS2511: Cannot create an instance
+        // of an abstract class.
+      </pre>
+      <p>הגיוני: ל-BasePage אין <code>path</code> ואין <code>isLoaded</code> – זה שלד חלקי.</p>
+    </div>
+    <div class="card bad"><h3>❌ מחלקה בת ששכחה לממש</h3>
+      <pre class="lang-ts sm">
+        class CartPage extends BasePage {
+          readonly path = "/cart";
+          // שכחנו את isLoaded...
+        }
+        // error TS2515: Non-abstract class
+        // 'CartPage' does not implement inherited
+        // abstract member isLoaded from class
+        // 'BasePage'.
+      </pre>
+      <p>זה בדיוק ה-False Positive מהשקף הקודם – עכשיו נתפס <b>לפני</b> שהבדיקה רצה.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>BasePage – הבסיס ל-Page Object Model</h2>
+  <div class="cols wide-code">
+    <ul>
+      <li><code>open()</code> נכתב פעם אחת</li>
+      <li>כל עמוד מספק רק את מה שייחודי לו: <code>path</code> ו-<code>isLoaded</code></li>
+      <li>שכחתם <code>isLoaded</code>? שגיאת קומפילציה</li>
+      <li><code>this.constructor.name</code> – שם המחלקה האמיתית (LoginPage...) להודעות ברורות</li>
+      <li>נחזור לזה בשיעורי Playwright ו-POM</li>
+    </ul>
+    <pre class="lang-ts">
+      abstract class BasePage {
+        constructor(protected baseUrl: string) {}
+
+        // כל עמוד חייב להגדיר נתיב ואיך מוודאים שנטען
+        abstract readonly path: string;
+        abstract isLoaded(): boolean;
+
+        // קוד משותף לכל העמודים
+        open(): void {
+          console.log(`Navigating to ${this.baseUrl}${this.path}`);
+          if (!this.isLoaded()) {
+            throw new Error(`${this.constructor.name} did not load`);
+          }
+          console.log(`  ✔ ${this.constructor.name} loaded`);
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>העמודים עצמם: LoginPage, DashboardPage, BrokenPage</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      class LoginPage extends BasePage {
+        readonly path = "/login";
+
+        isLoaded(): boolean {
+          // בפרויקט אמיתי: בודקים ששדה username מוצג
+          return true;
+        }
+
+        login(user: string, pw: string): void {
+          const masked = "*".repeat(pw.length);
+          console.log(`  typing ${user} / ${masked}`);
+        }
+      }
+    </pre>
+    <div class="stack">
+    <pre class="lang-ts sm">
+      class DashboardPage extends BasePage {
+        readonly path = "/dashboard";
+
+        isLoaded(): boolean {
+          return true;
+        }
+
+        widgetCount(): number {
+          return 4;
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      // עמוד שלא נטען – כדי לראות את מסלול השגיאה
+      class BrokenPage extends BasePage {
+        readonly path = "/broken";
+        isLoaded(): boolean {
+          return false;
+        }
+      }
+    </pre>
+    </div>
+  </div>
+  <div class="note">כל עמוד מוסיף גם מתודות משלו (<code>login</code>, <code>widgetCount</code>) – ה-BasePage לא צריך להכיר אותן.</div>
+</section>
+
+<section class="slide">
+  <h2>מריצים: <bdi>open()</bdi> משותף, <bdi>isLoaded()</bdi> של כל עמוד</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      const base = "http://localhost:3000";
+      const login = new LoginPage(base);
+      login.open();
+      login.login("admin", "1234");
+
+      const dashboard = new DashboardPage(base);
+      dashboard.open();
+      console.log("  widgets:", dashboard.widgetCount());
+
+      try {
+        new BrokenPage(base).open();
+      } catch (err) {
+        console.log("  ✘", (err as Error).message);
+      }
+
+      // מערך מסוג המחלקה המופשטת – פולימורפיזם
+      const pages: BasePage[] = [login, dashboard];
+      console.log("All paths:",
+        pages.map((p) =&gt; p.path).join(", "));
+    </pre>
+    <div class="stack">
+      <pre class="out">
+        Navigating to http://localhost:3000/login
+          ✔ LoginPage loaded
+          typing admin / ****
+        Navigating to http://localhost:3000/dashboard
+          ✔ DashboardPage loaded
+          widgets: 4
+        Navigating to http://localhost:3000/broken
+          ✘ BrokenPage did not load
+        All paths: /login, /dashboard
+      </pre>
+      <div class="tip">אי אפשר ליצור <code>new BasePage()</code> – אבל <b>אפשר</b> להשתמש ב-<code>BasePage</code> כטיפוס של משתנה או מערך.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מעקב: מה קורה בדיוק ב-<bdi>login.open()</bdi>?</h2>
+  <table>
+    <tr><th>#</th><th>הצעד</th><th>איפה רץ הקוד</th><th>תוצאה</th></tr>
+    <tr><td>1</td><td><code>login.open()</code></td><td>ל-LoginPage אין <code>open</code> ← עולים ל-<b>BasePage</b></td><td>מתחילים את הזרימה המשותפת</td></tr>
+    <tr><td>2</td><td><code>this.path</code></td><td><code>this</code> הוא LoginPage ← השדה של <b>LoginPage</b></td><td><code>"/login"</code></td></tr>
+    <tr><td>3</td><td><code>console.log(...)</code></td><td>BasePage</td><td><code>Navigating to http://localhost:3000/login</code></td></tr>
+    <tr><td>4</td><td><code>this.isLoaded()</code></td><td>המימוש של <b>LoginPage</b></td><td><code>true</code> ← לא זורקים שגיאה</td></tr>
+    <tr><td>5</td><td><code>this.constructor.name</code></td><td>BasePage</td><td><code>✔ LoginPage loaded</code></td></tr>
+  </table>
+  <div class="note">הקוד כתוב באב, אבל <code>this</code> הוא תמיד האובייקט האמיתי – לכן האב "קורא" למימושים של הבת. בשביל BrokenPage צעד 4 מחזיר <code>false</code> ונזרקת שגיאה.</div>
+</section>
+
+<section class="slide">
+  <h2>protected abstract – "חורים" שרק הבסיס ממלא</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>fillFields</code> ו-<code>button</code> הם <b>פרטי מימוש</b> – הבדיקה לא אמורה לקרוא להם ישירות</li>
+        <li><code>protected abstract</code>: הבת <b>חייבת</b> לממש, ורק המחלקה והבנות <b>יכולות</b> לקרוא</li>
+        <li>מבחוץ יש רק כניסה אחת: <code>submit()</code> – שמבטיחה סדר קבוע</li>
+      </ul>
+      <pre class="lang-ts sm">
+        new SignupForm().fillFields();
+        // ❌ error TS2445: Property 'fillFields' is protected
+        // and only accessible within class 'SignupForm'
+        // and its subclasses.
+      </pre>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        abstract class BaseForm {
+          protected abstract fillFields(): void;
+          protected abstract button(): string;
+
+          submit(): void {
+            console.log(`[${this.constructor.name}] start`);
+            this.fillFields();
+            console.log(`  click ${this.button()}`);
+          }
+        }
+        class SignupForm extends BaseForm {
+          protected fillFields(): void {
+            console.log("  fill email, password, confirm");
+          }
+          protected button(): string { return "#signup-btn"; }
+        }
+        new SignupForm().submit();
+      </pre>
+      <pre class="out">
+        [SignupForm] start
+          fill email, password, confirm
+          click #signup-btn
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>קוד משותף בבסיס: BaseApiClient</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>בניית URL והוספת טוקן – <b>פעם אחת</b> ב-<code>request</code></li>
+        <li>כל client מגדיר רק את <code>resource</code> ואת הפעולות שלו</li>
+        <li><code>baseUrl</code> ו-<code>token</code> הם <code>private</code> – אפילו הבנות לא נוגעות בהם</li>
+        <li>תיקון באימות (למשל פורמט header חדש) = שינוי במקום אחד</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        abstract class BaseApiClient {
+          constructor(private baseUrl: string, private token: string) {}
+          protected abstract readonly resource: string;
+
+          protected request(method: string, id?: number): string {
+            const path = id === undefined ? "" : `/${id}`;
+            const url = `${this.baseUrl}/${this.resource}${path}`;
+            const auth = `Bearer ${this.token.slice(0, 3)}...`;
+            return `${method} ${url} (auth: ${auth})`;
+          }
+        }
+        class UsersClient extends BaseApiClient {
+          protected readonly resource = "users";
+          getAll(): string { return this.request("GET"); }
+          remove(id: number): string { return this.request("DELETE", id); }
+        }
+        const users = new UsersClient("http://localhost:3000", "abc123");
+        console.log(users.remove(7));
+      </pre>
+      <pre class="out sm">
+        DELETE http://localhost:3000/users/7 (auth: Bearer abc...)
+      </pre>
+    </div>
+  </div>
+</section>
+
+
+<section class="slide">
+  <h2>טעויות נפוצות – Abstract</h2>
+  <div class="grid3">
+    <div class="card bad"><h3>❌ גוף למתודה abstract</h3>
+      <pre class="lang-ts sm">
+        abstract class Bad1 {
+          abstract isLoaded(): boolean {
+            return true;
+          }
+        }
+        // TS1245: Method 'isLoaded'
+        // cannot have an implementation
+        // because it is marked abstract.
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ abstract במחלקה רגילה</h3>
+      <pre class="lang-ts sm">
+        class Bad2 {
+          abstract isLoaded(): boolean;
+        }
+        // TS1244: Abstract methods can
+        // only appear within an
+        // abstract class.
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ חתימה שונה במימוש</h3>
+      <pre class="lang-ts sm">
+        class Bad3 extends BasePage {
+          readonly path = "/x";
+          isLoaded(): string {
+            return "yes";
+          }
+        }
+        // TS2416: Property 'isLoaded' in
+        // type 'Bad3' is not assignable to
+        // the same property in base type
+        // 'BasePage'.
+      </pre>
+    </div>
+  </div>
+  <div class="card good"><h3>✅ הכלל</h3><p>abstract = <b>רק חתימה</b> ורק בתוך <code>abstract class</code>. בבת – מממשים בדיוק את אותה חתימה (שם, פרמטרים, טיפוס החזרה).</p></div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Abstract Classes</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>בתיקיית השיעור פתחו את <code>exercises/01-abstract-classes.ts</code></li>
+        <li>1 – API endpoints (שדות <code>abstract readonly</code>)</li>
+        <li>2 – מחוללי נתוני בדיקה (מתודה abstract + קוד משותף)</li>
+        <li>3 – טפסים (<code>protected abstract</code> + לוגיקה משותפת)</li>
+        <li>4 – הרשאות לפי תפקיד</li>
+        <li>5 (בונוס) – BasePage: הבסיס ל-Page Object Model</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 05 01   # בדיקה עצמית
+        npm run solution -- 05 01   # הפתרון
+      </pre>
+      <div class="note">מימוש של חבר <code>abstract</code> – בלי חובת <code>override</code>. דריסה של מתודה רגילה – <b>עם</b> <code>override</code>.</div>
+      <div class="tip">תרגיל שעוד לא פתרתם מדפיס <code>✋ TODO</code>; פתרון נכון – אותו ערך משני צדי <code>=&gt; expected:</code>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== חלק 2: מיני-פריימוורק ===================== -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>מיני-פריימוורק בדיקות</h1>
+  <p class="subtitle">Abstraction + Polymorphism ביחד · examples/02-abstract-test-framework.ts</p>
+</section>
+
+<section class="slide">
+  <h2>המטרה: לבנות פריימוורק בדיקות קטן משלנו</h2>
+  <div class="flow">
+    <div class="step"><b>Check</b>abstract – זרימה קבועה</div><div class="arrow">←</div>
+    <div class="step y"><b>EqualsCheck, ContainsCheck, ResponseTimeCheck</b>מה כל בדיקה בודקת</div><div class="arrow">←</div>
+    <div class="step"><b dir="ltr">Check[]</b>מריצים הכל בלולאה אחת</div><div class="arrow">←</div>
+    <div class="step g"><b dir="ltr">Outcome[]</b>✔ / ✘ + פרטי כישלון</div>
+  </div>
+  <ol>
+    <li>טיפוס תוצאה <code>Outcome</code> ומחלקה מופשטת <code>Check</code></li>
+    <li>מחלקות בדיקה קונקרטיות – כל אחת מממשת <code>verify</code> ו-<code>describeFailure</code></li>
+    <li>הרצה של כל הבדיקות והדפסת תוצאות</li>
+    <li><code>BaseTest</code> עם setup → execute → teardown</li>
+    <li>Reporters – אותן תוצאות בפורמטים שונים</li>
+  </ol>
+  <div class="note">כך בדיוק בנויים Jest / Playwright Test "מבפנים" – רק הרבה יותר גדולים.</div>
+</section>
+
+<section class="slide">
+  <h2>שלב 1: המחלקה המופשטת Check – Template Method</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Outcome</code> – מה כל בדיקה מחזירה</li>
+        <li><code>verify</code> – "האם עבר?" (כל בדיקה אחרת)</li>
+        <li><code>describeFailure</code> – הודעה ברורה כשנכשל</li>
+        <li>שתיהן <code>protected abstract</code> – רק <code>run</code> קורא להן</li>
+        <li><b>Template Method</b>: <code>run</code> באב מגדירה את <b>סדר הצעדים</b> וקוראת ל"חורים" שהבנות ממלאות</li>
+        <li>הבנות לא יכולות "לשכוח" את ה-try/catch או לבנות Outcome לא נכון</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      type Outcome = { name: string; passed: boolean; details: string };
+
+      abstract class Check {
+        constructor(public readonly name: string) {}
+
+        protected abstract verify(): boolean;
+        protected abstract describeFailure(): string;
+
+        // הזרימה הקבועה – זהה לכל סוגי הבדיקות
+        run(): Outcome {
+          try {
+            const passed = this.verify();
+            const details = passed ? "ok" : this.describeFailure();
+            return { name: this.name, passed, details };
+          } catch (err) {
+            const details = `error: ${(err as Error).message}`;
+            return { name: this.name, passed: false, details };
+          }
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+
+<section class="slide">
+  <h2>שלב 2: בדיקות קונקרטיות – EqualsCheck ו-ContainsCheck</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      // &lt;T&gt; = טיפוס גנרי (שיעור 7) – כל סוג ערך
+      class EqualsCheck&lt;T&gt; extends Check {
+        constructor(name: string,
+                    private actual: T,
+                    private expected: T) {
+          super(name);
+        }
+        protected verify(): boolean {
+          return this.actual === this.expected;
+        }
+        protected describeFailure(): string {
+          return `expected ${String(this.expected)}` +
+            ` but got ${String(this.actual)}`;
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class ContainsCheck extends Check {
+        constructor(name: string,
+                    private text: string,
+                    private fragment: string) {
+          super(name);
+        }
+        protected verify(): boolean {
+          return this.text.includes(this.fragment);
+        }
+        protected describeFailure(): string {
+          return `"${this.text}" does not contain` +
+            ` "${this.fragment}"`;
+        }
+      }
+    </pre>
+  </div>
+  <div class="tip">שימו לב כמה מעט קוד יש בכל בדיקה: רק "מה לבדוק" ו"מה להגיד כשנכשל". כל השאר – ב-<code>run</code> של Check.</div>
+</section>
+
+<section class="slide">
+  <h2>שלב 3: ResponseTimeCheck – וגם מה קורה כשזורקים שגיאה</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class ResponseTimeCheck extends Check {
+          constructor(name: string,
+                      private ms: number,
+                      private maxMs: number) {
+            super(name);
+          }
+          protected verify(): boolean {
+            if (this.ms &lt; 0) {
+              throw new Error("negative duration");
+            }
+            return this.ms &lt;= this.maxMs;
+          }
+          protected describeFailure(): string {
+            return `${this.ms}ms &gt; limit ${this.maxMs}ms`;
+          }
+        }
+      </pre>
+      <div class="note"><code>verify</code> זורקת שגיאה על נתון לא תקין – וה-<code>catch</code> ב-<code>run</code> הופך אותה לתוצאה נכשלת.</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const ok = new EqualsCheck("status is 200", 200, 200);
+        const bad = new EqualsCheck("user name", "Dana", "Noa");
+        console.log(ok.run());
+        console.log(bad.run());
+      </pre>
+      <pre class="out sm">
+        { name: 'status is 200', passed: true, details: 'ok' }
+        {
+          name: 'user name',
+          passed: false,
+          details: 'expected Noa but got Dana'
+        }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שלב 4: מריצים את כל הבדיקות בלולאה אחת</h2>
+  <pre class="lang-ts">
+    const checks: Check[] = [
+      new EqualsCheck("status is 200", 200, 200),
+      new EqualsCheck("user name", "Dana", "Noa"),
+      new ContainsCheck("welcome text", "Welcome, admin!", "admin"),
+      new ResponseTimeCheck("GET /users is fast", 1450, 1000),
+      new ResponseTimeCheck("bad timer", -1, 1000),
+    ];
+    const outcomes = checks.map((c) =&gt; c.run()); // פולימורפיזם: כל run קורא ל-verify של הבת שלו
+    for (const o of outcomes) {
+      console.log(`${o.passed ? "✔" : "✘"} ${o.name.padEnd(22)} ${o.details}`);
+    }
+  </pre>
+  <pre class="out">
+    ✔ status is 200          ok
+    ✘ user name              expected Noa but got Dana
+    ✔ welcome text           ok
+    ✘ GET /users is fast     1450ms &gt; limit 1000ms
+    ✘ bad timer              error: negative duration
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>מעקב צעד-אחר-צעד: בדיקה אחת שנכשלת</h2>
+  <p><code>new ResponseTimeCheck("GET /users is fast", 1450, 1000).run()</code></p>
+  <table>
+    <tr><th>#</th><th>מה קורה</th><th>איפה</th><th>ערך</th></tr>
+    <tr><td>1</td><td><code>run()</code> נקראת</td><td>Check (הבת לא דורסת אותה)</td><td>נכנסים ל-<code>try</code></td></tr>
+    <tr><td>2</td><td><code>this.verify()</code></td><td>ResponseTimeCheck</td><td><code>ms &lt; 0</code>? לא · <code>1450 &lt;= 1000</code> ← <code>false</code></td></tr>
+    <tr><td>3</td><td><code>passed</code> הוא false ← <code>this.describeFailure()</code></td><td>ResponseTimeCheck</td><td><code>"1450ms &gt; limit 1000ms"</code></td></tr>
+    <tr><td>4</td><td><code>return { name, passed, details }</code></td><td>Check</td><td><code>{ passed: false, ... }</code></td></tr>
+    <tr><td>5</td><td>הלולאה מדפיסה</td><td>הקוד הקורא</td><td><code>✘ GET /users is fast  1450ms &gt; limit 1000ms</code></td></tr>
+  </table>
+  <div class="note">ובשביל <code>"bad timer"</code> (‎-1): בצעד 2 נזרקת שגיאה ← דילוג ישר ל-<code>catch</code> ← <code>details: "error: negative duration"</code>.</div>
+</section>
+
+<section class="slide">
+  <h2>BaseTest: setup → execute → teardown</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כל בדיקה אמיתית: <b>הכנה</b>, <b>ביצוע</b>, <b>ניקוי</b></li>
+        <li><code>setup</code> / <code>teardown</code> – מתודות רגילות "ריקות": בת דורסת רק אם צריך (עם <code>override</code>)</li>
+        <li><code>execute</code> – abstract: בלי זה אין בדיקה</li>
+        <li><code>finally</code> – רץ <b>תמיד</b>: גם אחרי הצלחה, גם אחרי שגיאה</li>
+      </ul>
+      <div class="warn">teardown שלא רץ = דפדפן פתוח, משתמש מחובר, נתונים "מלוכלכים" לבדיקה הבאה.</div>
+    </div>
+    <pre class="lang-ts sm">
+      abstract class BaseTest {
+        constructor(public readonly name: string) {}
+
+        protected setup(): void {}           // אופציונלי
+        protected abstract execute(): void;  // חובה
+        protected teardown(): void {}        // אופציונלי
+
+        run(): boolean {
+          console.log(`▶ ${this.name}`);
+          try {
+            this.setup();
+            this.execute();
+            console.log("  ✔ passed");
+            return true;
+          } catch (err) {
+            console.log(`  ✘ failed: ${(err as Error).message}`);
+            return false;
+          } finally {
+            this.teardown(); // תמיד!
+          }
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>זרימת הריצה של BaseTest</h2>
+  <div class="flow">
+    <div class="step"><b dir="ltr">setup()</b>הכנה: פתיחת עמוד, נתונים</div><div class="arrow">←</div>
+    <div class="step y"><b dir="ltr">execute()</b>הבדיקה עצמה</div><div class="arrow">←</div>
+    <div class="step g"><b>✔ passed</b>return true</div><div class="arrow">←</div>
+    <div class="step"><b dir="ltr">finally: teardown()</b>ניקוי</div>
+  </div>
+  <div class="flow">
+    <div class="step r"><b>שגיאה ב-setup או execute</b>throw</div><div class="arrow">←</div>
+    <div class="step r"><b>catch</b>✘ failed: ההודעה</div><div class="arrow">←</div>
+    <div class="step"><b dir="ltr">finally: teardown()</b>ניקוי – גם כאן!</div>
+  </div>
+  <table>
+    <tr><th>מה קרה</th><th>setup</th><th>execute</th><th>teardown</th><th>run מחזירה</th></tr>
+    <tr><td>הכל עבר</td><td>✅ רץ</td><td>✅ רץ</td><td>✅ רץ</td><td><code>true</code></td></tr>
+    <tr><td>execute זרקה</td><td>✅ רץ</td><td>💥 זרקה</td><td>✅ רץ</td><td><code>false</code></td></tr>
+    <tr><td>setup זרקה</td><td>💥 זרקה</td><td>⏭️ לא רץ</td><td>✅ רץ</td><td><code>false</code></td></tr>
+  </table>
+</section>
+
+<section class="slide">
+  <h2>בדיקה אמיתית: LoginTest</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      // "הדפדפן" – מדומה, כדי שנוכל להריץ בלי Playwright
+      class FakeBrowser {
+        page = "about:blank";
+        user: string | null = null;
+        goto(path: string): void {
+          this.page = path;
+          console.log(`  goto ${path}`);
+        }
+        login(user: string, pass: string): void {
+          if (pass === "secret") this.user = user;
+        }
+        close(): void {
+          console.log("  browser closed");
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class LoginTest extends BaseTest {
+        private browser = new FakeBrowser();
+        constructor(private user: string,
+                    private pass: string) {
+          super(`login as ${user}`);
+        }
+        protected override setup(): void {
+          this.browser.goto("/login");
+        }
+        protected execute(): void {
+          this.browser.login(this.user, this.pass);
+          if (this.browser.user !== this.user) {
+            throw new Error(`"${this.user}" is not logged in`);
+          }
+        }
+        protected override teardown(): void {
+          this.browser.close();
+        }
+      }
+    </pre>
+  </div>
+  <div class="note"><code>setup</code>/<code>teardown</code> דורסים מתודה רגילה ← <code>override</code>. <code>execute</code> מממש abstract ← בלי חובה.</div>
+</section>
+
+<section class="slide">
+  <h2>הרצה: בדיקה שעוברת ובדיקה שנכשלת</h2>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const tests: BaseTest[] = [
+          new LoginTest("dana", "secret"),
+          new LoginTest("noa", "wrong"),
+        ];
+        const results = tests.map((t) =&gt; t.run());
+        const passed = results.filter(Boolean).length;
+        console.log(`${passed}/${results.length} passed`);
+      </pre>
+      <pre class="out">
+        ▶ login as dana
+          goto /login
+          ✔ passed
+          browser closed
+        ▶ login as noa
+          goto /login
+          ✘ failed: "noa" is not logged in
+          browser closed
+        1/2 passed
+      </pre>
+    </div>
+    <div class="stack">
+      <p><b>מעקב: <code>LoginTest("noa", "wrong").run()</code></b></p>
+      <ol class="small">
+        <li><code>run</code> של BaseTest מדפיסה <code>▶ login as noa</code></li>
+        <li><code>this.setup()</code> ← של LoginTest ← <code>goto /login</code></li>
+        <li><code>this.execute()</code> ← הסיסמה שגויה ← <code>browser.user</code> נשאר <code>null</code></li>
+        <li><code>null !== "noa"</code> ← <code>throw</code></li>
+        <li>קופצים ל-<code>catch</code> ← <code>✘ failed: ...</code> ← <code>return false</code></li>
+        <li>לפני שהערך חוזר – <code>finally</code> ← <code>teardown()</code> ← <code>browser closed</code></li>
+      </ol>
+      <div class="note">שימו לב: <code>✔ passed</code> מודפס <b>לפני</b> <code>browser closed</code> – כי <code>finally</code> רץ אחרי ה-<code>return</code>, רגע לפני שהפונקציה באמת יוצאת.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Reporters – אותן תוצאות, פורמטים שונים</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      abstract class Reporter {
+        abstract render(results: Outcome[]): string;
+
+        print(results: Outcome[]): void {
+          console.log(`--- ${this.constructor.name} ---`);
+          console.log(this.render(results));
+        }
+      }
+      class DotsReporter extends Reporter {
+        render(results: Outcome[]): string {
+          return results
+            .map((r) =&gt; (r.passed ? "." : "F"))
+            .join("");
+        }
+      }
+      class JsonReporter extends Reporter {
+        render(results: Outcome[]): string {
+          const failed =
+            results.filter((r) =&gt; !r.passed).length;
+          const total = results.length;
+          return JSON.stringify({ total, failed });
+        }
+      }
+    </pre>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        // outcomes – 5 התוצאות מ"שלב 4"
+        const reporters: Reporter[] =
+          [new DotsReporter(), new JsonReporter()];
+        reporters.forEach((r) =&gt; r.print(outcomes));
+      </pre>
+      <pre class="out">
+        --- DotsReporter ---
+        .F.FF
+        --- JsonReporter ---
+        {"total":5,"failed":3}
+      </pre>
+      <div class="tip">ב-CI נרצה JUnit XML, בטרמינל – נקודות, בדוח – HTML. הבדיקות לא משתנות, רק ה-Reporter.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – במיני-פריימוורק</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ teardown בתוך ה-try</h3>
+      <pre class="lang-ts sm">
+        run(): void {
+          try {
+            this.execute();
+            this.teardown(); // לא ירוץ אם execute זרקה!
+          } catch (err) {
+            console.log(`  ✘ ${(err as Error).message}`);
+          }
+        }
+      </pre>
+      <pre class="out">
+          ✘ element not found
+      </pre>
+      <p>אין "teardown" בפלט – הדפדפן נשאר פתוח.</p>
+    </div>
+    <div class="card good"><h3>✅ teardown ב-finally</h3>
+      <pre class="lang-ts sm">
+        run(): void {
+          try {
+            this.execute();
+          } catch (err) {
+            console.log(`  ✘ ${(err as Error).message}`);
+          } finally {
+            this.teardown(); // תמיד רץ
+          }
+        }
+      </pre>
+      <ul>
+        <li>גם לא לתפוס שגיאות <b>בתוך</b> <code>verify</code> של הבת – תנו ל-<code>run</code> לטפל</li>
+        <li>ולא להפוך את <code>verify</code> ל-<code>public</code> – הבדיקה רצה רק דרך <code>run</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הצצה לשיעור הבא: abstract class מול interface</h2>
+  <div class="cols">
+    <table>
+      <tr><th></th><th>abstract class</th><th>interface</th></tr>
+      <tr><td>קוד משותף</td><td>✅ מתודות עם גוף</td><td>❌ רק "צורה"</td></tr>
+      <tr><td>בנאי ושדות עם ערך</td><td>✅</td><td>❌</td></tr>
+      <tr><td>כמה אפשר לרשת</td><td><code>extends</code> אחד בלבד</td><td><code>implements</code> כמה שרוצים</td></tr>
+      <tr><td>קיים בזמן ריצה</td><td>✅ (<code>instanceof</code> עובד)</td><td>❌ נמחק בקומפילציה</td></tr>
+      <tr><td>מתי</td><td>שלד + קוד משותף</td><td>חוזה בלבד</td></tr>
+    </table>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        interface Notifiable {
+          notify(msg: string): string;
+        }
+        class WebhookAlert implements Notifiable {
+          notify(msg: string): string {
+            return `POST /hooks: ${msg}`;
+          }
+        }
+        console.log(new WebhookAlert().notify("deploy done"));
+      </pre>
+      <pre class="out">
+        POST /hooks: deploy done
+      </pre>
+      <div class="note">ב-<b>שיעור 6</b> נלמד interfaces לעומק.</div>
+    </div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – מיני-פריימוורק בדיקות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>בתיקיית השיעור פתחו את <code>exercises/02-abstract-test-framework.ts</code></li>
+        <li>1 – בדיקות חדשות (מחלקות בנות של Check)</li>
+        <li>2 – הרצת כל הבדיקות וסיכום</li>
+        <li>3 – BaseTest עם setup / execute / teardown</li>
+        <li>4 – בדיקת login אמיתית (בת של BaseTest)</li>
+        <li>5 – Reporters: אותן תוצאות, פורמטים שונים</li>
+        <li>6 (בונוס) – TestSuite: הכל ביחד</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 05 02   # בדיקה עצמית
+        npm run solution -- 05 02   # הפתרון
+      </pre>
+      <div class="tip">ב-BaseTest של התרגיל יש פרט נוסף: אם גם execute וגם teardown זרקו – שומרים את השגיאה <b>הראשונה</b>. קראו את ההוראות בקובץ.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== סיכום ===================== -->
+<section class="slide">
+  <h2>ארבעת עקרונות ה-OOP – תמונה מלאה</h2>
+  <table>
+    <tr><th>עיקרון</th><th>במשפט אחד</th><th>בפרויקט אוטומציה</th></tr>
+    <tr><td>Encapsulation</td><td>הסתרת המימוש, ממשק מסודר</td><td>Page Object חושף פעולות, מסתיר סלקטורים</td></tr>
+    <tr><td>Inheritance</td><td>שימוש חוזר בקוד דרך יחס is-a</td><td><code>LoginPage extends BasePage</code></td></tr>
+    <tr><td>Polymorphism</td><td>אותה קריאה – התנהגות שונה</td><td><code>reports.forEach(r =&gt; r.render())</code></td></tr>
+    <tr><td>Abstraction</td><td>חוזה שמגדיר מה, בלי איך</td><td><code>abstract isLoaded()</code> / interfaces</td></tr>
+  </table>
+  <div class="note">בשיעורים 3–4 ראינו את שלושת הראשונים, והיום – את Abstraction, ואיך היא עובדת <b>ביחד</b> עם פולימורפיזם: המחלקה המופשטת מגדירה את החוזה, והפולימורפיזם מריץ את המימוש הנכון.</div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – שיעור 5 (תרגילי סיכום)</h2>
+  <ul>
+    <li>מחלקה מופשטת <code>Report</code> ← <code>TextReport</code>, <code>JsonReport</code>, <code>HtmlReport</code></li>
+    <li><code>renderAll(reports, summary)</code> – <b>בלי</b> <code>instanceof</code> או <code>if</code> על הסוג</li>
+    <li>מערכת הנחות: <code>Discount</code> מופשטת ← <code>PercentageDiscount</code>, <code>FixedDiscount</code>, <code>NoDiscount</code> + <code>bestPrice</code></li>
+    <li>הקובץ: <code>lessons/05-oop-abstract-classes/exercises/exercises.ts</code></li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 05        # תרגילי הסיכום – בדיקה עצמית
+    npm run exercise -- 05 01     # תרגילים של נושא אחד (01 / 02)
+    npm run solution -- 05        # הפתרון לתרגילי הסיכום
+    npm run solution -- 05 02     # הפתרון לנושא אחד
+  </pre>
+  <div class="tip">כל שורה בבדיקה העצמית: הערך שלכם <code>=&gt; expected:</code> הערך הצפוי. <code>✋ TODO</code> = עוד לא פתרתם.</div>
+</section>
+
+<section class="slide">
+  <h2>סיכום</h2>
+  <ul>
+    <li><b>Abstract class</b>: לא ניתן ליצור מופע · קוד משותף · מתודות abstract שחובה לממש</li>
+    <li><b>Template Method</b>: זרימה קבועה באב (<code>run</code>), "חורים" שהבנות ממלאות · <code>finally</code> לניקוי</li>
+    <li>Abstraction + Polymorphism (משיעור 4) = תשתית גמישה שקל להרחיב</li>
+    <li>בשיעור הבא: <b>Interfaces</b>, <b>Type Aliases</b> ו-<b>Union Types</b></li>
+  </ul>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+# Lesson 11 – Exercise 2: Nightly Regression
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/nightly.yml
+#
+# Requirements:
+#  1. name: "Nightly"
+#  2. Runs every day at 01:30 UTC  (cron: "30 1 * * *")
+#  3. Can be triggered manually (workflow_dispatch) with an input named environment
+#     of type choice with the options qa and staging (default qa)
+#  4. An environment variable BASE_URL that comes from vars.BASE_URL
+#     and an environment variable API_TOKEN that comes from secrets.API_TOKEN  (never write a token in the code!)
+#  5. The step that runs the tests:  npx playwright test --grep @regression
+#  6. Upload playwright-report/ as an artifact with retention-days: 30, even on failure
+
+name: TODO
+
+on:
+  # TODO
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    # TODO: env
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # TODO: run the tests + upload the report
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] name: "Nightly" at the top level
+# [ ] schedule with  cron: "30 1 * * *"
+# [ ] workflow_dispatch with inputs → environment:  type: choice,  options: qa, staging,  default: qa
+# [ ] env with  BASE_URL: ${{ vars.BASE_URL }}  and  API_TOKEN: ${{ secrets.API_TOKEN }}  (no token written in the code!)
+# [ ] A step that runs  npx playwright test --grep @regression
+# [ ] An actions/upload-artifact@v7 step with  if: always(),  path: playwright-report/  and  retention-days: 30
+#
+# Compare with the solution: solutions/nightly.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/nightly.yml

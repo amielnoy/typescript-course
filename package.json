@@ -1,0 +1,27 @@
+{
+  "name": "qa-automation-ts-course",
+  "version": "1.0.0",
+  "description": "קורס TypeScript, Git/GitHub ו-CI/CD לבודקי תוכנה – דוגמאות ותרגילים",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check-setup": "node scripts/check-setup.mjs",
+    "typecheck": "tsc --noEmit",
+    "exercise": "node scripts/run-exercise.mjs",
+    "solution": "node scripts/run-exercise.mjs --solutions",
+    "solutions": "tsx scripts/run-all-examples.ts solutions",
+    "examples": "tsx scripts/run-all-examples.ts",
+    "mock-api": "tsx shared/mock-api/start.ts",
+    "report": "tsx lessons/10-ci-cd-logs-reports/examples/04-mini-runner-with-reports.ts",
+    "ci": "npm run typecheck && npm run solutions && npm run examples && npm run report",
+    "lectures": "node scripts/build-lectures.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0"
+  }
+}

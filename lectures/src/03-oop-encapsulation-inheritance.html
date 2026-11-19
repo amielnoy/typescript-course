@@ -1,0 +1,3128 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>שיעור 3 – מבוא ל-OOP: Objects, Constructors, Encapsulation ו-Inheritance</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="3">
+
+<!-- ============================== פתיחה ============================== -->
+<section class="slide title">
+  <div class="badge">שיעור 3</div>
+  <h1>מבוא ל-OOP</h1>
+  <p class="subtitle">מבוא לעקרונות ה-OOP: Objects, Constructors, Encapsulation ו-Inheritance</p>
+  <div class="chips"><span>Objects</span><span>Constructors</span><span>Access modifiers</span><span>Getters &amp; Setters</span><span>Inheritance</span><span>static</span></div>
+  <div class="meta">19.11 · יום ה' · 09:00–16:00 · ZOOM · תיקייה בפרויקט: lessons/03-oop-encapsulation-inheritance</div>
+</section>
+
+<section class="slide">
+  <h2>בוקר טוב! פתיחה <bdi dir="ltr">(09:00–09:05)</bdi></h2>
+  <ul>
+    <li>👋 ZOOM: מצלמה פתוחה כשאפשר · שאלות בצ'אט או ב"הרמת יד" · תשובות לשאלות "מה יודפס?" – בצ'אט</li>
+    <li>פתחו את הפרויקט ב-VS Code והריצו את בדיקת הסביבה</li>
+    <li>ודאו שקובצי שיעור 3 אצלכם: הפקודה השנייה צריכה להדפיס <code>✋ TODO</code> – זה תקין, עוד לא פתרנו</li>
+    <li>היום יום ארוך – 7 שעות עם 3 הפסקות. לוח הזמנים המלא בעוד שני שקפים</li>
+  </ul>
+  <pre class="lang-bash">
+      npm run check-setup          # ✔ = OK, ✘ = needs fixing
+      npm run exercise -- 03 01    # should show ✋ TODO
+    </pre>
+  <div class="note">קיבלתם ✘? כתבו בצ'אט – נטפל בזה בהפסקה הראשונה (<bdi dir="ltr">10:30</bdi>), כדי לא לעצור את כולם</div>
+</section>
+
+<section class="slide">
+  <h2>מה נלמד היום</h2>
+  <div class="flow">
+    <div class="step"><b>Objects</b>חלק 1: אובייקטים, JSON ותזכורת לבנאים</div><div class="arrow">←</div>
+    <div class="step"><b>Encapsulation</b>חלק 2: הרשאות גישה ושדות פרטיים</div><div class="arrow">←</div>
+    <div class="step y"><b>Getters &amp; Setters</b>חלק 3: ולידציה ונרמול</div><div class="arrow">←</div>
+    <div class="step g"><b>Inheritance</b>חלק 4: הורשה, בנאי האב ודריסה</div><div class="arrow">←</div>
+    <div class="step"><b>static</b>חלק 5: מונים, Factory, Singleton</div>
+  </div>
+  <ul>
+    <li>בכל חלק: <b>הסבר פשוט</b> ← <b>דוגמאות קוד עם פלט אמיתי</b> ← <b>טעויות נפוצות</b> ← <b>🤔 מה יודפס?</b> ← <b>חימום בכיתה</b> ← <b>תרגילים</b></li>
+    <li>כל הדוגמאות מעולם הבדיקות: Page Objects, לקוחות API, דוחות ריצה, נתוני בדיקה</li>
+    <li>קבצי הדוגמאות המלאים: <code>lessons/03-oop-encapsulation-inheritance/examples</code></li>
+    <li>מריצים דוגמה עם <code>npx tsx &lt;path&gt;</code> – ומשחקים עם הקוד!</li>
+  </ul>
+  <div class="tip">המטרה: לכתוב מחלקות ש"מגינות על עצמן", ולבנות היררכיה כמו <code>BasePage ← LoginPage</code> – הבסיס של כל פרויקט אוטומציה</div>
+</section>
+
+<section class="slide">
+  <h2>לוח הזמנים של היום</h2>
+  <table>
+    <thead><tr><th>שעה</th><th>מה עושים</th></tr></thead>
+    <tbody>
+      <tr><td><bdi dir="ltr">09:00–09:15</bdi></td><td>פתיחה ותזכורת משיעור 2</td></tr>
+      <tr><td><bdi dir="ltr">09:15–10:30</bdi></td><td>חלק 1 – אובייקטים: שדות, destructuring, spread, JSON, אובייקטים מקוננים</td></tr>
+      <tr><td><bdi dir="ltr">10:30–10:45</bdi></td><td>☕ הפסקה</td></tr>
+      <tr><td><bdi dir="ltr">10:45–11:45</bdi></td><td>חלק 2 – Encapsulation: private, readonly, #field</td></tr>
+      <tr><td><bdi dir="ltr">11:45–12:30</bdi></td><td>חלק 3 – Getters ו-Setters: ולידציה, ערכים מחושבים</td></tr>
+      <tr><td><bdi dir="ltr">12:30–13:15</bdi></td><td>🍽️ הפסקת צהריים</td></tr>
+      <tr><td><bdi dir="ltr">13:15–14:45</bdi></td><td>חלק 4 – Inheritance: extends, super, override, protected</td></tr>
+      <tr><td><bdi dir="ltr">14:45–15:00</bdi></td><td>☕ הפסקה</td></tr>
+      <tr><td><bdi dir="ltr">15:00–15:40</bdi></td><td>חלק 5 – static: מונים, קבועים, Factory, Singleton</td></tr>
+      <tr><td><bdi dir="ltr">15:40–16:00</bdi></td><td>סיכום, שאלת סיכום, שאלון "איזה כלי?", שאלות ומה עושים בבית</td></tr>
+    </tbody>
+  </table>
+  <div class="note">בכל חלק יש <b>חימום בכיתה</b> (2 תרגילים קצרים בראש קובץ התרגילים) – ואת התרגילים המלאים ממשיכים בבית</div>
+</section>
+
+<!-- ============================== תזכורת משיעור 2 ============================== -->
+<section class="slide">
+  <h2>תזכורת משיעור 2 – במפה אחת <bdi dir="ltr">(09:05–09:15)</bdi></h2>
+  <div class="grid3">
+    <div class="card"><h3>🧩 פונקציות</h3><p>פרמטרים וערך חזרה · אופציונלי <code>?</code> · ברירת מחדל <code>= value</code> · rest <code>...args</code> · טיפוס של פונקציה</p></div>
+    <div class="card"><h3>➡️ Arrow functions ומערכים</h3><p><code>(x) =&gt; x * 2</code> · callbacks · <code>map</code> / <code>filter</code> / <code>find</code> / <code>some</code> / <code>every</code> / <code>reduce</code> / <code>sort</code></p></div>
+    <div class="card"><h3>🏗️ מחלקות</h3><p><code>class</code> · <code>constructor</code> · <code>new</code> · <code>this</code> · parameter properties · Page Object</p></div>
+  </div>
+  <ul>
+    <li>שלוש שאלות "מה יודפס?" קצרות – אחת לכל נושא. כתבו את התשובה בצ'אט לפני שמציגים אותה</li>
+    <li>קובץ השאלות המלא: <code>lessons/03-oop-encapsulation-inheritance/examples/00-recap-lesson-2.ts</code></li>
+  </ul>
+  <div class="tip">היום ממשיכים בדיוק מהמחלקות: איך מחלקה <b>מגינה</b> על הנתונים שלה (Encapsulation) ואיך מחלקות <b>משתפות</b> קוד (Inheritance)</div>
+</section>
+
+<section class="slide">
+  <h2>🤔 חימום: מה יודפס? פונקציות ומערכים</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      // 1. default + rest
+      function report(
+        title: string,
+        status = "PASSED",
+        ...tags: string[]
+      ): string {
+        return `${title}: ${status} [${tags.join(", ")}]`;
+      }
+
+      console.log(report("Login"));
+      console.log(report("Cart", "FAILED"));
+      console.log(report("Search", undefined, "smoke", "ui"));
+    </pre>
+    <pre class="lang-ts sm">
+      // 2. arrow functions + array methods
+      const results = [
+        { name: "login", passed: true, ms: 1200 },
+        { name: "cart", passed: false, ms: 3400 },
+        { name: "search", passed: true, ms: 800 },
+      ];
+
+      const failed = results
+        .filter((r) =&gt; !r.passed)
+        .map((r) =&gt; r.name);
+      const totalMs = results.reduce((sum, r) =&gt; sum + r.ms, 0);
+      const allFast = results.every((r) =&gt; r.ms &lt; 3000);
+      console.log(failed, totalMs, allFast);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>🤔 חימום: מה יודפס? מחלקות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>שימו לב לבנאי: מה מקבל <code>priority</code> כשלא מעבירים אותו?</li>
+        <li><code>start()</code> נקראת רק על אובייקט אחד – מה קורה לשני?</li>
+        <li>התשובות לשלוש השאלות – בשקף הבא</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      // 3. class, constructor, parameter properties, this
+      class TestCase {
+        status = "new";
+
+        constructor(
+          public id: string,
+          private priority = 3,
+        ) {}
+
+        start(): void {
+          this.status = "running";
+        }
+
+        describe(): string {
+          return `${this.id} (P${this.priority}) - ${this.status}`;
+        }
+      }
+
+      const first = new TestCase("TC-1", 1);
+      const second = new TestCase("TC-2");
+      first.start();
+      console.log(first.describe());
+      console.log(second.describe());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובות החימום</h2>
+  <div class="grid3">
+    <div class="stack">
+      <h3>1. פונקציות</h3>
+      <pre class="out">
+        Login: PASSED []
+        Cart: FAILED []
+        Search: PASSED [smoke, ui]
+      </pre>
+      <p class="small"><code>undefined</code> מפעיל את ברירת המחדל · rest בלי ארגומנטים = מערך ריק <code>[]</code></p>
+    </div>
+    <div class="stack">
+      <h3>2. מערכים</h3>
+      <pre class="out">
+        [ 'cart' ] 5400 false
+      </pre>
+      <p class="small"><code>filter</code> ואז <code>map</code> · <code>reduce</code> מתחיל מ-0 · ל-<code>every</code> מספיק איבר אחד איטי (3400) כדי להחזיר false</p>
+    </div>
+    <div class="stack">
+      <h3>3. מחלקות</h3>
+      <pre class="out">
+        TC-1 (P1) - running
+        TC-2 (P3) - new
+      </pre>
+      <p class="small">ברירת מחדל בבנאי: <code>priority = 3</code> · לכל אובייקט <code>status</code> משלו – <code>start()</code> שינתה רק את <code>first</code></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שיעורי בית משיעור 2 – Test Case Manager</h2>
+  <ul>
+    <li>משימות 1–5: פרמטרים עם ברירת מחדל ו-rest, כללי בדיקה כפונקציות, המחלקה <code>TestSuite</code>, סיכום עם מתודות מערך</li>
+    <li>מה הסתדר? איפה נתקעתם? – 2 דקות שאלות עכשיו, ושאלות ארוכות בהפסקה</li>
+    <li>משימות 6–7 (Challenge) משתמשות באובייקטים וב-JSON – את זה לומדים <b>בחלק 1 היום</b>, ואז חוזרים אליהן</li>
+  </ul>
+  <pre class="lang-bash">
+      npm run exercise -- 02 hw    # self-check
+      npm run solution -- 02 hw    # only after you tried!
+    </pre>
+  <div class="note">ומכאן – לחלק 1: אובייקטים (<bdi dir="ltr">09:15</bdi>)</div>
+</section>
+
+<!-- ============================== חלק 1: אובייקטים ============================== -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>אובייקטים</h1>
+  <p class="subtitle">שדות ומתודות, destructuring, spread, Object.keys / entries ו-JSON</p>
+  <p class="subtitle">🕘 <bdi dir="ltr">09:15–10:30</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>אובייקט במילים פשוטות – כרטיס עם שדות</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>אובייקט = <b>כרטיס</b> עם כמה פרטים יחד (<code>שם: ערך</code>) – כמו כרטיס בדיקה ב-Jira</li>
+        <li>קוראים שדה עם נקודה: <code>testCase.title</code></li>
+        <li>שם השדה נמצא במשתנה? סוגריים מרובעים: <code>testCase[field]</code></li>
+      </ul>
+      <pre class="out">
+        Login with valid user
+        1
+        { id: 'TC-101', title: 'Login…', priority: 2 }
+      </pre>
+      <div class="note">TS זוכר את הצורה: שדה שלא הוגדר (<code>owner</code>) – שגיאת קומפילציה</div>
+    </div>
+    <pre class="lang-ts sm">
+      const testCase = {
+        id: "TC-101",
+        title: "Login with valid user",
+        priority: 1,
+      };
+
+      console.log(testCase.title);
+      const field = "priority";
+      console.log(testCase[field]);
+      testCase.priority = 2;
+      console.log(testCase);
+      // testCase.owner = "dana"; // ❌ does not exist
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>אובייקט: שדות, מתודות ו-this</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>אובייקט = אוסף <b>שדות</b> <code>key: value</code> – ואפשר גם <b>מתודות</b></li>
+        <li>גישה: <code>obj.retries</code> או <code>obj["retries"]</code> (כשהמפתח במשתנה)</li>
+        <li>בתוך מתודה, <code>this</code> = האובייקט שלפני הנקודה</li>
+        <li>TS זוכר את <b>הצורה</b>: שדה שלא קיים או טיפוס שגוי → שגיאה</li>
+      </ul>
+      <pre class="out">
+        chromium, retries=2
+        chromium 2
+        chromium, retries=3
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const testConfig = {
+        browser: "chromium",
+        headless: true,
+        retries: 2,
+        describe(): string {
+          return `${this.browser}, retries=${this.retries}`;
+        },
+      };
+      console.log(testConfig.describe());
+      console.log(testConfig.browser, testConfig["retries"]);
+
+      testConfig.retries = 3; // שינוי ערך של שדה – מותר
+      console.log(testConfig.describe());
+
+      // testConfig.video = true; ❌ Property 'video' does not exist
+      // testConfig.retries = "3"; ❌ 'string' is not assignable to 'number'
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Destructuring – פירוק אובייקט למשתנים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>שולפים כמה שדות למשתנים <b>בשורה אחת</b>; שם המשתנה = שם השדה</li>
+        <li>שינוי שם: <code>{ name: userName }</code></li>
+        <li>ברירת מחדל אם השדה חסר: <code>role&nbsp;=&nbsp;"tester"</code></li>
+        <li>במערך – לפי <b>מיקום</b>: <code>[first, second]</code></li>
+      </ul>
+      <pre class="out">
+        chromium 2
+        Noa tester
+        login search
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const testConfig = { browser: "chromium", retries: 2 };
+
+      // בלי destructuring
+      const browser1 = testConfig.browser;
+      const retries1 = testConfig.retries;
+
+      // עם destructuring – אותו דבר בשורה אחת
+      const { browser, retries } = testConfig;
+      console.log(browser, retries);
+
+      const user: { name: string; email: string; role?: string } = {
+        name: "Noa",
+        email: "noa@example.com",
+      };
+      const { name: userName, role = "tester" } = user;
+      console.log(userName, role);
+
+      const [first, second] = ["login", "search", "checkout"];
+      console.log(first, second);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Destructuring בפרמטרים ובלולאות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מפרקים אובייקט <b>כבר בחתימת הפונקציה</b> – כולל ברירת מחדל</li>
+        <li>ב-<code>for...of</code> על מערך אובייקטים – מפרקים כל איבר</li>
+        <li>ב-Playwright: <code>({ page })</code> – זה destructuring!</li>
+      </ul>
+      <pre class="out sm">
+        BUG-101 [High] Login disabled
+        BUG-102 [Low] Typo on homepage
+        BUG-101: Login disabled
+        BUG-102: Typo on homepage
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      type Bug = { id: number; title: string; severity?: string };
+
+      function describeBug({ id, title, severity = "Low" }: Bug): string {
+        return `BUG-${id} [${severity}] ${title}`;
+      }
+
+      const bugs: Bug[] = [
+        { id: 101, title: "Login disabled", severity: "High" },
+        { id: 102, title: "Typo on homepage" },
+      ];
+      console.log(describeBug(bugs[0]));
+      console.log(describeBug(bugs[1]));
+
+      for (const { id, title } of bugs) {
+        console.log(`BUG-${id}: ${title}`);
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Spread – העתקה ומיזוג</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>...obj</code> = "פרוס כאן את כל השדות של obj"</li>
+        <li>במיזוג – <b>האחרון גובר</b>, לכן <code>...overrides</code> בסוף</li>
+        <li>הסדר קובע! בסדר הפוך – ההגדרות שלנו נדרסות</li>
+        <li>אפשר להוסיף או להחליף שדה בעותק החדש</li>
+        <li>עובד גם על מערכים: <code>[...smoke]</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const defaults = { timeout: 30000, retries: 0, headless: true };
+        const overrides = { retries: 3 };
+
+        const finalConfig = { ...defaults, ...overrides };
+        console.log(finalConfig);
+
+        const wrongOrder = { ...overrides, ...defaults }; // ❌
+        console.log(wrongOrder);
+
+        const firefox = { ...finalConfig, browser: "firefox" };
+        console.log(firefox);
+
+        const smoke = ["login", "logout"];
+        console.log([...smoke, "checkout"]);
+      </pre>
+      <pre class="out sm">
+        { timeout: 30000, retries: 3, headless: true }
+        { retries: 0, timeout: 30000, headless: true }
+        { timeout: 30000, retries: 3, headless: true, browser: 'firefox' }
+        [ 'login', 'logout', 'checkout' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>העתקה מול הפניה (reference)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>const ref = defaults</code> <b>לא מעתיק</b> – שני שמות לאותו אובייקט</li>
+        <li><code>{ ...defaults }</code> יוצר אובייקט <b>חדש</b> – שינוי בעותק לא נוגע במקור</li>
+        <li>אבל ההעתקה <b>רדודה</b> (shallow): אובייקט <b>בתוך</b> אובייקט עדיין משותף</li>
+      </ul>
+      <pre class="out">
+        5
+        30000 1
+        XYZ
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const defaults = { timeout: 30000, retries: 0 };
+
+      const ref = defaults; // אותו אובייקט!
+      ref.retries = 5;
+      console.log(defaults.retries);
+
+      const copy = { ...defaults }; // אובייקט חדש
+      copy.timeout = 1;
+      console.log(defaults.timeout, copy.timeout);
+
+      const base = { url: "/api", headers: { token: "abc" } };
+      const clone = { ...base };
+      clone.headers.token = "XYZ"; // headers משותף!
+      console.log(base.headers.token);
+    </pre>
+  </div>
+  <div class="tip">באוטומציה: נתוני בדיקה משותפים (config, משתמש לדוגמה) – מעתיקים לפני שמשנים, כדי שטסט אחד לא "ילכלך" לטסט אחר</div>
+</section>
+
+<section class="slide">
+  <h2>Object.keys / values / entries – לעבור על כל השדות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Object.keys</code> → <b>שמות השדות</b></li>
+        <li><code>Object.values</code> → <b>הערכים</b></li>
+        <li><code>Object.entries</code> → זוגות <code>[key,&nbsp;value]</code></li>
+        <li>עם <code>for...of</code> ו-destructuring – עוברים על כל השדות</li>
+        <li>שימושים: לבדוק כל שדה בטופס, להדפיס headers, להשוות צפוי מול בפועל</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const defaults = { timeout: 30000, retries: 0, headless: true };
+
+        console.log(Object.keys(defaults));
+        console.log(Object.values(defaults));
+        console.log(Object.entries(defaults));
+
+        for (const [key, value] of Object.entries(defaults)) {
+          console.log(`${key} =&gt; ${value}`);
+        }
+      </pre>
+      <pre class="out sm">
+        [ 'timeout', 'retries', 'headless' ]
+        [ 30000, 0, true ]
+        [ [ 'timeout', 30000 ], [ 'retries', 0 ], [ 'headless', true ] ]
+        timeout =&gt; 30000
+        retries =&gt; 0
+        headless =&gt; true
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>JSON – אובייקט ⇄ טקסט (בדיוק מה ש-API מחזיר)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>JSON</b> = פורמט טקסט לנתונים – כך API שולח ומקבל מידע</li>
+        <li><code>JSON.stringify</code> – הופך אובייקט <b>לטקסט</b></li>
+        <li>עם <code>null, 2</code> – טקסט מסודר עם הזחה (ללוגים)</li>
+        <li><code>JSON.parse</code> – הופך טקסט <b>לאובייקט</b></li>
+        <li><code>parse</code> לא יודע מה יחזור – מוסיפים <code>as</code> עם הטיפוס</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const bug = { id: 101, title: "Login disabled", severity: "High" };
+        const json = JSON.stringify(bug);
+        console.log(json);
+        console.log(typeof json);
+        console.log(JSON.stringify({ id: 7, status: "open" }, null, 2));
+
+        const text = '{"id": 7, "status": "open"}';
+        const parsed = JSON.parse(text) as { id: number; status: string };
+        console.log(parsed.status, typeof parsed);
+      </pre>
+      <pre class="out sm">
+        {"id":101,"title":"Login disabled","severity":"High"}
+        string
+        {
+          "id": 7,
+          "status": "open"
+        }
+        open object
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>אובייקטים מקוננים – קוראים תשובת API</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>תשובת API = אובייקטים מקוננים. מגיעים לעומק בשרשרת: <code>users[0].address</code></li>
+        <li><code>?</code> בטיפוס = שדה <b>אופציונלי</b> – לא תמיד קיים</li>
+        <li><code>?.</code> – "אם קיים, תמשיך". אם לא – <code>undefined</code> במקום קריסה</li>
+        <li><code>??</code> – ערך ברירת מחדל כשאין ערך</li>
+      </ul>
+      <pre class="out">
+        Haifa
+        undefined
+        Dana: Haifa
+        Avi: unknown city
+      </pre>
+      <div class="warn small">בלי <code>?.</code>: <code>users[1].address.city</code> – שגיאת קומפילציה: <bdi dir="ltr">'address' is possibly 'undefined'</bdi></div>
+    </div>
+    <pre class="lang-ts sm">
+      type ApiUser = {
+        id: number;
+        name: string;
+        address?: { city: string }; // optional
+      };
+
+      type UsersResponse = { status: number; users: ApiUser[] };
+
+      const usersResponse: UsersResponse = {
+        status: 200,
+        users: [
+          { id: 7, name: "Dana", address: { city: "Haifa" } },
+          { id: 8, name: "Avi" }, // no address
+        ],
+      };
+
+      console.log(usersResponse.users[0].address?.city);
+      console.log(usersResponse.users[1].address?.city);
+      for (const user of usersResponse.users) {
+        console.log(`${user.name}: ${user.address?.city ?? "unknown city"}`);
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מערך של אובייקטים – בדיקה מונחית נתונים (data-driven)</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>כל אובייקט = <b>מקרה בדיקה</b> אחד: קלט + תוצאה צפויה</li>
+        <li>לולאה אחת מריצה את כולם – מקרה חדש = עוד שורה (הרעיון של <code>test.each</code>)</li>
+        <li>destructuring ישר בלולאה: <code>{ username, password, expected }</code></li>
+        <li>והבדיקה מצאה באג: המערכת בכלל לא בודקת את שם המשתמש 🐞</li>
+      </ul>
+      <pre class="out">
+        ✔ login("dana", "S3cret!") -&gt; true
+        ✔ login("dana", "wrong") -&gt; false
+        ✘ login("", "S3cret!") -&gt; true
+        2/3 passed
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const loginCases = [
+        { username: "dana", password: "S3cret!", expected: true },
+        { username: "dana", password: "wrong", expected: false },
+        { username: "", password: "S3cret!", expected: false },
+      ];
+
+      function fakeLogin(username: string, password: string): boolean {
+        return password === "S3cret!"; // bug: ignores username
+      }
+
+      let loginPassed = 0;
+      for (const { username, password, expected } of loginCases) {
+        const actual = fakeLogin(username, password);
+        const ok = actual === expected;
+        if (ok) loginPassed++;
+        const mark = ok ? "✔" : "✘";
+        const call = `login("${username}", "${password}")`;
+        console.log(mark, call, "-&gt;", actual);
+      }
+      console.log(`${loginPassed}/${loginCases.length} passed`);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות עם אובייקטים</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ לא כך</h3>
+      <pre class="lang-ts sm">
+        // טעות 1: השוואת אובייקטים עם ===
+        const a = { id: 1 };
+        const b = { id: 1 };
+        console.log(a === b); // false
+
+        // טעות 2: פענוח תשובה שאינה JSON
+        JSON.parse("&lt;html&gt;Server Error&lt;/html&gt;");
+        // SyntaxError: Unexpected token '&lt;' ...
+        // והטסט קורס בלי הסבר ברור
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ כך</h3>
+      <pre class="lang-ts sm">
+        // תיקון 1: משווים את השדות עצמם
+        console.log(a.id === b.id); // true
+
+        // תיקון 2: עוטפים ב-try/catch
+        const text = "&lt;html&gt;Server Error&lt;/html&gt;";
+        try {
+          JSON.parse(text);
+        } catch (e) {
+          console.log("Not JSON:", text);
+        }
+      </pre>
+    </div>
+  </div>
+  <div class="note">ב-JSON: מפתחות תמיד במירכאות כפולות, ואין פונקציות – <code>stringify</code> פשוט מדלג על מתודות</div>
+</section>
+
+<section class="slide">
+  <h2>🤔 מה יודפס? הפניה מול עותק</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>חשבו דקה וכתבו בצ'אט מה יודפס – בלי להריץ!</li>
+        <li>רמז: עברו שורה אחרי שורה וכתבו ליד כל אחת מה קורה</li>
+      </ul>
+      <div class="tip">התשובה – בשקף הבא</div>
+    </div>
+    <pre class="lang-ts sm">
+      const original = { name: "Dana", tags: ["smoke"] };
+      const sameRef = original;
+      const shallow = { ...original };
+
+      sameRef.name = "Avi";
+      shallow.name = "Noa";
+      shallow.tags.push("e2e");
+
+      console.log(original.name);
+      console.log(original.tags);
+      console.log(shallow.name);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובה: הפניה מול עותק</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>sameRef = original</code> – <b>לא</b> עותק: שני שמות לאותו אובייקט → <code>Avi</code></li>
+        <li><code>{ ...original }</code> – אובייקט חדש, ולכן ה-<code>name</code> שלו נפרד → <code>Noa</code></li>
+        <li>אבל spread הוא עותק <b>רדוד</b>: <code>tags</code> הוא אותו מערך בשניהם → <code>e2e</code> נכנס גם למקור</li>
+        <li>התיקון: להעתיק גם את המערך הפנימי</li>
+      </ul>
+      <pre class="out">
+        Avi
+        [ 'smoke', 'e2e' ]
+        Noa
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const deeper = { ...original, tags: [...original.tags] };
+      deeper.tags.push("regression");
+      console.log(original.tags); // unchanged
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>חימום בכיתה – אובייקטים</h2>
+  <ul>
+        <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/01-objects.ts</code> – החימום נמצא <b>בראש הקובץ</b>, לפני תרגיל 1</li>
+        <li><b>Warm-up A</b> – <code>createTestCase(id, title)</code>: מחזירה כרטיס חדש עם <code>status: "new"</code> ו-<code>tags</code> ריק <i>(פותרים יחד, 5 דק')</i></li>
+        <li><b>Warm-up B</b> – <code>withTag(card, tag)</code>: עותק חדש עם תגית נוספת – בלי לשנות את הכרטיס המקורי <i>(לבד, 5 דק')</i></li>
+        <li>הבדיקה העצמית של החימום מודפסת ראשונה – כל עוד לא פתרתם יופיע <code>✋ TODO</code></li>
+      </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 01
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>פתרון החימום – אובייקטים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>{ id, title }</code> – קיצור של <code>{ id: id, title: title }</code></li>
+        <li>מעתיקים את האובייקט <b>וגם</b> את המערך – אחרת שני הכרטיסים חולקים את אותו <code>tags</code></li>
+        <li>גם כשאין מה להוסיף מחזירים <b>עותק</b> – מי שקיבל אותו יכול לשנות בלי לפגוע במקור</li>
+        <li>הפתרון המלא: <code>npm run solution -- 03 01</code></li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      function createTestCase(id: string, title: string): TestCaseCard {
+        return { id, title, status: "new", tags: [] };
+      }
+
+      function withTag(card: TestCaseCard, tag: string): TestCaseCard {
+        if (card.tags.includes(tag)) {
+          return { ...card, tags: [...card.tags] };
+        }
+        return { ...card, tags: [...card.tags, tag] };
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול: אובייקטים</h2>
+  <ul>
+    <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/01-objects.ts</code></li>
+    <li>התרגילים: <code>describeUser</code> (destructuring + ברירת מחדל) · <code>mergeConfig</code> (spread) · <code>findEmptyFields</code> (Object.entries) · <code>diffFields</code> (Object.keys – צפוי מול בפועל) · <code>updateBugJson</code> (JSON + spread) · בונוס: <code>createSuite</code> (אובייקט עם מתודות ו-this)</li>
+    <li>בדיקה עצמית: <code>&lt;result&gt; =&gt; expected: &lt;value&gt;</code> · לא נפתר עדיין: <code>✋ TODO</code></li>
+  </ul>
+  <div class="grid2">
+    <pre class="lang-bash">
+      npm run exercise -- 03 01
+    </pre>
+    <pre class="lang-bash">
+      npm run solution -- 03 01
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מאובייקט למחלקה – תזכורת משיעור 2: בנאים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>אובייקט ליטרלי – <b>אחד</b>. מחלקה – <b>תבנית</b> שממנה יוצרים כמה שרוצים עם <code>new</code></li>
+        <li><code>constructor</code> רץ פעם אחת, ברגע היצירה, ומאתחל את השדות</li>
+        <li><code>this</code> – האובייקט שנוצר עכשיו</li>
+        <li>Parameter properties: <code>public name</code> בבנאי = הצהרה + השמה בשורה אחת</li>
+        <li>ברירת מחדל בבנאי: <code>role = "viewer"</code></li>
+      </ul>
+      <div class="note">מכאן ממשיכים: איך מחלקה <b>מגינה</b> על הנתונים שלה (Encapsulation) ואיך היא <b>משתפת</b> קוד (Inheritance)</div>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        class TestUser {
+          constructor(
+            public name: string,
+            private role = "viewer",
+          ) {}
+          describe(): string {
+            return `${this.name} (${this.role})`;
+          }
+        }
+        const dana = new TestUser("Dana", "admin");
+        console.log(dana.describe());
+        console.log(new TestUser("Avi").describe());
+      </pre>
+      <pre class="out">
+        Dana (admin)
+        Avi (viewer)
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide section">
+  <div class="badge">הפסקה</div>
+  <h1>☕ הפסקה</h1>
+  <p class="subtitle"><bdi dir="ltr">10:30–10:45</bdi> · ממשיכים ב-Encapsulation</p>
+</section>
+
+<!-- ============================== חלק 2: Encapsulation ============================== -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>Encapsulation – כימוס</h1>
+  <p class="subtitle">הרשאות גישה: <bdi dir="ltr">public / private / protected / readonly / #field</bdi></p>
+  <p class="subtitle">🕘 <bdi dir="ltr">10:45–11:45</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>Encapsulation – כימוס</h2>
+  <ul>
+    <li><b>הרעיון:</b> האובייקט שומר על הנתונים שלו – העולם החיצון עובד רק דרך ממשק מסודר</li>
+    <li>מסתירים <b>איך</b> (המימוש) וחושפים רק <b>מה</b> (הפעולות)</li>
+    <li>מונע מצבים לא חוקיים: סיסמה ריקה, timeout שלילי, דילוג על נעילת חשבון</li>
+    <li>מאפשר לשנות את המימוש הפנימי בלי לשבור את מי שמשתמש במחלקה</li>
+    <li>דוגמה מהאוטומציה: Page Object חושף <code>login(user, pass)</code> – ולא את הסלקטורים</li>
+  </ul>
+  <div class="grid2">
+    <div class="card good"><h3>🏧 אנלוגיה: כספומט</h3><p>לוחצים "משיכה" ומקבלים כסף. לא פותחים את הכספת ולא סופרים שטרות בעצמנו. הכפתורים = <b>public</b>, הכספת = <b>private</b>.</p></div>
+    <div class="card"><h3>🧪 למה זה חשוב לבודקים?</h3><p>בדיוק את זה אנחנו בודקים: שאי אפשר לעקוף חוקים עסקיים. בקוד האוטומציה שלנו – אותו עיקרון שומר על הבדיקות יציבות.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>כימוס במילים פשוטות – שלט של טלוויזיה</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>בשלט יש רק כפתורים: <b>+</b> ו-<b>−</b>. אין דרך "לכתוב" ווליום 500</li>
+        <li>השדה <code>level</code> הוא <code>private</code> – רק המחלקה עצמה נוגעת בו</li>
+        <li><code>up()</code> / <code>down()</code> הן הכפתורים – והן שומרות על החוק 0–10</li>
+        <li>לחצנו 8 פעמים על + כשהיינו ב-5 → נעצרים ב-<b>10</b>, לא ב-13</li>
+      </ul>
+      <pre class="out">
+        volume: 10
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class VolumeControl {
+        private level = 5; // 0..10
+
+        up(): void {
+          if (this.level &lt; 10) this.level++;
+        }
+        down(): void {
+          if (this.level &gt; 0) this.level--;
+        }
+        current(): number {
+          return this.level;
+        }
+      }
+
+      const tv = new VolumeControl();
+      for (let i = 0; i &lt; 8; i++) tv.up();
+      console.log("volume:", tv.current());
+      // tv.level = 500; // ❌ Property 'level' is private
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הבעיה: שדות שכל אחד יכול לשנות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>השדות <code>passed</code> ו-<code>failed</code> פתוחים לכולם</li>
+        <li>אף אחד לא בודק שהערך הגיוני</li>
+        <li>התוצאה: דוח עם <b>250%</b> הצלחה 🤯</li>
+        <li>באג כזה מתגלה רק בזמן ריצה – ולפעמים בכלל לא</li>
+      </ul>
+      <pre class="out">
+        pass rate: 250%
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      class TestRun {
+        passed = 0;
+        failed = 0;
+
+        passRate(): number {
+          const total = this.passed + this.failed;
+          return Math.round((this.passed / total) * 100);
+        }
+      }
+
+      const run = new TestRun();
+      run.passed = 5;
+      run.failed = -3; // nobody stops this!
+      console.log(`pass rate: ${run.passRate()}%`);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הפתרון: שדות private + מתודות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>השדות <code>private</code> – אי אפשר לגעת בהם מבחוץ</li>
+        <li>הדרך היחידה לשנות: <code>record(ok)</code></li>
+        <li>המחלקה מבטיחה: <code>failed</code> לעולם לא שלילי</li>
+        <li>חלוקה ב-0 מטופלת במקום אחד</li>
+      </ul>
+      <pre class="out">
+        pass rate: 67%
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TestRun {
+        private passed = 0;
+        private failed = 0;
+
+        record(ok: boolean): void {
+          if (ok) this.passed++;
+          else this.failed++;
+        }
+
+        passRate(): number {
+          const total = this.passed + this.failed;
+          if (total === 0) return 0;
+          return Math.round((this.passed / total) * 100);
+        }
+      }
+      const run = new TestRun();
+      run.record(true); run.record(true); run.record(false);
+      console.log(`pass rate: ${run.passRate()}%`);
+      // run.failed = -3;
+      // ❌ Property 'failed' is private and only accessible
+      //    within class 'TestRun'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>כימוס ב-Page Object</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>הבדיקה קוראת ל-<code>login(user, pass)</code> – ולא מכירה את הסלקטורים</li>
+        <li>הסלקטור השתנה? מתקנים <b>במקום אחד</b> – בתוך המחלקה</li>
+        <li>הבדיקות לא נשברות – הממשק נשאר זהה</li>
+      </ul>
+      <pre class="out">
+        fill  #username = dana
+        fill  #password = *******
+        click button[type=submit]
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      class LoginPage {
+        private readonly userInput = "#username";
+        private readonly passInput = "#password";
+        private readonly submitBtn = "button[type=submit]";
+
+        login(user: string, pass: string): void {
+          console.log(`fill  ${this.userInput} = ${user}`);
+          const stars = "*".repeat(pass.length);
+          console.log(`fill  ${this.passInput} = ${stars}`);
+          console.log(`click ${this.submitBtn}`);
+        }
+      }
+
+      const page = new LoginPage();
+      page.login("dana", "S3cret!");
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הרשאות גישה (Access Modifiers)</h2>
+  <table>
+    <tr><th>Modifier</th><th>נגיש מתוך המחלקה</th><th>ממחלקה יורשת</th><th>מבחוץ</th></tr>
+    <tr><td><code>public</code> (ברירת מחדל)</td><td>✅</td><td>✅</td><td>✅</td></tr>
+    <tr><td><code>protected</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+    <tr><td><code>private</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+    <tr><td><code>#field</code> (JS אמיתי)</td><td>✅</td><td>❌</td><td>❌ (גם בזמן ריצה)</td></tr>
+    <tr><td><code>readonly</code></td><td>השמה רק בהגדרה/בבנאי</td><td>—</td><td>קריאה בלבד</td></tr>
+  </table>
+  <div class="note"><code>private</code> של TypeScript נאכף בזמן קומפילציה. <code>#field</code> נאכף גם בזמן ריצה</div>
+  <div class="tip">כלל אצבע: מתחילים מ-<code>private</code>, ופותחים (<code>protected</code> / <code>public</code>) רק כשיש צורך אמיתי</div>
+</section>
+
+<section class="slide">
+  <h2>דוגמה: חשבון משתמש שננעל אחרי 3 ניסיונות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>הסיסמה והמונה <b>פרטיים</b> – הדרך היחידה לשנות מצב: <code>login()</code></li>
+        <li><code>username</code> הוא <code>public readonly</code>: רק קריאה</li>
+        <li>סיסמה נכונה מאפסת את המונה</li>
+        <li>אחרי 3 כישלונות – גם הסיסמה הנכונה נדחית</li>
+        <li>מבחוץ אי אפשר "לרמות" – וזה בדיוק מה שאנחנו בודקים כבודקים!</li>
+      </ul>
+      <pre class="out">
+        false true
+        false false false
+        false
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class UserAccount {
+        private failedLogins = 0;
+        constructor(
+          public readonly username: string,
+          private password: string,
+        ) {}
+        login(attempt: string): boolean {
+          if (this.failedLogins &gt;= 3) return false; // locked
+          const ok = attempt === this.password;
+          this.failedLogins = ok ? 0 : this.failedLogins + 1;
+          return ok;
+        }
+      }
+      const acc = new UserAccount("dana", "S3cret!");
+      console.log(acc.login("123"), acc.login("S3cret!"));
+      console.log(acc.login("x"), acc.login("y"), acc.login("z"));
+      console.log(acc.login("S3cret!")); // correct – but locked
+      // acc.failedLogins = 0;
+      // ❌ Property 'failedLogins' is private and only accessible
+      //    within class 'UserAccount'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>readonly – מציבים פעם אחת, קוראים תמיד</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>readonly</code> = השמה רק בהגדרה או בבנאי</li>
+        <li>מתאים למזהים: <code>id</code>, <code>username</code>, <code>baseUrl</code></li>
+        <li>⚠️ מגן על <b>ההפניה</b> – לא על התוכן של מערך</li>
+      </ul>
+      <pre class="out sm">
+        TestCase { id: 'TC-001', tags: [ 'smoke' ] }
+      </pre>
+      <div class="tip small">רוצים שגם התוכן יהיה לקריאה בלבד? מגדירים מערך readonly:</div>
+      <pre class="lang-ts sm">
+        readonly tags: readonly string[] = [];
+        tc.tags.push("smoke");
+        // ❌ Property 'push' does not exist
+        //    on type 'readonly string[]'.
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TestCase {
+        readonly id: string;
+        readonly tags: string[] = [];
+
+        constructor(id: string) {
+          this.id = id; // ✅ allowed – inside the constructor
+        }
+
+        rename(): void {
+          // this.id = "TC-999";
+          // ❌ Cannot assign to 'id' because it is
+          //    a read-only property.
+        }
+      }
+
+      const tc = new TestCase("TC-001");
+      // tc.id = "TC-002";       ❌ same error
+      tc.tags.push("smoke");     // ⚠️ works!
+      console.log(tc);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Parameter Properties – קיצור דרך בבנאי</h2>
+  <div class="grid2">
+    <div class="card"><h3>הדרך הארוכה</h3>
+      <pre class="lang-ts sm">
+        class Credentials {
+          public readonly username: string;
+          private password: string;
+
+          constructor(username: string, password: string) {
+            this.username = username;
+            this.password = password;
+          }
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ הקיצור – אותה משמעות בדיוק</h3>
+      <pre class="lang-ts sm">
+        class Credentials {
+          constructor(
+            public readonly username: string,
+            private password: string,
+          ) {}
+
+          masked(): string {
+            const stars = "*".repeat(this.password.length);
+            return `${this.username} / ${stars}`;
+          }
+        }
+      </pre>
+    </div>
+  </div>
+  <div class="cols">
+    <ul class="small">
+      <li>modifier לפני פרמטר בבנאי = הגדרת שדה + השמה אוטומטית</li>
+      <li>שימו לב לפלט: <code>console.log</code> מציג גם את ה-<code>password</code> הפרטי!</li>
+    </ul>
+    <pre class="out sm">
+      dana / *******
+      Credentials { username: 'dana', password: 'S3cret!' }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>#field מול private – מה ההבדל?</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li><code>private</code> קיים רק בזמן קומפילציה – בזמן ריצה זה שדה רגיל</li>
+        <li><code>JSON.stringify</code> / <code>Object.keys</code> / <code>console.log</code> חושפים אותו ← טוקנים דולפים ללוגים ולדוחות</li>
+        <li><code>#value</code> – שדה פרטי "אמיתי" של JavaScript, נאכף גם בזמן ריצה</li>
+        <li>המלצה: סודות (טוקן, סיסמה) ← <code>#</code>. כל השאר ← <code>private</code> מספיק</li>
+      </ul>
+      <pre class="out">
+        {"value":"secret-123"}
+        {}
+        [ 'value' ] []
+        secret-123
+        sec***
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TsToken {
+        constructor(private value: string) {}
+      }
+
+      class JsToken {
+        #value: string;
+        constructor(value: string) {
+          this.#value = value;
+        }
+        masked(): string {
+          return this.#value.slice(0, 3) + "***";
+        }
+      }
+
+      const a = new TsToken("secret-123");
+      const b = new JsToken("secret-123");
+      console.log(JSON.stringify(a));
+      console.log(JSON.stringify(b));
+      console.log(Object.keys(a), Object.keys(b));
+      console.log((a as any).value); // bypass TS
+      console.log(b.masked());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מלכודת: להחזיר מערך פרטי – מחזירים עותק</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>private</code> מגן על <b>השדה</b> – לא על המערך שהשדה מצביע עליו</li>
+        <li><code>return this.tests</code> מוסר החוצה את <b>אותו</b> מערך – וכל אחד יכול לעשות לו <code>push</code></li>
+        <li><code>return [...this.tests]</code> – עותק: מה שקורה בחוץ נשאר בחוץ</li>
+        <li>זוכרים את "הפניה מול עותק" מחלק 1? אותו עיקרון בדיוק</li>
+      </ul>
+      <pre class="out">
+        [ 'login', 'checkout' ]
+        [ 'login', 'checkout', 'hacked' ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TestSuite {
+        private tests: string[] = [];
+
+        add(name: string): void {
+          this.tests.push(name);
+        }
+        getTestsUnsafe(): string[] {
+          return this.tests; // ❌ the array itself
+        }
+        getTests(): string[] {
+          return [...this.tests]; // ✔ a copy
+        }
+      }
+
+      const suite = new TestSuite();
+      suite.add("login");
+      suite.add("checkout");
+
+      suite.getTests().push("hacked");
+      console.log(suite.getTests());
+
+      suite.getTestsUnsafe().push("hacked");
+      console.log(suite.getTests());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – הרשאות גישה</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ פרמטר בלי modifier = לא שדה</h3>
+      <pre class="lang-ts sm">
+        class Credentials {
+          constructor(username: string) {}
+          show() { return this.username; }
+          // ❌ Property 'username' does not
+          //    exist on type 'Credentials'.
+        }
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מוסיפים public / private / readonly</h3>
+      <pre class="lang-ts sm">
+        class Credentials {
+          constructor(public username: string) {}
+          show() { return this.username; }
+        }
+      </pre>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ מחזירים את המערך הפנימי עצמו</h3>
+      <pre class="lang-ts sm">
+        private tests = ["login", "search"];
+        getTests(): string[] { return this.tests; }
+
+        suite.getTests().length = 0;
+        console.log(suite.getTests()); // [] 😱
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מחזירים עותק</h3>
+      <pre class="lang-ts sm">
+        private tests = ["login", "search"];
+        getTests(): string[] { return [...this.tests]; }
+
+        suite.getTests().length = 0;
+        console.log(suite.getTests()); // [ 'login', 'search' ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>🤔 מה עובר קומפילציה – ומה יודפס?</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>אילו מהשורות (1)–(4) עוברות קומפילציה? ומה תדפיס שורה (4)?</li>
+        <li>רמז: עברו שורה אחרי שורה וכתבו ליד כל אחת מה קורה</li>
+      </ul>
+      <div class="tip">התשובה – בשקף הבא</div>
+    </div>
+    <pre class="lang-ts sm">
+      class Report {
+        readonly id = 1;
+        private total = 0;
+        title = "Nightly";
+        #secret = "token-123";
+      }
+
+      const report = new Report();
+      report.title = "Daily";           // (1)
+      report.id = 2;                    // (2)
+      console.log(report.total);        // (3)
+      console.log(Object.keys(report)); // (4)
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובה: מה עובר קומפילציה?</h2>
+  <ul>
+        <li><b>(1)</b> ✔ <code>title</code> הוא public – מותר לשנות</li>
+        <li><b>(2)</b> ❌ <code>Cannot assign to 'id' because it is a read-only property</code></li>
+        <li><b>(3)</b> ❌ <code>Property 'total' is private and only accessible within class 'Report'</code></li>
+        <li><b>(4)</b> (אחרי שמוחקים את 2 ו-3) מדפיסה את השדות שקיימים <b>בזמן ריצה</b>:</li>
+      </ul>
+  <pre class="out">
+        [ 'id', 'total', 'title' ]
+      </pre>
+  <div class="grid2">
+    <div class="card"><h3>private של TS</h3><p>נבדק רק בקומפילציה. בזמן ריצה השדה קיים – ומופיע ב-<code>Object.keys</code> וב-<code>JSON.stringify</code></p></div>
+    <div class="card good"><h3>#secret</h3><p>פרטי באמת, גם בזמן ריצה – לא מופיע בכלל. לטוקנים וסיסמאות שעלולים להגיע ללוג</p></div>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>חימום בכיתה – Encapsulation</h2>
+  <ul>
+        <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/02-access-modifiers.ts</code> – החימום נמצא <b>בראש הקובץ</b>, לפני תרגיל 1</li>
+        <li><b>Warm-up A</b> – <code>StepCounter</code>: שדה <code>private count</code>, ו-<code>next()</code> / <code>current()</code> / <code>reset()</code> <i>(פותרים יחד, 5 דק')</i></li>
+        <li><b>Warm-up B</b> – <code>PasswordField</code>: <code>readonly label</code>, ערך פרטי, ו-<code>masked()</code> שמחזירה כוכביות <i>(לבד, 5 דק')</i></li>
+        <li>הבדיקה העצמית של החימום מודפסת ראשונה – כל עוד לא פתרתם יופיע <code>✋ TODO</code></li>
+      </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 02
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>פתרון החימום – Encapsulation</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      class StepCounter {
+        private count = 0;
+
+        next(): number {
+          this.count++;
+          return this.count;
+        }
+        current(): number {
+          return this.count;
+        }
+        reset(): void {
+          this.count = 0;
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class PasswordField {
+        readonly label: string;
+        private value = "";
+
+        constructor(label: string) {
+          this.label = label;
+        }
+        type(text: string): void {
+          this.value += text;
+        }
+        clear(): void {
+          this.value = "";
+        }
+        length(): number {
+          return this.value.length;
+        }
+        masked(): string {
+          return "*".repeat(this.value.length);
+        }
+      }
+    </pre>
+  </div>
+  <div class="note">הערך האמיתי של הסיסמה אף פעם לא יוצא מהמחלקה – החוצה יוצאות רק כוכביות · <code>npm run solution -- 03 02</code></div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – הרשאות גישה</h2>
+  <ul>
+    <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/02-access-modifiers.ts</code></li>
+    <li>תרגיל 1 – דיווח באג: <code>readonly</code> ומערך פרטי</li>
+    <li>תרגיל 2 – טוקן API עם שדה פרטי "אמיתי" (<code>#</code>)</li>
+    <li>תרגיל 3 – מאגר נתוני בדיקה (Test Data Pool)</li>
+    <li>תרגיל 4 – Feature Flags שאפשר "לנעול"</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 02     # בדיקה עצמית: התוצאה שלכם מול הערך הצפוי
+    npm run solution -- 03 02     # הפתרון – רק אחרי שניסיתם!
+  </pre>
+  <div class="note">תרגיל שעוד לא פתרתם מציג <code>✋ TODO</code> – זה תקין, המשיכו לפתור</div>
+</section>
+
+<!-- ============================== חלק 3: Getters & Setters ============================== -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>Getters ו-Setters</h1>
+  <p class="subtitle">"שדה" שמריץ קוד: ולידציה, נרמול וערכים מחושבים</p>
+  <p class="subtitle">🕘 <bdi dir="ltr">11:45–12:30</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>מה זה getter ו-setter?</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>getter</b> – מתודה שנקראת כמו שדה: <code>b.name</code> (בלי סוגריים)</li>
+        <li><b>setter</b> – מופעל בהשמה: <code>b.name = "firefox"</code></li>
+        <li>למה? לבדוק / לנרמל ערך לפני שמירה, או לחשב ערך בזמן קריאה</li>
+        <li>מבחוץ זה נראה כמו שדה רגיל</li>
+        <li>מוסכמה: השדה הפנימי מתחיל ב-<code>_</code></li>
+      </ul>
+      <pre class="out">
+        [set] name = firefox
+        [get] name
+        firefox
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      class Browser {
+        private _name = "chromium";
+
+        get name(): string {
+          console.log("[get] name");
+          return this._name;
+        }
+
+        set name(value: string) {
+          console.log(`[set] name = ${value}`);
+          this._name = value;
+        }
+      }
+
+      const b = new Browser();
+      b.name = "firefox";    // runs the setter
+      console.log(b.name);   // runs the getter
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>במילים פשוטות – ערך אחד, שתי "תצוגות"</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>שומרים את הערך <b>פעם אחת</b> – במילישניות (<code>_ms</code>)</li>
+        <li><code>get seconds</code> מחשב שניות בכל קריאה. מבחוץ: <code>timeout.seconds</code> – בלי סוגריים</li>
+        <li><code>set seconds</code> מתרגם חזרה למילישניות: <code>timeout.seconds = 2.5</code></li>
+        <li>אין שני שדות שצריך לסנכרן – ולכן אין באג של "השניות לא מתאימות למילישניות"</li>
+      </ul>
+      <pre class="out">
+        5
+        2500
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class Timeout {
+        private _ms = 5000;
+
+        get ms(): number {
+          return this._ms;
+        }
+        get seconds(): number {
+          return this._ms / 1000;
+        }
+        set seconds(value: number) {
+          this._ms = value * 1000;
+        }
+      }
+
+      const timeout = new Timeout();
+      console.log(timeout.seconds); // getter
+      timeout.seconds = 2.5;        // setter
+      console.log(timeout.ms);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Getters ו-Setters – ולידציה בגישה לשדה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מבחוץ נראה כמו שדה רגיל: <code>config.timeoutMs = 10_000</code></li>
+        <li>ה-setter הוא "שומר הסף" – ערך לא חוקי לא נכנס</li>
+        <li>getter בלי setter = קריאה בלבד, כמו <code>timeoutSeconds</code></li>
+      </ul>
+      <pre class="out sm">
+        timeout=10s
+        Caught: timeout must be 1..120000, got -5
+        still: 10000
+      </pre>
+      <div class="tip small">ערך שגוי נעצר <b>ברגע ההשמה</b> – עם הודעה ברורה, ולא אחרי 20 דקות ריצה כש-timeout שלילי שובר משהו אחר</div>
+    </div>
+    <pre class="lang-ts sm">
+      class TestConfig {
+        private _timeoutMs = 30_000;
+        get timeoutMs(): number { return this._timeoutMs; }
+        set timeoutMs(value: number) {
+          if (value &lt;= 0 || value &gt; 120_000) {
+            const msg = `timeout must be 1..120000, got ${value}`;
+            throw new RangeError(msg);
+          }
+          this._timeoutMs = value;
+        }
+        get timeoutSeconds(): number { return this._timeoutMs / 1000; }
+      }
+
+      const config = new TestConfig();
+      config.timeoutMs = 10_000; // calls the setter
+      console.log(`timeout=${config.timeoutSeconds}s`);
+      try {
+        config.timeoutMs = -5; // 💥 the setter throws
+      } catch (err) {
+        console.log("Caught:", (err as Error).message);
+      }
+      console.log("still:", config.timeoutMs); // old value kept
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>getter מחושב – ערך שתמיד מעודכן</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li>אין שדה מאחורי <code>fullName</code> / <code>email</code> – הערך <b>מחושב</b> בכל קריאה</li>
+        <li>שינינו <code>lastName</code>? ה-email התעדכן לבד</li>
+        <li>אין setter ← לקריאה בלבד, גם בלי <code>readonly</code></li>
+      </ul>
+      <pre class="out sm">
+        Dana Levi | dana.levi@test.com
+        Dana Cohen | dana.cohen@test.com
+      </pre>
+      <pre class="lang-ts sm">
+        // u.email = "x@y.com";
+        // ❌ Cannot assign to 'email' because it
+        //    is a read-only property.
+      </pre>
+      <div class="note small">ומי שעוקף עם <code>any</code> – נכשל בזמן ריצה ב-<code>TypeError</code></div>
+    </div>
+    <pre class="lang-ts sm">
+      class TestUser {
+        constructor(
+          public firstName: string,
+          public lastName: string,
+        ) {}
+
+        get fullName(): string {
+          return `${this.firstName} ${this.lastName}`;
+        }
+
+        get email(): string {
+          const name = `${this.firstName}.${this.lastName}`;
+          return `${name}@test.com`.toLowerCase();
+        }
+      }
+
+      const u = new TestUser("Dana", "Levi");
+      console.log(u.fullName, "|", u.email);
+      u.lastName = "Cohen";
+      console.log(u.fullName, "|", u.email);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>setter שמנרמל קלט</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      class RunOptions {
+        private _browser = "chromium";
+
+        get browser(): string {
+          return this._browser;
+        }
+
+        set browser(raw: string) {
+          let name = raw.trim().toLowerCase();
+          if (name === "chrome") name = "chromium";
+          if (name === "safari") name = "webkit";
+          const valid = ["chromium", "firefox", "webkit"];
+          if (!valid.includes(name)) {
+            throw new Error(`unsupported browser: "${raw}"`);
+          }
+          this._browser = name;
+        }
+      }
+    </pre>
+    <div class="stack">
+      <div class="note small">קלט "מלוכלך" (רווחים, אותיות גדולות, כינויים) הופך לערך אחיד – לפני שהוא נשמר</div>
+      <pre class="lang-ts sm">
+        const opts = new RunOptions();
+        const inputs = ["  Firefox ", "Chrome", "SAFARI",
+          "edge"];
+        for (const input of inputs) {
+          try {
+            opts.browser = input;
+            console.log(`"${input}" -&gt; ${opts.browser}`);
+          } catch (err) {
+            console.log((err as Error).message);
+          }
+        }
+      </pre>
+      <pre class="out">
+        "  Firefox " -> firefox
+        "Chrome" -> chromium
+        "SAFARI" -> webkit
+        unsupported browser: "edge"
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>getter בלי setter = קריאה בלבד מבחוץ</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>passed</code> ו-<code>total</code> – getters בלבד, בלי setter</li>
+        <li>מבחוץ אפשר <b>לקרוא</b> – אבל לא לכתוב</li>
+        <li>הדרך היחידה לשנות: <code>recordPass()</code> / <code>recordFail()</code></li>
+        <li><code>total</code> מחושב – תמיד מעודכן, אי אפשר "לשכוח" לעדכן אותו</li>
+      </ul>
+      <pre class="out">
+        2/3
+      </pre>
+      <div class="warn small"><code>counter.passed = 100</code> → <bdi dir="ltr">Cannot assign to 'passed' because it is a read-only property</bdi></div>
+    </div>
+    <pre class="lang-ts sm">
+      class RunCounter {
+        private _passed = 0;
+        private _failed = 0;
+
+        get passed(): number {
+          return this._passed;
+        }
+        get total(): number {
+          return this._passed + this._failed;
+        }
+        recordPass(): void {
+          this._passed++;
+        }
+        recordFail(): void {
+          this._failed++;
+        }
+      }
+
+      const counter = new RunCounter();
+      counter.recordPass();
+      counter.recordPass();
+      counter.recordFail();
+      console.log(`${counter.passed}/${counter.total}`);
+      // counter.passed = 100; // ❌
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – Getters ו-Setters</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ ה-setter קורא לעצמו</h3>
+      <pre class="lang-ts sm">
+        class Config {
+          get timeout(): number {
+            return this.timeout;   // getter again!
+          }
+          set timeout(v: number) {
+            this.timeout = v;      // setter again!
+          }
+        }
+        new Config().timeout = 5;
+      </pre>
+      <pre class="out sm">
+        RangeError: Maximum call stack size exceeded
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ שומרים בשדה פנימי אחר</h3>
+      <pre class="lang-ts sm">
+        class Config {
+          private _timeout = 5_000;
+          get timeout(): number {
+            return this._timeout;
+          }
+          set timeout(v: number) {
+            this._timeout = v;
+          }
+        }
+        new Config().timeout = 5; // ✅
+      </pre>
+    </div>
+  </div>
+  <div class="warn">שדה ו-getter באותו שם (<code>timeout = 5;</code> וגם <code>get timeout()</code>) ← ❌ <code>Duplicate identifier 'timeout'.</code></div>
+</section>
+
+<section class="slide">
+  <h2>🤔 מה יודפס? getter + setter עם ולידציה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>חשבו דקה וכתבו בצ'אט מה יודפס – בלי להריץ!</li>
+        <li>רמז: עברו שורה אחרי שורה וכתבו ליד כל אחת מה קורה</li>
+      </ul>
+      <div class="tip">התשובה – בשקף הבא</div>
+    </div>
+    <pre class="lang-ts sm">
+      class RetryLimit {
+        private _max = 3;
+        get max(): number {
+          return this._max;
+        }
+        set max(value: number) {
+          if (value &lt; 0) throw new Error(`max must be &gt;= 0, got ${value}`);
+          this._max = value;
+        }
+      }
+
+      const retry = new RetryLimit();
+      retry.max = 5;
+      console.log(retry.max);
+      retry.max += 1;
+      console.log(retry.max);
+      try {
+        retry.max = -1;
+      } catch (e) {
+        console.log((e as Error).message);
+      }
+      console.log(retry.max);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובה: getter + setter עם ולידציה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>retry.max = 5</code> – setter, הערך תקין → נשמר</li>
+        <li><code>retry.max += 1</code> זה בעצם <code>retry.max = retry.max + 1</code>: קודם <b>getter</b> (5), אחר כך <b>setter</b> (6)</li>
+        <li><code>retry.max = -1</code> – ה-setter זורק <b>לפני</b> ההשמה</li>
+        <li>ולכן הערך הלא חוקי לא נשמר – נשארים עם <b>6</b></li>
+      </ul>
+      <pre class="out">
+        5
+        6
+        max must be &gt;= 0, got -1
+        6
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      set max(value: number) {
+        if (value &lt; 0) throw new Error(...); // stops
+        this._max = value; // not reached
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>חימום בכיתה – Getters ו-Setters</h2>
+  <ul>
+        <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/03-getters-setters.ts</code> – החימום נמצא <b>בראש הקובץ</b>, לפני תרגיל 1</li>
+        <li><b>Warm-up A</b> – <code>Duration</code>: שומרת מילישניות, ו-getter / setter בשם <code>seconds</code> <i>(פותרים יחד, 5 דק')</i></li>
+        <li><b>Warm-up B</b> – <code>Username</code>: setter שמנקה רווחים, ממיר לאותיות קטנות וזורק על שם ריק <i>(לבד, 5 דק')</i></li>
+        <li>הבדיקה העצמית של החימום מודפסת ראשונה – כל עוד לא פתרתם יופיע <code>✋ TODO</code></li>
+      </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 03
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>פתרון החימום – Getters ו-Setters</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      class Duration {
+        private _ms: number;
+
+        constructor(ms: number) {
+          this._ms = ms;
+        }
+        get ms(): number {
+          return this._ms;
+        }
+        get seconds(): number {
+          return this._ms / 1000;
+        }
+        set seconds(value: number) {
+          this._ms = value * 1000;
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class Username {
+        private _value = "";
+
+        constructor(value: string) {
+          this.value = value; // through the setter
+        }
+        get value(): string {
+          return this._value;
+        }
+        set value(v: string) {
+          const clean = v.trim().toLowerCase();
+          if (clean === "") {
+            throw new Error("Username cannot be empty");
+          }
+          this._value = clean;
+        }
+      }
+    </pre>
+  </div>
+  <div class="note">הבנאי עובר דרך ה-setter – כך אותם חוקים חלים גם ביצירה · <code>npm run solution -- 03 03</code></div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Getters ו-Setters</h2>
+  <ul>
+    <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/03-getters-setters.ts</code></li>
+    <li>תרגיל 1 – שם של מקרה בדיקה (Test Case)</li>
+    <li>תרגיל 2 – גודל מסך (Viewport) לבדיקות UI</li>
+    <li>תרגיל 3 – מדיניות Retry לבדיקות "מהבהבות" (flaky)</li>
+    <li>תרגיל 4 – סטטיסטיקה של ריצת בדיקות (getters מחושבים בלבד)</li>
+    <li>תרגיל 5 (בונוס) – הגדרות סביבה עם setters ש"מנרמלים" את הערך</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 03
+    npm run solution -- 03 03     # רק אחרי שניסיתם!
+  </pre>
+</section>
+
+<section class="slide section">
+  <div class="badge">הפסקת צהריים</div>
+  <h1>🍽️ הפסקת צהריים</h1>
+  <p class="subtitle"><bdi dir="ltr">12:30–13:15</bdi> · ממשיכים ב-Inheritance</p>
+</section>
+
+<!-- ============================== חלק 4: Inheritance ============================== -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>הורשה – Inheritance</h1>
+  <p class="subtitle">יחס "is-a": ApiTest הוא סוג של BaseTest</p>
+  <p class="subtitle">🕘 <bdi dir="ltr">13:15–14:45</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>מה זה הורשה – ולמה צריך?</h2>
+  <ul>
+    <li>מחלקה <b>בת</b> (child) מקבלת את כל השדות והמתודות של מחלקת <b>האב</b> (parent)</li>
+    <li>הבת יכולה <b>להוסיף</b> דברים חדשים, ו<b>להחליף</b> (override) התנהגות קיימת</li>
+    <li>קוד משותף (setup, לוגים, ניווט) נכתב <b>פעם אחת</b> – באב</li>
+    <li>מבחן is-a: "ApiTest <b>הוא סוג של</b> BaseTest" – נשמע נכון? מתאים להורשה</li>
+  </ul>
+  <div class="flow">
+    <div class="step g"><b>ApiTest</b><bdi dir="ltr">override run()</bdi><br />שולחת GET ובודקת סטטוס</div><div class="arrow">←</div>
+    <div class="step"><b>BaseTest (האב)</b><bdi dir="ltr">name · log() · setup() · run() · teardown() · execute()</bdi></div><div class="arrow">→</div>
+    <div class="step y"><b>UiTest</b><bdi dir="ltr">setup() / teardown()</bdi><br />מרחיבה: פתיחה וסגירה של דפדפן</div>
+  </div>
+  <div class="note">החץ = <code>extends</code>: הבת "מצביעה" על האב שממנו היא יורשת</div>
+</section>
+
+<section class="slide">
+  <h2>הורשה במילים פשוטות – הבת מקבלת הכול, ומוסיפה</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>SmokeTest</code> כותבת <b>רק את מה שחדש</b>: <code>tag</code></li>
+        <li><code>name</code> ו-<code>run()</code> הגיעו מהאב – בלי לכתוב אותם שוב</li>
+        <li>לפני שמשתמשים ב-<code>extends</code> – אומרים את המשפט בקול:</li>
+      </ul>
+      <table>
+        <thead><tr><th>המשפט</th><th>מתאים?</th></tr></thead>
+        <tbody>
+        <tr><td>LoginPage <b>היא סוג של</b> BasePage</td><td>✔ הורשה</td></tr>
+        <tr><td>Admin <b>הוא סוג של</b> TestUser</td><td>✔ הורשה</td></tr>
+        <tr><td>ApiClient <b>הוא סוג של</b> Logger</td><td>✘ – <b>יש לו</b> logger</td></tr>
+        <tr><td>TestRun <b>הוא סוג של</b> TestCase</td><td>✘ – <b>יש בו</b> בדיקות</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+      class Test {
+        constructor(public name: string) {}
+
+        run(): string {
+          return `running ${this.name}`;
+        }
+      }
+
+      class SmokeTest extends Test {
+        tag = "smoke"; // only what's new
+      }
+
+      const smoke = new SmokeTest("login");
+      console.log(smoke.run(), "|", smoke.tag);
+    </pre>
+      <pre class="out">
+        running login | smoke
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>extends – הדוגמה הכי פשוטה</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>OrdersClient extends HttpClient</code> – מקבלת את <code>get()</code> ואת <code>baseUrl</code></li>
+        <li>אין בנאי בבת? היא משתמשת בבנאי של האב</li>
+        <li>כותבים רק את מה שחדש: <code>getOrder()</code></li>
+        <li><code>instanceof</code> – האובייקט הוא <b>גם</b> HttpClient</li>
+      </ul>
+      <pre class="out">
+        GET https://shop.test/orders/42
+        GET https://shop.test/health
+        true
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class HttpClient {
+        constructor(protected baseUrl: string) {}
+
+        get(path: string): string {
+          return `GET ${this.baseUrl}${path}`;
+        }
+      }
+
+      class OrdersClient extends HttpClient {
+        getOrder(id: number): string {
+          return this.get(`/orders/${id}`);
+        }
+      }
+
+      const orders = new OrdersClient("https://shop.test");
+      console.log(orders.getOrder(42));
+      console.log(orders.get("/health")); // inherited
+      console.log(orders instanceof HttpClient);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>super(...) – קריאה לבנאי של האב</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li>יש לבת בנאי משלה? <b>חובה</b> לקרוא ל-<code>super(...)</code> עם הפרמטרים של האב</li>
+        <li><code>super()</code> חייב לבוא <b>לפני</b> כל שימוש ב-<code>this</code></li>
+        <li>סדר הריצה: קודם בנאי האב, אחר כך המשך בנאי הבת</li>
+      </ul>
+      <pre class="out sm">
+        1. BasePage constructor
+        2. CartPage constructor
+           https://shop.test/cart has 3 items
+      </pre>
+      <pre class="lang-ts sm">
+        // no super(...) at all:
+        // ❌ Constructors for derived classes must
+        //    contain a 'super' call.
+        // this before super(...):
+        // ❌ 'super' must be called before accessing
+        //    'this' in the constructor of a derived class.
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class BasePage {
+        constructor(protected baseUrl: string) {
+          console.log("1. BasePage constructor");
+        }
+      }
+
+      class CartPage extends BasePage {
+        constructor(baseUrl: string, private items: number) {
+          super(baseUrl); // must come first
+          console.log("2. CartPage constructor");
+          const url = `${this.baseUrl}/cart`;
+          console.log(`   ${url} has ${this.items} items`);
+        }
+      }
+
+      new CartPage("https://shop.test", 3);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סדר הבנאים – מי רץ קודם?</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>new CheckoutPage()</code> מפעיל את הבנאי של הבת – והוא קורא ל-<code>super(...)</code></li>
+        <li>הבנאי של האב רץ <b>קודם</b> ובונה את "החלק של האב" (<code>path</code>)</li>
+        <li>רק אחרי <code>super</code> מותר לגעת ב-<code>this</code></li>
+        <li>יש בנאי בבת? חובה לקרוא בו ל-<code>super</code></li>
+      </ul>
+      <pre class="out">
+        1. Page: path=/checkout
+        2. CheckoutPage: title=Checkout
+        is a Page? true
+      </pre>
+      <div class="warn small"><bdi dir="ltr">'super' must be called before accessing 'this' in the constructor of a derived class</bdi></div>
+    </div>
+    <pre class="lang-ts sm">
+      class Page {
+        constructor(protected readonly path: string) {
+          console.log(`1. Page: path=${path}`);
+        }
+      }
+
+      class CheckoutPage extends Page {
+        readonly title: string;
+
+        constructor() {
+          // console.log(this.title); // ❌ before super
+          super("/checkout");
+          this.title = "Checkout";
+          console.log(`2. CheckoutPage: title=${this.title}`);
+        }
+      }
+
+      const checkout = new CheckoutPage();
+      console.log("is a Page?", checkout instanceof Page);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>extends, super ו-protected – מחלקת הבסיס</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>extends</code> – יורשים שדות ומתודות</li>
+        <li><code>super(...)</code> – קריאה לבנאי של האב</li>
+        <li><code>override</code> – החלפת מימוש של האב</li>
+        <li><code>protected</code> – משותף לאב ולבנות בלבד</li>
+        <li>קוד משותף נכתב <b>פעם אחת</b></li>
+      </ul>
+      <div class="note small"><code>execute()</code> הוא <b>Template Method</b>: הסדר קבוע באב, והבנות משנות רק את השלבים</div>
+    </div>
+    <pre class="lang-ts sm">
+      class BaseTest {
+        protected logs: string[] = [];
+        constructor(public readonly name: string) {}
+
+        protected log(message: string): void {
+          this.logs.push(message);
+          console.log(`[${this.name}] ${message}`);
+        }
+        setup(): void { this.log("setup"); }
+        run(): boolean { return true; }
+        teardown(): void { this.log("teardown"); }
+
+        execute(): boolean {      // Template Method – סדר קבוע
+          this.setup();
+          const ok = this.run();
+          this.teardown();
+          this.log(ok ? "PASSED" : "FAILED");
+          return ok;
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ApiTest – מחליפה את <bdi dir="ltr">run()</bdi></h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>מקבלת בירושה: <code>name</code>, <code>log()</code>, <code>setup()</code>, <code>teardown()</code>, <code>execute()</code></li>
+        <li>מוסיפה שדות משלה: <code>endpoint</code>, <code>expected</code></li>
+        <li><code>override run()</code> – רק השלב הזה שונה</li>
+        <li><code>this.log(...)</code> עובד – כי <code>log</code> הוא <code>protected</code></li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      class ApiTest extends BaseTest {
+        constructor(
+          name: string,
+          private endpoint: string,
+          private expected: number,
+        ) {
+          super(name); // required before using this
+        }
+
+        override run(): boolean {
+          this.log(`GET ${this.endpoint}`); // protected: OK
+          // fake API call
+          const actual = this.endpoint === "/missing" ? 404 : 200;
+          return actual === this.expected;
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>הרחבה במקום החלפה: <bdi dir="ltr">super.method()</bdi></h2>
+  <pre class="lang-ts sm">
+    class UiTest extends BaseTest {
+      constructor(name: string, private pageUrl: string) {
+        super(name);
+      }
+      override setup(): void {
+        super.setup();                          // קודם – מה שהאב עושה
+        this.log(`open browser at ${this.pageUrl}`);
+      }
+      override teardown(): void {
+        this.log("close browser");
+        super.teardown();                       // ואחר כך – האב
+      }
+    }
+    tests[1] instanceof UiTest;     // true
+    tests[1] instanceof BaseTest;   // true
+  </pre>
+  <div class="grid2">
+    <ul>
+      <li><code>super.setup()</code> – מפעיל את גרסת האב</li>
+      <li>מוסיפים התנהגות בלי לשכפל קוד</li>
+    </ul>
+    <ul>
+      <li><code>instanceof</code> – בדיקת סוג בזמן ריצה</li>
+      <li>מערך מסוג האב יכול להכיל בנות</li>
+    </ul>
+  </div>
+  <div class="warn">שכחתם <code>super.setup()</code>? אין שגיאה – ה-setup של האב פשוט לא רץ (באג "שקט")</div>
+</section>
+
+<section class="slide">
+  <h2>מריצים: Template Method בפעולה</h2>
+  <div class="flow">
+    <div class="step"><b><bdi dir="ltr">execute()</bdi></b>באב – הסדר קבוע</div><div class="arrow">←</div>
+    <div class="step y"><b><bdi dir="ltr">setup()</bdi></b>UiTest מרחיבה</div><div class="arrow">←</div>
+    <div class="step g"><b><bdi dir="ltr">run()</bdi></b>ApiTest מחליפה</div><div class="arrow">←</div>
+    <div class="step y"><b><bdi dir="ltr">teardown()</bdi></b>UiTest מרחיבה</div><div class="arrow">←</div>
+    <div class="step"><b>PASSED / FAILED</b>באב</div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const tests: BaseTest[] = [
+          new ApiTest("GET users", "/users", 200),
+          new UiTest("Login", "/app"),
+          new ApiTest("GET missing", "/missing", 200),
+        ];
+        tests.forEach((t) =&gt; t.execute());
+      </pre>
+      <div class="tip small">לולאה אחת מריצה כל סוג בדיקה – כל אובייקט מפעיל <b>את הגרסה שלו</b> של כל שלב</div>
+    </div>
+    <pre class="out sm">
+      [GET users] setup
+      [GET users] GET /users
+      [GET users] teardown
+      [GET users] PASSED
+      [Login] setup
+      [Login] open browser at /app
+      [Login] close browser
+      [Login] teardown
+      [Login] PASSED
+      [GET missing] setup
+      [GET missing] GET /missing
+      [GET missing] teardown
+      [GET missing] FAILED
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>override ו-noImplicitOverride</h2>
+  <ul>
+    <li><code>override</code> = "אני מחליף בכוונה מתודה של האב"</li>
+    <li>בפרויקט שלנו <code>noImplicitOverride</code> פעיל ב-tsconfig ← <b>חובה</b> לכתוב <code>override</code></li>
+    <li>מגן משתי טעויות: החלפה בלי לשים לב, ושגיאת כתיב בשם המתודה</li>
+  </ul>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ שכחנו override</h3>
+      <pre class="lang-ts sm">
+        class ApiTest extends BaseTest {
+          setup(): void {}
+        }
+        // ❌ This member must have an 'override' modifier
+        //    because it overrides a member in the base
+        //    class 'BaseTest'.
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ שגיאת כתיב בשם</h3>
+      <pre class="lang-ts sm">
+        class ApiTest extends BaseTest {
+          override teardwon(): void {}
+        }
+        // ❌ This member cannot have an 'override' modifier
+        //    because it is not declared in the base class
+        //    'BaseTest'. Did you mean 'teardown'?
+      </pre>
+    </div>
+  </div>
+  <div class="tip">בלי <code>override</code>, <code>teardwon</code> הייתה מתודה חדשה ש-<code>execute()</code> לא קורא לה – והניקוי לא היה רץ אף פעם</div>
+</section>
+
+<section class="slide">
+  <h2>protected מול private – מה הבת רואה?</h2>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      class BaseTest {
+        protected logs: string[] = [];
+        private secret = "db-password";
+      }
+
+      class ApiTest extends BaseTest {
+        count(): number {
+          return this.logs.length; // ✅ protected
+        }
+        peek(): string {
+          return this.secret;
+          // ❌ Property 'secret' is private and only
+          //    accessible within class 'BaseTest'.
+        }
+      }
+
+      const t = new ApiTest();
+      t.logs;
+      // ❌ Property 'logs' is protected and only accessible
+      //    within class 'BaseTest' and its subclasses.
+    </pre>
+    <div class="stack">
+      <table>
+        <tr><th></th><th>במחלקה</th><th>בבת</th><th>מבחוץ</th></tr>
+        <tr><td><code>private</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td><code>protected</code></td><td>✅</td><td>✅</td><td>❌</td></tr>
+        <tr><td><code>public</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+      </table>
+      <ul class="small">
+        <li><code>protected</code> = "כלים פנימיים" שהבנות צריכות: <code>log()</code>, <code>baseUrl</code>, <code>click()</code></li>
+        <li><code>private</code> = פרט מימוש של האב בלבד – גם הבנות לא נוגעות</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>BasePage – מה שמשותף לכל הדפים</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>BasePage</code> = מה שכל דף צריך: <code>open</code>, <code>fill</code>, <code>click</code></li>
+        <li><code>fill</code> / <code>click</code> הם <code>protected</code> – הדפים משתמשים בהם, הבדיקה לא</li>
+        <li><code>title()</code> – ברירת מחדל שהבנות יחליפו</li>
+        <li><code>describe()</code> קורא ל-<code>this.title()</code> – ויקבל את הגרסה <b>של הבת</b></li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      class BasePage {
+        constructor(protected readonly path: string) {}
+
+        open(baseUrl: string): void {
+          console.log(`goto ${baseUrl}${this.path}`);
+        }
+        protected fill(selector: string, value: string): void {
+          console.log(`fill ${selector} = ${value}`);
+        }
+        protected click(selector: string): void {
+          console.log(`click ${selector}`);
+        }
+        title(): string {
+          return "Untitled";
+        }
+        describe(): string {
+          return `${this.title()} (${this.path})`;
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>LoginPage extends BasePage</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li>LoginPage כותבת רק את מה שייחודי לה: <code>path</code>, <code>title()</code>, <code>login()</code></li>
+        <li><code>open()</code> ו-<code>describe()</code> – בירושה, בלי שורת קוד</li>
+        <li><code>describe()</code> של האב קורא ל-<code>this.title()</code> ← מקבל <code>"Login"</code></li>
+      </ul>
+      <pre class="out">
+        goto https://qa.example.com/login
+        fill #username = dana
+        fill #password = S3cret!
+        click #submit
+        Login (/login)
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class LoginPage extends BasePage {
+        constructor() {
+          super("/login");
+        }
+        override title(): string {
+          return "Login";
+        }
+        login(user: string, pass: string): void {
+          this.fill("#username", user);
+          this.fill("#password", pass);
+          this.click("#submit");
+        }
+      }
+
+      const loginPage = new LoginPage();
+      loginPage.open("https://qa.example.com");
+      loginPage.login("dana", "S3cret!");
+      console.log(loginPage.describe());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שרשרת הורשה: כל רמה בונה על הקודמת</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li>כל רמה מוסיפה header משלה</li>
+        <li><code>super.headers()</code> מביא את מה שהאב (והסבא) כבר בנו</li>
+        <li>admin הוא גם AuthClient וגם HttpClient</li>
+      </ul>
+      <pre class="lang-ts sm">
+        const admin = new AdminClient("t0k3n");
+        console.log(admin.headers());
+        console.log(admin instanceof AuthClient,
+          admin instanceof HttpClient);
+      </pre>
+      <pre class="out sm">
+        {
+          Accept: 'application/json',
+          Authorization: 'Bearer t0k3n',
+          'X-Role': 'admin'
+        }
+        true true
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class HttpClient {
+        headers(): Record&lt;string, string&gt; {
+          return { Accept: "application/json" };
+        }
+      }
+
+      class AuthClient extends HttpClient {
+        constructor(protected token: string) {
+          super();
+        }
+        override headers(): Record&lt;string, string&gt; {
+          const auth = `Bearer ${this.token}`;
+          return { ...super.headers(), Authorization: auth };
+        }
+      }
+
+      class AdminClient extends AuthClient {
+        override headers(): Record&lt;string, string&gt; {
+          return { ...super.headers(), "X-Role": "admin" };
+        }
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחלקות שגיאה מותאמות: extends Error</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>Error</code> היא מחלקה רגילה – אפשר לרשת ממנה!</li>
+        <li>שגיאה עם מידע נוסף: <code>status</code>, שם המשאב...</li>
+        <li><code>super(message)</code> – ההודעה נשמרת ב-<code>Error</code></li>
+        <li><code>this.name</code> – מה שמופיע לפני ההודעה בלוג</li>
+        <li>NotFoundError הוא סוג של ApiError, שהוא סוג של Error</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      class ApiError extends Error {
+        constructor(public readonly status: number, message: string) {
+          super(`[${status}] ${message}`);
+          this.name = "ApiError";
+        }
+      }
+
+      class NotFoundError extends ApiError {
+        constructor(resource: string) {
+          super(404, `${resource} not found`);
+          this.name = "NotFoundError";
+        }
+      }
+
+      function getUser(id: number): string {
+        if (id === 0) throw new NotFoundError(`user ${id}`);
+        if (id &lt; 0) throw new ApiError(400, "invalid id");
+        return `user-${id}`;
+      }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תופסים לפי סוג: catch + instanceof</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <pre class="out">
+        OK: user-7
+        404 -> [404] user 0 not found
+        ApiError 400 [400] invalid id
+        true true true
+        NotFoundError: [404] order 9 not found
+      </pre>
+      <ul class="small">
+        <li><code>instanceof</code> בודק וגם "מצמצם" את הטיפוס – <code>err.status</code> זמין</li>
+        <li>סדר: מהספציפי (NotFoundError) לכללי (ApiError)</li>
+      </ul>
+    </div>
+    <pre class="lang-ts sm">
+      for (const id of [7, 0, -1]) {
+        try {
+          console.log("OK:", getUser(id));
+        } catch (err) {
+          if (err instanceof NotFoundError) {
+            console.log("404 -&gt;", err.message);
+          } else if (err instanceof ApiError) {
+            console.log(err.name, err.status, err.message);
+          }
+        }
+      }
+
+      const e = new NotFoundError("order 9");
+      console.log(e instanceof NotFoundError,
+        e instanceof ApiError, e instanceof Error);
+      console.log(String(e));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מתי הורשה – ומתי לא?</h2>
+  <ul>
+    <li>✅ יש יחס <b>"is-a"</b> אמיתי: <code>LoginPage</code> הוא <code>BasePage</code>, <code>UsersClient</code> הוא <code>ApiClient</code></li>
+    <li>✅ יש קוד משותף משמעותי (setup, לוגים, ניווט)</li>
+    <li>❌ רק כדי "לקבל" מתודה אחת – עדיף להשתמש באובייקט עזר (composition)</li>
+    <li>❌ היררכיות עמוקות (5 רמות) – קשה להבין מאיפה מגיעה התנהגות</li>
+    <li>כלל אצבע: <b>1–2 רמות</b> הורשה בפרויקט אוטומציה זה בדרך כלל מספיק</li>
+  </ul>
+  <div class="tip">שאלו את עצמכם: "<b>הוא סוג של</b>" (is-a) ← הורשה. "<b>יש לו</b>" (has-a) ← שדה (composition)</div>
+</section>
+
+<section class="slide">
+  <h2>Composition: "יש לו" במקום "הוא סוג של"</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ ירושה רק בשביל מתודה</h3>
+      <pre class="lang-ts sm">
+        class LoginTest extends Logger {
+          run(): void {
+            this.info("start");
+          }
+        }
+        // LoginTest "is a" Logger? No!
+        // And now it can't extend BaseTest
+        // (only one extends is allowed)
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ Logger כשדה (has-a)</h3>
+      <pre class="lang-ts sm">
+        class LoginTest {
+          private logger = new Logger("login");
+
+          run(): void {
+            this.logger.info("start");
+            this.logger.info("done");
+          }
+        }
+        new LoginTest().run();
+      </pre>
+      <pre class="out sm">
+        [login] start
+        [login] done
+      </pre>
+    </div>
+  </div>
+  <div class="note">ב-TypeScript מחלקה יכולה לרשת <b>ממחלקה אחת בלבד</b> – אז שומרים את ה-<code>extends</code> ליחס האמיתי</div>
+</section>
+
+<section class="slide">
+  <h2>🤔 מה יודפס? איזו מתודה רצה?</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>חשבו דקה וכתבו בצ'אט מה יודפס – בלי להריץ!</li>
+        <li>רמז: עברו שורה אחרי שורה וכתבו ליד כל אחת מה קורה</li>
+      </ul>
+      <div class="tip">התשובה – בשקף הבא</div>
+    </div>
+    <pre class="lang-ts sm">
+      class Base {
+        name(): string {
+          return "base";
+        }
+        hello(): string {
+          return `hi from ${this.name()}`;
+        }
+      }
+
+      class Child extends Base {
+        override name(): string {
+          return "child";
+        }
+      }
+
+      console.log(new Base().hello());
+      console.log(new Child().hello());
+      console.log(new Child() instanceof Base);
+      console.log(new Base() instanceof Child);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובה: איזו מתודה רצה?</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>hello()</code> כתובה רק באב – אבל <code>this</code> הוא <b>האובייקט האמיתי</b></li>
+        <li>על <code>Child</code>, הקריאה <code>this.name()</code> מגיעה לגרסה של הבת → <code>child</code></li>
+        <li><code>instanceof</code>: כל Child הוא <b>גם</b> Base – אבל Base הוא לא Child</li>
+        <li>זה הבסיס ל-<b>Polymorphism</b> – הנושא של השיעור הבא</li>
+      </ul>
+      <pre class="out">
+        hi from base
+        hi from child
+        true
+        false
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      new Child().hello();
+      // hello() comes from Base
+      //   → this.name()
+      //   → this is a Child
+      //   → Child.name() → "child"
+    </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>חימום בכיתה – Inheritance</h2>
+  <ul>
+        <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/04-inheritance.ts</code> – החימום נמצא <b>בראש הקובץ</b>, לפני תרגיל 1</li>
+        <li><b>Warm-up A</b> – <code>SmokeCheck extends Check</code>: <code>super(name)</code>, ו-<code>describe()</code> שמרחיבה את <code>super.describe()</code> <i>(פותרים יחד, 5 דק')</i></li>
+        <li><b>Warm-up B</b> – <code>LimitedCounter extends Counter</code>: <code>increment()</code> שנעצר במקסימום, בעזרת <code>count</code> ה-protected <i>(לבד, 5 דק')</i></li>
+        <li>הבדיקה העצמית של החימום מודפסת ראשונה – כל עוד לא פתרתם יופיע <code>✋ TODO</code></li>
+      </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 04
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>פתרון החימום – Inheritance</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      class SmokeCheck extends Check {
+        readonly tag = "smoke";
+
+        constructor(
+          name: string,
+          readonly owner: string,
+        ) {
+          super(name);
+        }
+
+        override describe(): string {
+          const extra = `[${this.tag}] by ${this.owner}`;
+          return `${super.describe()} ${extra}`;
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class LimitedCounter extends Counter {
+        constructor(private readonly max: number) {
+          super();
+        }
+
+        override increment(): void {
+          if (this.count &lt; this.max) {
+            super.increment();
+          }
+        }
+
+        isFull(): boolean {
+          return this.count &gt;= this.max;
+        }
+      }
+    </pre>
+  </div>
+  <div class="note">מרחיבים ולא מחליפים: האב יודע לתאר ולספור – הבת מוסיפה רק את מה שחדש · <code>npm run solution -- 03 04</code></div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – Inheritance</h2>
+  <ul>
+    <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/04-inheritance.ts</code></li>
+    <li>תרגיל 1 – <code>LoginPage extends BasePage</code></li>
+    <li>תרגיל 2 – <code>ProductPage extends BasePage</code>: שימוש ב-<code>super.method()</code></li>
+    <li>תרגיל 3 – מחלקות שגיאה מותאמות (הורשה מ-<code>Error</code>)</li>
+    <li>תרגיל 4 – Template Method: שתי בדיקות שיורשות מ-<code>BaseCheck</code></li>
+    <li>תרגיל 5 (בונוס) – היררכיית הרשאות של משתמשי בדיקה (3 רמות)</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 04
+    npm run solution -- 03 04     # רק אחרי שניסיתם!
+  </pre>
+</section>
+
+<section class="slide section">
+  <div class="badge">הפסקה</div>
+  <h1>☕ הפסקה</h1>
+  <p class="subtitle"><bdi dir="ltr">14:45–15:00</bdi> · ממשיכים ב-static</p>
+</section>
+
+<!-- ============================== חלק 5: static ============================== -->
+<section class="slide section">
+  <div class="badge">חלק 5</div>
+  <h1>static</h1>
+  <p class="subtitle">שייך למחלקה – לא לאובייקט: מונים, קבועים, Factory ו-Singleton</p>
+  <p class="subtitle">🕘 <bdi dir="ltr">15:00–15:40</bdi></p>
+</section>
+
+<section class="slide">
+  <h2>static – שייך למחלקה, לא לאובייקט</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>static</code> – ערך/פעולה משותפים לכל המחלקה</li>
+        <li>שדה רגיל: עותק <b>לכל אובייקט</b>. שדה static: עותק <b>אחד</b></li>
+        <li>ניגשים דרך שם המחלקה: <code>Counter.total</code></li>
+        <li>שימושים: מונים, קבועים (<code>HttpStatus.NOT_FOUND</code>), Factory</li>
+      </ul>
+      <pre class="out">
+        2 1 3
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class Counter {
+        static total = 0; // one for the whole class
+        count = 0;        // one per object
+
+        hit(): void {
+          this.count++;
+          Counter.total++;
+        }
+      }
+
+      const a = new Counter();
+      const b = new Counter();
+      a.hit();
+      a.hit();
+      b.hit();
+      console.log(a.count, b.count, Counter.total);
+
+      // a.total;
+      // ❌ Property 'total' does not exist on type 'Counter'.
+      //    Did you mean to access the static member
+      //    'Counter.total' instead?
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>static במילים פשוטות – לוח משותף מול מחברת אישית</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>static sharedLog</code> – <b>לוח</b> אחד בכיתה: כולם כותבים עליו וכולם רואים אותו</li>
+        <li><code>ownLog</code> – <b>מחברת</b> אישית: לכל אובייקט יש משלו</li>
+        <li>לחבר סטטי ניגשים דרך <b>שם המחלקה</b>: <code>ParallelWorker.sharedLog</code></li>
+        <li>שימושים: מונים, קבועים, מטמון (cache) משותף לכל הבדיקות</li>
+      </ul>
+      <pre class="out">
+        [ 'login passed', 'search passed' ]
+        [ 'cart failed' ]
+        [
+          'worker-1: login passed',
+          'worker-2: cart failed',
+          'worker-1: search passed'
+        ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class ParallelWorker {
+        static sharedLog: string[] = [];
+        ownLog: string[] = [];
+
+        constructor(public name: string) {}
+
+        write(message: string): void {
+          this.ownLog.push(message);
+          ParallelWorker.sharedLog.push(`${this.name}: ${message}`);
+        }
+      }
+
+      const w1 = new ParallelWorker("worker-1");
+      const w2 = new ParallelWorker("worker-2");
+      w1.write("login passed");
+      w2.write("cart failed");
+      w1.write("search passed");
+      console.log(w1.ownLog);
+      console.log(w2.ownLog);
+      console.log(ParallelWorker.sharedLog);
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחולל מזהים לבדיקות – בלי new</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>counter</code> פרטי וסטטי – אחד לכל התוכנית</li>
+        <li>קוראים בלי <code>new</code>: <code>TestIdGenerator.next()</code></li>
+        <li>בתוך מתודה סטטית ניגשים דרך שם המחלקה</li>
+        <li><code>reset()</code> – כדי להתחיל מחדש בין ריצות</li>
+      </ul>
+      <pre class="out">
+        TC-001
+        TC-002
+        BUG-003
+        TC-001
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TestIdGenerator {
+        private static counter = 0;
+
+        static next(prefix = "TC"): string {
+          TestIdGenerator.counter++;
+          const num = String(TestIdGenerator.counter).padStart(3, "0");
+          return `${prefix}-${num}`;
+        }
+
+        static reset(): void {
+          TestIdGenerator.counter = 0;
+        }
+      }
+
+      console.log(TestIdGenerator.next());
+      console.log(TestIdGenerator.next());
+      console.log(TestIdGenerator.next("BUG"));
+      TestIdGenerator.reset();
+      console.log(TestIdGenerator.next());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>קבועים ומתודות עזר סטטיות</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul class="small">
+        <li><code>static readonly</code> = קבוע של המחלקה: <code>HttpStatus.NOT_FOUND</code> במקום 404 "קסום"</li>
+        <li>מתודת עזר סטטית: לא צריכה מצב – רק קלט ← פלט</li>
+        <li>מכירים כבר: <code>Math.max()</code>, <code>JSON.stringify()</code> – גם הן static!</li>
+      </ul>
+      <pre class="out sm">
+        ✔ POST /users: expected 201, got 201
+        ✔ GET /users/999: expected 404, got 404
+        ✘ GET /health: expected 200, got 500
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class HttpStatus {
+        static readonly OK = 200;
+        static readonly CREATED = 201;
+        static readonly NOT_FOUND = 404;
+      }
+
+      class Assert {
+        static equal(actual: unknown, expected: unknown, label: string) {
+          const mark = actual === expected ? "✔" : "✘";
+          const msg = `expected ${expected}, got ${actual}`;
+          console.log(`${mark} ${label}: ${msg}`);
+        }
+      }
+
+      Assert.equal(201, HttpStatus.CREATED, "POST /users");
+      Assert.equal(404, HttpStatus.NOT_FOUND, "GET /users/999");
+      Assert.equal(500, HttpStatus.OK, "GET /health");
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Factory methods ובנאי private</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li><b>Factory method</b> = מתודה סטטית שמחזירה אובייקט מוכן</li>
+        <li>שם ברור: <code>User.admin()</code> קריא יותר מ-<code>new</code> עם רשימת פרמטרים</li>
+        <li><code>private constructor</code> – מכריח להשתמש ב-factory</li>
+        <li>ב-QA: משתמשי בדיקה, תשובות Mock, נתוני טפסים</li>
+      </ul>
+      <pre class="out">
+        User { name: 'admin', role: 'admin' }
+        User { name: 'Yossi', role: 'tester' }
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class User {
+        private constructor(
+          public name: string,
+          public role: "admin" | "tester",
+        ) {}
+
+        static admin(name = "admin"): User {
+          return new User(name, "admin");
+        }
+        static tester(name = "tester"): User {
+          return new User(name, "tester");
+        }
+      }
+
+      console.log(User.admin());
+      console.log(User.tester("Yossi"));
+
+      // new User("x", "admin");
+      // ❌ Constructor of class 'User' is private and only
+      //    accessible within the class declaration.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Singleton – מופע אחד לכל התוכנית</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul class="small">
+        <li>Singleton = מחלקה שיש לה <b>אובייקט אחד בלבד</b></li>
+        <li><code>private constructor</code> + <code>static getInstance()</code></li>
+        <li>הקריאה הראשונה יוצרת – כל השאר מקבלות את אותו אובייקט</li>
+        <li>שימושים: איסוף תוצאות לדוח, הגדרות ריצה, חיבור ל-DB</li>
+      </ul>
+      <pre class="out">
+        true 2
+      </pre>
+      <div class="warn small">Singleton = מצב גלובלי: נתונים עלולים "לזלוג" בין בדיקות. השתמשו במשורה</div>
+    </div>
+    <pre class="lang-ts sm">
+      class ReportCollector {
+        private static instance: ReportCollector | undefined;
+        private lines: string[] = [];
+        private constructor() {}
+
+        static getInstance(): ReportCollector {
+          if (!ReportCollector.instance) {
+            ReportCollector.instance = new ReportCollector();
+          }
+          return ReportCollector.instance;
+        }
+        add(line: string): void { this.lines.push(line); }
+        count(): number { return this.lines.length; }
+      }
+
+      const r1 = ReportCollector.getInstance(); // login.test
+      const r2 = ReportCollector.getInstance(); // search.test
+      r1.add("login: PASSED");
+      r2.add("search: FAILED");
+      console.log(r1 === r2, r1.count());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>טעויות נפוצות – static</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ this של אובייקט בתוך מתודה סטטית</h3>
+      <pre class="lang-ts sm">
+        class Counter {
+          count = 0;
+          static report() {
+            return this.count;
+          }
+        }
+        // ❌ Property 'count' does not exist
+        //    on type 'typeof Counter'.
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מתודה רגילה (או לקבל אובייקט)</h3>
+      <pre class="lang-ts sm">
+        class Counter {
+          count = 0;
+          report() {
+            return this.count;
+          }
+        }
+        // a static method belongs to no
+        // object – whose "count" is it?
+      </pre>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ מצב סטטי "זולג" בין בדיקות</h3>
+      <pre class="lang-ts sm">
+        // login.test:  next() → "TC-001"
+        // search.test: expects "TC-001"
+        //              but gets "TC-002" ❌
+      </pre>
+    </div>
+    <div class="card good"><h3>✅ מאפסים ב-setup</h3>
+      <pre class="lang-ts sm">
+        override setup(): void {
+          TestIdGenerator.reset();
+          super.setup();
+        }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>🤔 מה יודפס? מונה סטטי</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>חשבו דקה וכתבו בצ'אט מה יודפס – בלי להריץ!</li>
+        <li>רמז: עברו שורה אחרי שורה וכתבו ליד כל אחת מה קורה</li>
+      </ul>
+      <div class="tip">התשובה – בשקף הבא</div>
+    </div>
+    <pre class="lang-ts sm">
+      class Run {
+        static count = 0;
+        readonly id: number;
+
+        constructor() {
+          Run.count++;
+          this.id = Run.count;
+        }
+      }
+
+      const run1 = new Run();
+      new Run();
+      const run3 = new Run();
+      console.log(run1.id, run3.id, Run.count);
+      // console.log(run1.count); // compiles?
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובה: מונה סטטי</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>Run.count</code> – <b>אחד</b> לכל המחלקה: כל <code>new</code> מגדיל אותו</li>
+        <li><code>id</code> – לכל אובייקט <b>משלו</b>: מקבל את ערך המונה ברגע היצירה</li>
+        <li><code>run1.id</code> = 1, <code>run3.id</code> = 3, ואחרי 3 יצירות <code>Run.count</code> = 3</li>
+        <li><code>run1.count</code> – לא עובר קומפילציה: לאובייקט אין את השדה הסטטי</li>
+      </ul>
+      <div class="warn small"><bdi dir="ltr">Property 'count' does not exist on type 'Run'. Did you mean to access the static member 'Run.count' instead?</bdi></div>
+    </div>
+    <pre class="out">
+        1 3 3
+      </pre>
+  </div>
+</section>
+
+<section class="slide practice">
+  <h2>חימום בכיתה – static</h2>
+  <ul>
+        <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/05-static-members.ts</code> – החימום נמצא <b>בראש הקובץ</b>, לפני תרגיל 1</li>
+        <li><b>Warm-up A</b> – <code>Units</code>: מתודות המרה סטטיות ו-<code>isTooSlow</code> מול הקבוע <code>DEFAULT_TIMEOUT_MS</code> <i>(פותרים יחד, 5 דק')</i></li>
+        <li><b>Warm-up B</b> – <code>TestRun</code>: מונה <code>private static</code> שנותן לכל ריצה מספר, ו-<code>total()</code> / <code>reset()</code> <i>(לבד, 5 דק')</i></li>
+        <li>הבדיקה העצמית של החימום מודפסת ראשונה – כל עוד לא פתרתם יופיע <code>✋ TODO</code></li>
+      </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 05
+  </pre>
+</section>
+
+<section class="slide">
+  <h2>פתרון החימום – static</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      class Units {
+        static readonly DEFAULT_TIMEOUT_MS = 30000;
+
+        static msToSeconds(ms: number): number {
+          return ms / 1000;
+        }
+        static secondsToMs(seconds: number): number {
+          return seconds * 1000;
+        }
+        static isTooSlow(ms: number): boolean {
+          return ms &gt; Units.DEFAULT_TIMEOUT_MS;
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class TestRun {
+        private static created = 0;
+        readonly number: number;
+
+        constructor(readonly name: string) {
+          TestRun.created++;
+          this.number = TestRun.created;
+        }
+        label(): string {
+          return `#${this.number} ${this.name}`;
+        }
+        static total(): number {
+          return TestRun.created;
+        }
+        static reset(): void {
+          TestRun.created = 0;
+        }
+      }
+    </pre>
+  </div>
+  <div class="note">בתוך מתודה סטטית ניגשים לחברים סטטיים דרך שם המחלקה (<code>Units.DEFAULT_TIMEOUT_MS</code>) · <code>npm run solution -- 03 05</code></div>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – static</h2>
+  <ul>
+    <li>פתחו את <code>lessons/03-oop-encapsulation-inheritance/exercises/05-static-members.ts</code></li>
+    <li>תרגיל 1 – קבועי סביבה ומתודות סטטיות</li>
+    <li>תרגיל 2 – מחולל מזהים עם מונה נפרד לכל קידומת</li>
+    <li>תרגיל 3 – סשנים של בדיקה: שילוב static ושדות של האובייקט</li>
+    <li>תרגיל 4 – תשובות Mock ל-API: בנאי private ו-Factory methods</li>
+    <li>תרגיל 5 (בונוס) – Singleton: מאגר הגדרות אחד לכל הבדיקות</li>
+  </ul>
+  <pre class="lang-bash">
+    npm run exercise -- 03 05
+    npm run solution -- 03 05     # רק אחרי שניסיתם!
+  </pre>
+</section>
+
+<!-- ============================== סיכום ושאלות (15:40–16:00) ============================== -->
+<section class="slide">
+  <h2>סיכום: מה למדנו היום <bdi dir="ltr">(15:40–16:00)</bdi></h2>
+  <div class="grid3">
+    <div class="card"><h3>📦 Objects</h3><p>destructuring · spread = עותק <b>רדוד</b> · <code>?.</code> ו-<code>??</code> · <code>Object.entries</code> · JSON</p></div>
+    <div class="card"><h3>🔒 Encapsulation</h3><p><code>private</code> / <code>readonly</code> / <code>#</code> · מחזירים <b>עותק</b> של מערך פרטי, לא את המערך עצמו</p></div>
+    <div class="card"><h3>🎛️ Getters ו-Setters</h3><p>נראים כמו שדה · setter = ולידציה ונרמול · getter בלי setter = קריאה בלבד מבחוץ</p></div>
+    <div class="card good"><h3>🧬 Inheritance</h3><p><code>extends</code> · <code>super()</code> קודם · <code>override</code> ו-<code>super.method()</code> · רק ליחס is-a</p></div>
+    <div class="card"><h3>📌 static</h3><p>שייך למחלקה ולא לאובייקט: מונים, קבועים, Factory methods, Singleton</p></div>
+    <div class="card good"><h3>🧪 למה זה חשוב לבודקים?</h3><p>Page Objects, לקוחות API ונתוני בדיקה שמגינים על עצמם – ופחות קוד כפול</p></div>
+  </div>
+  <div class="tip">הכלל של היום: <b>האובייקט אחראי על התקינות של עצמו</b> – ואת הקוד המשותף כותבים פעם אחת, באב</div>
+</section>
+
+<section class="slide">
+  <h2>🤔 שאלת הסיכום: מה יודפס?</h2>
+  <div class="grid2">
+    <pre class="lang-ts sm">
+      class BaseCheck {
+        static created = 0;
+        #attempts = 0;
+
+        constructor(readonly name: string) {
+          BaseCheck.created++;
+        }
+        get attempts(): number {
+          return this.#attempts;
+        }
+        run(): string {
+          this.#attempts++;
+          return `${this.name}: ${this.result()}`;
+        }
+        protected result(): string {
+          return "OK";
+        }
+      }
+    </pre>
+    <pre class="lang-ts sm">
+      class FlakyCheck extends BaseCheck {
+        protected override result(): string {
+          return this.attempts &lt; 2 ? "RETRY" : "OK";
+        }
+      }
+
+      const api = new BaseCheck("api");
+      const ui = new FlakyCheck("ui");
+      console.log(api.run());
+      console.log(ui.run());
+      console.log(ui.run());
+      console.log(ui.attempts, api.attempts, BaseCheck.created);
+    </pre>
+  </div>
+  <div class="note">כל נושאי היום בשאלה אחת: <code>static</code>, <code>#</code>, getter, <code>readonly</code>, <code>protected</code>, <code>extends</code>, <code>override</code> · עקבו אחרי <code>#attempts</code> של כל אובייקט בנפרד · כתבו בצ'אט את 4 השורות</div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובה: שאלת הסיכום</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><code>run()</code> כתובה באב, אבל <code>this.result()</code> רץ על האובייקט האמיתי – ב-<code>ui</code> זו הגרסה של <code>FlakyCheck</code></li>
+        <li>לכל אובייקט <code>#attempts</code> <b>משלו</b>: <code>ui</code> רץ פעמיים (2), <code>api</code> פעם אחת (1)</li>
+        <li>הבת קוראת את המונה דרך ה-getter – את <code>#attempts</code> עצמו היא לא רואה</li>
+        <li><code>BaseCheck.created</code> – <b>אחד</b> לכל המחלקה: 2 אובייקטים נוצרו (גם <code>new FlakyCheck</code> עובר בבנאי של האב)</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="out">
+        api: OK
+        ui: RETRY
+        ui: OK
+        2 1 2
+      </pre>
+      <div class="note">הקוד המלא: <code>examples/06-lesson-summary.ts</code></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>🧰 שאלון בזק: איזה כלי מתאים?</h2>
+  <table>
+    <thead><tr><th>#</th><th>המצב</th><th>הכלי</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>מזהה של בדיקה שאסור לשנות אחרי היצירה</td><td>?</td></tr>
+      <tr><td>2</td><td>טוקן שאסור שיופיע ב-<code>JSON.stringify</code> או בלוג</td><td>?</td></tr>
+      <tr><td>3</td><td>timeout שחייב להיות בין 1 ל-120000</td><td>?</td></tr>
+      <tr><td>4</td><td><code>passRate</code> שמחושב מ-passed ו-failed</td><td>?</td></tr>
+      <tr><td>5</td><td><code>LoginPage</code> ו-<code>CartPage</code> חולקות <code>navigate()</code></td><td>?</td></tr>
+      <tr><td>6</td><td><code>ApiClient</code> צריך לכתוב ללוג</td><td>?</td></tr>
+      <tr><td>7</td><td>מזהה ייחודי לכל משתמש בדיקה, לאורך כל הריצה</td><td>?</td></tr>
+      <tr><td>8</td><td>כמה דרכים מוכנות ליצור תשובת Mock (ok / notFound)</td><td>?</td></tr>
+    </tbody>
+  </table>
+  <div class="note">האפשרויות: <code>readonly</code> · <code>#</code> · setter · getter · <code>extends</code> · composition · <code>static</code> · factory – כתבו בצ'אט מספר + כלי</div>
+</section>
+
+<section class="slide">
+  <h2>✅ תשובות: איזה כלי מתאים?</h2>
+  <table>
+    <thead><tr><th>#</th><th>המצב</th><th>הכלי</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>מזהה של בדיקה שאסור לשנות אחרי היצירה</td><td><code>readonly</code></td></tr>
+      <tr><td>2</td><td>טוקן שאסור שיופיע ב-<code>JSON.stringify</code> או בלוג</td><td>שדה <code>#</code></td></tr>
+      <tr><td>3</td><td>timeout שחייב להיות בין 1 ל-120000</td><td>setter עם ולידציה</td></tr>
+      <tr><td>4</td><td><code>passRate</code> שמחושב מ-passed ו-failed</td><td>getter מחושב, בלי setter</td></tr>
+      <tr><td>5</td><td><code>LoginPage</code> ו-<code>CartPage</code> חולקות <code>navigate()</code></td><td><code>extends BasePage</code></td></tr>
+      <tr><td>6</td><td><code>ApiClient</code> צריך לכתוב ללוג</td><td>composition – שדה <code>logger</code>, לא הורשה</td></tr>
+      <tr><td>7</td><td>מזהה ייחודי לכל משתמש בדיקה, לאורך כל הריצה</td><td>מונה <code>static</code></td></tr>
+      <tr><td>8</td><td>כמה דרכים מוכנות ליצור תשובת Mock (ok / notFound)</td><td>static factory + בנאי <code>private</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="slide practice">
+  <h2>מה עושים בבית?</h2>
+  <div class="grid3">
+    <div class="card"><h3>1️⃣ חימומים ותרגילים לפי נושא</h3><p>מה שלא הספקתם בכיתה: Warm-up A/B ותרגילים 1–5 בכל אחד מ-5 הקבצים · הרצה: <code>npm run exercise -- 03 &lt;01–05&gt;</code></p></div>
+    <div class="card"><h3>2️⃣ תרגילי הסיכום</h3><p><code>Account</code> · <code>SafeCounter</code> · <code>UsersClient extends ApiClient</code> · <code>Employee</code> ← <code>AutomationEngineer</code> ← <code>TeamLead</code> · <code>npm run exercise -- 03</code></p></div>
+    <div class="card good"><h3>3️⃣ שיעורי הבית: Staging Test Accounts</h3><p>שגיאות משלכם, <code>TestUser</code> עם סיסמה ב-<code>#</code>, <code>Viewer</code> / <code>Admin</code>, ו-<code>UserRegistry</code> סטטי עם נעילה אחרי 3 ניסיונות · 7 משימות (6–7 Challenge) · <code>npm run exercise -- 03 hw</code></p></div>
+  </div>
+  <ul>
+    <li>ועכשיו אפשר לחזור לשיעורי הבית של שיעור 2: משימות 6–7 (אובייקטים ו-JSON) – <code>npm run exercise -- 02 hw</code></li>
+    <li>פתרונות: <code>npm run solution -- 03 hw</code> · <code>npm run solution -- 03 02</code> – רק אחרי שניסיתם לבד!</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>🙋 שאלות? – ולקראת השיעור הבא</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li><b>שאלות</b> – עכשיו, בצ'אט או ב"הרמת יד". מה היה הכי לא ברור היום?</li>
+        <li>סבב מהיר בצ'אט: נושא אחד שהבנתם היום, ונושא אחד שתרצו לחזור עליו</li>
+        <li>נתקעתם בבית? כתבו את השאלה עם הודעת השגיאה המלאה – זה חצי מהפתרון</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card good"><h3>📅 שיעור 4 – 20.11 · יום ו' · <bdi dir="ltr">09:00–14:00</bdi> · ZOOM</h3><p>חזרה והעמקה ב-<b>Encapsulation</b> וב-<b>Inheritance</b>, ונושא חדש: <b>Polymorphism</b> – אותה קריאה, התנהגות שונה לכל מחלקה</p></div>
+      <div class="tip">כבר ראיתם את זה היום: <code>this.result()</code> ו-<code>this.name()</code> שרצו בגרסה של הבת – זה בדיוק Polymorphism</div>
+    </div>
+  </div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>

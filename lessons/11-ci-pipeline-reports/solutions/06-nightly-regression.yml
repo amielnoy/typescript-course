@@ -1,0 +1,57 @@
+# Lesson 11 – Topic 06 Solution: Nightly Regression – schedule, inputs and concurrency
+name: Nightly Plus
+
+on:
+  schedule:
+    - cron: "0 2 * * 1-5" # 02:00 UTC, Monday to Friday
+    - cron: "0 6 * * 6" # 06:00 UTC, Saturday
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: "Browser to run"
+        type: choice
+        options: [chromium, firefox, webkit]
+        default: chromium
+      debug:
+        description: "Verbose Playwright API logs"
+        type: boolean
+        default: false
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Install the selected browser
+        run: npx playwright install --with-deps ${{ inputs.browser || 'chromium' }}
+
+      - name: Enable debug logs
+        if: ${{ inputs.debug }}
+        run: echo "DEBUG=pw:api" >> "$GITHUB_ENV"
+
+      - name: Run regression
+        run: npx playwright test --project=${{ inputs.browser || 'chromium' }}
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-report-${{ github.run_number }}
+          path: playwright-report/
+
+  notify:
+    needs: regression
+    if: ${{ failure() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Nightly regression failed – see the report of run ${{ github.run_number }}"

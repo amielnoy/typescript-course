@@ -1,0 +1,58 @@
+# Lesson 11 – Topic 04: Matrix, cache and needs (Exercises)
+# Topic: examples/workflows/02-node-tests-matrix.yml
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/04-node-tests-matrix.yml
+#
+# Tasks:
+#  1. The test job runs on  runs-on: ${{ matrix.os }}  with a matrix of:
+#       os:   [ubuntu-latest, windows-latest]
+#       node: [22, 24]
+#  2. In strategy:  fail-fast: false  (a failure in one combination does not cancel the rest)
+#     and max-parallel: 2  (at most 2 machines in parallel)
+#  3. Inside the matrix:
+#     a. exclude – drop the combination os: windows-latest + node: 22  (saves run minutes)
+#     b. include – one extra combination (in this order):  os: ubuntu-latest, node: 25, experimental: true
+#  4. continue-on-error at the job level (not on a step!), based on the matrix:
+#       continue-on-error: ${{ matrix.experimental == true }}
+#     (an experimental combination that fails will not turn the whole Workflow red)
+#  5. A setup-node step (actions/setup-node@v6) with node-version from the matrix,
+#     cache: npm and cache-dependency-path: package-lock.json
+#  6. (Bonus) A job named summary (runs-on: ubuntu-latest) that runs after test (needs) even if test failed
+#     (if: always()), and prints ${{ needs.test.result }}
+
+name: Matrix Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: TODO
+    # TODO: continue-on-error
+    # TODO: strategy (fail-fast, max-parallel, matrix with exclude/include)
+
+    steps:
+      - uses: actions/checkout@v6
+      # TODO: setup-node
+      - run: npm ci
+      - run: npm run solutions
+
+  # TODO (Bonus): a job named summary
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] The test job runs on  runs-on: ${{ matrix.os }}
+# [ ] In the matrix:  os: [ubuntu-latest, windows-latest]  and  node: [22, 24]
+# [ ] In strategy:  fail-fast: false  and  max-parallel: 2
+# [ ] The matrix has an exclude for the combination  os: windows-latest + node: 22
+# [ ] The matrix has an include for the combination  os: ubuntu-latest, node: 25, experimental: true  (in this order)
+# [ ] continue-on-error: ${{ matrix.experimental == true }}  at the job level (same indentation as runs-on – not inside a step)
+# [ ] An actions/setup-node@v6 step with  node-version: ${{ matrix.node }},  cache: npm  and  cache-dependency-path: package-lock.json
+# [ ] (Bonus) A job named summary with  needs: test,  if: always()  at the job level,  runs-on: ubuntu-latest,
+#         that prints ${{ needs.test.result }}
+#
+# Compare with the solution: solutions/04-node-tests-matrix.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/04-node-tests-matrix.yml

@@ -1,0 +1,69 @@
+# Lesson 11 – Topic 07: A Quality Gate for Pull Requests (Exercises)
+# Topic: examples/workflows/05-pr-quality-gate.yml
+# Fill in every place marked TODO. Self-check: the checklist at the end of the file + compare with solutions/07-pr-quality-gate.yml
+#
+# Tasks:
+#  1. Trigger: pull_request to the main branch, only for  types: [opened, synchronize, reopened]
+#     and only when files changed in one of the paths:  "lessons/**"  or  package-lock.json
+#  2. Minimal Workflow-level permissions (top-level permissions):
+#       contents: read  and  pull-requests: write
+#  3. timeout-minutes: 10 for the lint job and timeout-minutes: 15 for the tests job
+#     (a stuck job will not waste 6 hours – GitHub's default)
+#  4. The lint job must not run on a PR in draft mode:
+#       if: github.event.pull_request.draft == false
+#  5. A job named quality-gate (runs-on: ubuntu-latest) with  needs: [lint, tests]  and if: always()
+#     and a step that runs  exit 1  only if one of the jobs failed or was cancelled:
+#       if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+#     (in Branch Protection you set only quality-gate as a Required check – one check instead of a list)
+#  6. (Bonus) In quality-gate – a step that writes the result of each job to $GITHUB_STEP_SUMMARY:
+#       ${{ needs.lint.result }}  and  ${{ needs.tests.result }}
+
+name: PR Gate
+
+on:
+  # TODO: pull_request with branches, types and paths
+
+# TODO: permissions
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    # TODO: if (not on a draft) + timeout-minutes
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+
+  tests:
+    needs: lint
+    runs-on: ubuntu-latest
+    # TODO: timeout-minutes
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run solutions
+
+  # TODO: a job named quality-gate
+
+# ============================================================
+# Self-check – checklist
+# When you are done, go through the list and mark [x] next to each item that holds in the code you wrote
+# (in the code itself – not in the comments). Watch the indentation: it determines which level each key belongs to.
+# ============================================================
+# [ ] on → pull_request with  branches: [main]
+# [ ] In pull_request:  types: [opened, synchronize, reopened]
+# [ ] In pull_request: a paths filter (not paths-ignore) that includes "lessons/**" and package-lock.json
+# [ ] Top-level permissions with  contents: read  and  pull-requests: write
+# [ ] lint job:  timeout-minutes: 10;  tests job:  timeout-minutes: 15  (at the job level)
+# [ ] lint job:  if: github.event.pull_request.draft == false  at the job level
+# [ ] A job named quality-gate with  needs: [lint, tests],  if: always()  at the job level and runs-on: ubuntu-latest
+# [ ] In quality-gate: a step that runs  exit 1  with
+#         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+# [ ] (Bonus) In quality-gate: a step that writes ${{ needs.lint.result }} and ${{ needs.tests.result }} to $GITHUB_STEP_SUMMARY
+#
+# Compare with the solution: solutions/07-pr-quality-gate.yml
+# YAML syntax check (optional):  npx --yes js-yaml lessons/11-ci-pipeline-reports/exercises/07-pr-quality-gate.yml
