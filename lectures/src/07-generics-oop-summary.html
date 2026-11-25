@@ -15,20 +15,23 @@
   <h1>Generics ותרגול OOP מסכם</h1>
   <p class="subtitle">קוד אחד שעובד עם כל טיפוס – בלי לאבד בטיחות</p>
   <div class="chips"><span>Generic functions</span><span>Generic interfaces</span><span>Generic classes</span><span>Constraints</span><span>keyof</span><span>OOP summary</span></div>
-  <div class="meta">Generics: 26.11 · יום ה' · 12:30–16:00 · תרגול OOP מסכם: 3.12 (חזרה למבחן) · ZOOM · תיקייה בפרויקט: lessons/07-generics-oop-summary</div>
+  <div class="meta">Generics: 26.11 · יום ה' · <span dir="ltr">12:30–16:00</span> · תרגול OOP מסכם: 3.12 (חזרה למבחן) · ZOOM · תיקייה בפרויקט: lessons/07-generics-oop-summary</div>
 </section>
 
 <section class="slide">
   <h2>מה נלמד היום</h2>
   <table>
-    <tr><th>חלק</th><th>נושא</th><th>קובץ דוגמה</th></tr>
-    <tr><td>1</td><td>פונקציות גנריות: <code>&lt;T&gt;</code>, הסקת טיפוסים, כמה פרמטרי טיפוס, callbacks</td><td><code>examples/01-generic-functions.ts</code></td></tr>
-    <tr><td>2</td><td>ממשקים ומחלקות גנריים, <code>extends</code>, <code>keyof</code>, טיפוסים גנריים מובנים</td><td><code>examples/02-generic-interfaces-classes.ts</code></td></tr>
-    <tr><td>3</td><td>תרגול OOP מסכם: מיני-תשתית בדיקות API שמשלבת הכול</td><td><code>examples/03-oop-summary-mini-framework.ts</code></td></tr>
+    <tr><th>שעה</th><th>חלק</th><th>נושא</th><th>קובץ דוגמה</th></tr>
+    <tr><td><span dir="ltr">12:30–13:00</span></td><td></td><td colspan="2">הפסקת צהריים</td></tr>
+    <tr><td><span dir="ltr">13:00–14:10</span></td><td>1</td><td>פונקציות גנריות: <code>&lt;T&gt;</code>, הסקת טיפוסים, כמה פרמטרי טיפוס, callbacks</td><td><code>examples/01-generic-functions.ts</code></td></tr>
+    <tr><td><span dir="ltr">14:10–14:25</span></td><td></td><td colspan="2">הפסקה</td></tr>
+    <tr><td><span dir="ltr">14:25–15:50</span></td><td>2</td><td>ממשקים ומחלקות גנריים, <code>extends</code>, <code>keyof</code>, טיפוסים גנריים מובנים</td><td><code>examples/02-generic-interfaces-classes.ts</code></td></tr>
+    <tr><td><span dir="ltr">15:50–16:00</span></td><td></td><td colspan="2">סיכום ושיעורי בית</td></tr>
+    <tr><td><b>3.12</b> <span dir="ltr">11:25–12:00</span></td><td>3</td><td>תרגול OOP מסכם: מיני-תשתית בדיקות API – <b>בחזרה למבחן</b></td><td><code>examples/03-oop-summary-mini-framework.ts</code></td></tr>
   </table>
   <ul>
     <li>כבר השתמשתם ב-generics בלי לשים לב: <code>Array&lt;string&gt;</code>, <code>Map&lt;number, User&gt;</code>, <code>Promise&lt;User&gt;</code></li>
-    <li>היום נלמד <b>לכתוב</b> כאלה בעצמנו – ונחבר את כל עקרונות ה-OOP לתשתית אחת</li>
+    <li>היום נלמד <b>לכתוב</b> כאלה בעצמנו. את חלק 3 (חיבור כל עקרונות ה-OOP לתשתית אחת) נעשה ב-3.12, בחזרה למבחן</li>
   </ul>
   <pre class="lang-bash">
     npx tsx lessons/07-generics-oop-summary/examples/01-generic-functions.ts   # הרצת דוגמה
@@ -39,7 +42,7 @@
 <!-- חלק 1: פונקציות גנריות -->
 <!-- ============================================================ -->
 <section class="slide section">
-  <div class="badge">חלק 1</div>
+  <div class="badge">חלק 1 · <span dir="ltr">13:00–14:10</span></div>
   <h1>פונקציות גנריות</h1>
   <p class="subtitle">פרמטר-טיפוס &lt;T&gt; · הסקת טיפוסים · כמה פרמטרים · callbacks</p>
   <div class="chips"><span>examples/01-generic-functions.ts</span></div>
@@ -400,7 +403,7 @@
 <!-- חלק 2: ממשקים ומחלקות גנריים -->
 <!-- ============================================================ -->
 <section class="slide section">
-  <div class="badge">חלק 2</div>
+  <div class="badge">חלק 2 · <span dir="ltr">14:25–15:50</span></div>
   <h1>ממשקים ומחלקות גנריים</h1>
   <p class="subtitle"><span dir="ltr">ApiResponse&lt;T&gt; · Queue&lt;T&gt; · Repository&lt;T&gt; · extends · keyof</span> · טיפוסים מובנים</p>
   <div class="chips"><span>examples/02-generic-interfaces-classes.ts</span></div>
@@ -1026,7 +1029,7 @@
 <!-- חלק 3: תרגול OOP מסכם -->
 <!-- ============================================================ -->
 <section class="slide section">
-  <div class="badge">חלק 3</div>
+  <div class="badge">חלק 3 · 3.12 · <span dir="ltr">11:25–12:00</span> (חזרה למבחן)</div>
   <h1>תרגול OOP מסכם</h1>
   <p class="subtitle">מיני-תשתית בדיקות API שמשלבת את כל מה שלמדנו</p>
   <div class="chips"><span>examples/03-oop-summary-mini-framework.ts</span></div>
