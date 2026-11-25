@@ -11,9 +11,10 @@
 | 3 | 19.11 | ה' 09:00–16:00 | ZOOM | מבוא ל-OOP: Objects, Constructors, Encapsulation, Inheritance | `03-oop-encapsulation-inheritance.pdf` |
 | 4 | 20.11 | ו' 09:00–14:00 | ZOOM | עקרונות ה-OOP (חלקים א'+ב') ופולימורפיזם | `04-oop-polymorphism.pdf` |
 | 5 | 24.11 | ג' 09:00–11:30 | ZOOM | עקרונות ה-OOP (חלק ג'): Abstract Classes | `05-oop-abstract-classes.pdf` |
-| 6 | 26.11 | ה' 09:00–16:00 | ZOOM | ממשקים וטיפוסים מותאמים: Interfaces, Type Aliases, Union Types | `06-interfaces-types-unions.pdf` |
-| 7 | 27.11 | ו' 09:00–14:00 | ZOOM | Generics ותרגול OOP מסכם | `07-generics-oop-summary.pdf` |
-| 8 | 3.12 | ה' 09:00–16:00 | ZOOM | קוד אסינכרוני וטיפול בשגיאות: Promise, Async/Await, Error Handling | `08-async-error-handling.pdf` |
+| 6 | 26.11 | ה' 09:00–12:30 | ZOOM | ממשקים וטיפוסים מותאמים: Interfaces, Type Aliases, Union Types | `06-interfaces-types-unions.pdf` |
+| 7 | 26.11 | ה' 12:30–16:00 | ZOOM | Generics (נושאים 01–02). התרגול המסכם (נושא 03) עבר לחזרה ב-3.12 | `07-generics-oop-summary.pdf` |
+| 8 | 27.11 | ו' 09:00–14:00 | ZOOM | קוד אסינכרוני וטיפול בשגיאות: Promise, Async/Await, Error Handling | `08-async-error-handling.pdf` |
+| מבחן | 3.12 | ה' 09:00–12:00 חזרה · 12:30–14:30 מבחן | ZOOM | חזרה למבחן (כולל תרגול OOP מסכם משיעור 7), ואחריה מבחן | `12-exam-review.pdf` |
 | 9 | ייקבע | | ZOOM | קונפיגורציה וניהול גרסאות: Git ו-GitHub | `09-git-github.pdf` |
 | 10 | 1.1 | | ZOOM | תחקור בדיקות וניתוח תוצאות + עולם ה-CI/CD | `10-ci-cd-logs-reports.pdf` |
 | 11 | 5.1 | | פרונטלי | הרצה אוטומטית ודוחות (GitHub Actions, Allure) | `11-ci-pipeline-reports.pdf` |
@@ -52,6 +53,7 @@ lessons/
                  + תרגיל מסכם לשיעור (exercises.ts); בסוף כל קובץ – בדיקה עצמית שמדפיסה תוצאה מול ערך צפוי
     solutions/   פתרונות (אותם שמות קבצים)
 
+review/examples/       דוגמאות החזרה למבחן (שיעורים 1–8), אחת לכל חלק במצגת 12-exam-review
 lectures/              מצגות ההרצאות (PDF) + lectures/src/ – מקורות HTML לעריכה
 shared/mock-api/       שרת REST מקומי שמשמש כ"מערכת תחת בדיקה" – אין צורך באינטרנט
 .github/workflows/     ה-CI של הפרויקט עצמו

@@ -66,3 +66,11 @@
 - הקובץ: `exercises/homework.ts` – 7 משימות שנבנות זו על זו (6–7 הן Challenge)
 - בדיקה: `npm run exercise -- 03 hw`
 - פתרון: `solutions/homework.ts` – הרצה: `npm run solution -- 03 hw`
+
+### שיעורי בית 2 (גרסה נוספת)
+**Checkout Smoke Suite – אובייקטי קונפיגורציה, בדיקות עם מחזור חיים ודוח ל-CI.** לפני כל deploy רצה סוויטת smoke קצרה מול שירות ה-checkout – כמה בדיקות API וכמה בדיקות UI. בונים אותה מחדש כמודול נקי: קונפיגורציה שנבנית עם spread בלי "לדלוף" שינויים (מלכודת ההעתקה הרדודה), `RunContext` ששומר את הטוקן בשדה `#` ומאמת את `retries` ב-setter, `BaseCheck` עם Template Method (`setup` ← ניסיונות עם retry ← `teardown` תמיד), `ApiCheck` ו-`UiCheck` שדורסים רק את ה-hooks, factory methods סטטיים, ו-`SmokeSuite` שמסכם הכול להחלטה GREEN / YELLOW / RED ולדוח JSON בלי הטוקן האמיתי.
+הגרסה הזו משלימה את מה שפחות מתורגל בשיעורי הבית הראשונים: חלק 1 (אובייקטים, `Object.entries`, JSON) ו-Template Method.
+
+- הקובץ: `exercises/homework2.ts` – 7 משימות שנבנות זו על זו (6–7 הן Challenge)
+- בדיקה: `npm run exercise -- 03 hw2`
+- פתרון: `solutions/homework2.ts` – הרצה: `npm run solution -- 03 hw2`

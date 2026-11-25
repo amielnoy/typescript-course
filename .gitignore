@@ -1,0 +1,12 @@
+node_modules/
+reports/
+test-results/
+playwright-report/
+allure-results/
+allure-report/
+*.log
+.env
+.DS_Store
+
+# Final exam – lecturer only. Do not push before the exam (3.12); send students only exam/exam.ts
+exam/

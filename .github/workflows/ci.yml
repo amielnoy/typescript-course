@@ -1,0 +1,112 @@
+# ה-Pipeline של פרויקט הקורס עצמו.
+# רץ על כל push ל-main ועל כל Pull Request. אפשר גם להפעיל ידנית (Actions → CI → Run workflow).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# אם דוחפים שוב לאותו ענף – מבטלים את הריצה הקודמת שעדיין רצה
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------- שלב 1: איכות קוד ----------
+  quality:
+    name: Typecheck & examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        # npm ci מהיר ומדויק יותר, אבל דורש package-lock.json (הריצו npm install פעם אחת ועשו commit לקובץ)
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run all examples (smoke)
+        run: npm run examples
+
+  # ---------- שלב 2: בדיקות על כמה גרסאות Node (matrix) ----------
+  tests:
+    name: Tests (Node ${{ matrix.node }})
+    needs: quality # רץ רק אם quality עבר
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Run all solutions (smoke)
+        run: npm run solutions
+
+      - name: API tests with HTML report (mini runner)
+        run: npm run report # כותב גם ל-$GITHUB_STEP_SUMMARY
+
+      - name: Upload reports
+        if: always() # גם (ובעיקר!) כשהבדיקות נכשלו
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-node-${{ matrix.node }}
+          path: reports/
+          retention-days: 14
+
+  # ---------- שלב 3: Playwright + Allure ----------
+  playwright:
+    name: Playwright (API + UI) + Allure
+    needs: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lessons/11-ci-pipeline-reports/playwright-project
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install root dependencies (tsx for the mock API)
+        working-directory: .
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Install Playwright project dependencies
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Generate Allure report
+        if: always()
+        run: npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload Playwright & Allure reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-allure-reports
+          path: |
+            lessons/11-ci-pipeline-reports/playwright-project/playwright-report/
+            lessons/11-ci-pipeline-reports/playwright-project/allure-report/
+            lessons/11-ci-pipeline-reports/playwright-project/test-results/
+          retention-days: 14

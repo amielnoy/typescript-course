@@ -30,13 +30,13 @@ export class TestLogger {
 
 export class ConsoleLogger extends TestLogger {
   override log(message: string): string {
-    throw new Error("TODO");
+    return `[console] ${message}`;
   }
 }
 
 export class UpperCaseLogger extends TestLogger {
   override log(message: string): string {
-    throw new Error("TODO");
+    return super.log(message.toUpperCase());
   }
 }
 
@@ -46,7 +46,7 @@ export class PrefixLogger extends TestLogger {
   }
 
   override log(message: string): string {
-    throw new Error("TODO");
+    return super.log(`[${this.prefix}] ${message}`);
   }
 }
 
@@ -86,32 +86,32 @@ export class BrowserDriver {
 
 export class ChromeDriver extends BrowserDriver {
   override name(): string {
-    throw new Error("TODO");
+    return "chrome";
   }
 
   override supports(feature: string): boolean {
-    throw new Error("TODO");
+    return ["headless", "devtools", "pdf"].includes(feature);
   }
 }
 
 export class FirefoxDriver extends BrowserDriver {
   override name(): string {
-    throw new Error("TODO");
+    return "firefox";
   }
 
   override supports(feature: string): boolean {
-    throw new Error("TODO");
+    return ["headless"].includes(feature);
   }
 }
 
 export class SafariDriver extends BrowserDriver {
   override name(): string {
-    throw new Error("TODO");
+    return "safari";
   }
 }
 
 export function driversSupporting(drivers: BrowserDriver[], feature: string): string[] {
-  throw new Error("TODO");
+  return drivers.filter(driver => driver.supports(feature)).map(driver => driver.name());
 }
 
 /**
@@ -139,7 +139,10 @@ export class FieldValidator {
 
 export class RequiredValidator extends FieldValidator {
   override validate(value: string): string | null {
-    throw new Error("TODO");
+    if (value.trim() === "") {
+      return "required";
+    }
+    return null;
   }
 }
 
@@ -149,18 +152,28 @@ export class MinLengthValidator extends FieldValidator {
   }
 
   override validate(value: string): string | null {
-    throw new Error("TODO");
+    if (value.length < this.min) {
+      return `min length ${this.min}`;
+    }
+    return null;  
   }
 }
 
 export class EmailValidator extends FieldValidator {
   override validate(value: string): string | null {
-    throw new Error("TODO");
+    if (!value.includes("@")) {
+      return "invalid email";
+    }
+    const atIndex = value.indexOf("@");
+    if (!value.includes(".", atIndex)) {
+      return "invalid email";
+    }
+    return null;  
   }
 }
 
 export function collectErrors(value: string, validators: FieldValidator[]): string[] {
-  throw new Error("TODO");
+  return validators.map(v => v.validate(value)).filter((error): error is string => error !== null); 
 }
 
 /**
@@ -193,7 +206,7 @@ export class FixedWait extends WaitStrategy {
   }
 
   override delayFor(attempt: number): number {
-    throw new Error("TODO");
+    return this.ms;
   }
 }
 
@@ -203,7 +216,7 @@ export class LinearWait extends WaitStrategy {
   }
 
   override delayFor(attempt: number): number {
-    throw new Error("TODO");
+    return this.stepMs * attempt;
   }
 }
 
@@ -216,12 +229,19 @@ export class ExponentialWait extends WaitStrategy {
   }
 
   override delayFor(attempt: number): number {
-    throw new Error("TODO");
+    return Math.min(this.baseMs * Math.pow(2, attempt - 1), this.maxMs);
   }
 }
 
 export function totalWait(strategy: WaitStrategy, attempts: number): number {
-  throw new Error("TODO");
+  if (attempts <= 0) {
+    return 0;
+  }
+  let total = 0;
+  for (let i = 1; i <= attempts; i++) {
+    total += strategy.delayFor(i);
+  }
+  return total;
 }
 
 /**
@@ -265,7 +285,7 @@ export class TestCase {
 
 export class PassedTest extends TestCase {
   override status(): string {
-    throw new Error("TODO");
+    return "passed";
   }
 }
 
@@ -278,26 +298,26 @@ export class FailedTest extends TestCase {
   }
 
   override status(): string {
-    throw new Error("TODO");
+    return `failed (${this.reason})`;
   }
 
   override isFailure(): boolean {
-    throw new Error("TODO");
+    return true;
   }
 }
 
 export class SkippedTest extends TestCase {
   override status(): string {
-    throw new Error("TODO");
+    return "skipped";
   }
 
   override summary(): string {
-    throw new Error("TODO");
+    return `~ ${super.summary()}`;
   }
 }
 
 export function failureSummaries(tests: TestCase[]): string[] {
-  throw new Error("TODO");
+  return tests.filter((t) => t.isFailure()).map((t) => t.summary());
 }
 
 // ============================================================

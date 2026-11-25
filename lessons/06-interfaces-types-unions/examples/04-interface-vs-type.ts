@@ -6,43 +6,47 @@
 //   type      – ל-union, literal, tuple, פונקציות, ושילובים (&)
 
 // 1) שניהם יכולים לתאר אובייקט:
-interface UserI {
+interface ShopperI {
   name: string;
 }
-type UserT = { name: string };
+type ShopperT = { name: string };
 
 // 2) הרחבה:
-interface AdminI extends UserI {
-  level: number;
+interface VipI extends ShopperI {
+  tier: number;
 }
-type AdminT = UserT & { level: number };
+type VipT = ShopperT & { tier: number };
+
+const x: VipI = { name: "Noa", tier: 2 };
+const y: VipT = x; // ✅ אותה צורה = תואמים
+console.log(y);
 
 // 3) רק type יכול להיות union / literal:
-type Status = "passed" | "failed" | "skipped";
-// interface Status = "passed" | "failed";   // ❌ לא אפשרי
+type Tier = "basic" | "gold" | "platinum";
+// interface Tier = "basic" | "gold";   // ❌ לא אפשרי
 
 // 4) רק interface תומך ב-"declaration merging" (הגדרה בכמה מקומות שמתמזגת):
-interface Env {
+interface RunConfig {
   baseUrl: string;
 }
-interface Env {
-  apiKey: string;
+interface RunConfig {
+  locale: string;
 }
-const env: Env = { baseUrl: "http://localhost:3000", apiKey: "xyz" }; // שני השדות נדרשים
+const config: RunConfig = { baseUrl: "https://staging.shop.dev", locale: "he-IL" }; // שני השדות נדרשים
+console.log(config);
 
 // 5) מחלקה יכולה לממש את שניהם (כל עוד ה-type הוא צורת אובייקט):
-class Tester implements UserI {
+class Shopper implements ShopperI {
   constructor(public name: string) {}
 }
-class Lead implements AdminT {
+class VipShopper implements VipT {
   constructor(
     public name: string,
-    public level: number,
+    public tier: number,
   ) {}
 }
 
-const a: AdminI = { name: "Avi", level: 2 };
-const s: Status = "passed";
-console.log({ a, s, env, tester: new Tester("Noa"), lead: new Lead("Dana", 3) });
+const t: Tier = "gold";
+console.log({ t, shopper: new Shopper("Omer"), vip: new VipShopper("Noa", 3) });
 
 export {}; // הופך את הקובץ למודול (משתנים לא "מתנגשים" עם קבצים אחרים)

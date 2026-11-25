@@ -21,7 +21,8 @@
 export type NumberMatcher = (value: number) => boolean;
 
 export function between(min: number, max: number): NumberMatcher {
-  throw new Error("TODO");
+  if (min > max) throw new Error(`Invalid range: ${min}..${max}`);
+  return (value: number) => value >= min && value <= max; 
 }
 
 /**
@@ -42,7 +43,14 @@ export function between(min: number, max: number): NumberMatcher {
 export type Environment = "dev" | "staging" | "prod";
 
 export function buildUrl(env: Environment, path: string): string {
-  throw new Error("TODO");
+  const baseUrls: Record<Environment, string> = {
+    dev: "http://localhost:3000",
+    staging: "https://staging.example.com",
+    prod: "https://example.com",
+  };
+  const baseUrl = baseUrls[env];
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}${normalizedPath}`;
 }
 
 /**
@@ -61,7 +69,17 @@ export function buildUrl(env: Environment, path: string): string {
 export type StatusLine = [code: number, text: string];
 
 export function parseStatusLine(line: string): StatusLine {
-  throw new Error("TODO");
+  const parts = line.split(" ");
+  if (parts.length < 3) {
+    throw new Error(`Invalid status line: ${line}`);
+  }
+  const codeStr = parts[1];
+  if (!/^\d{3}$/.test(codeStr)) {
+    throw new Error(`Invalid status line: ${line}`);
+  }
+  const code = parseInt(codeStr, 10);
+  const text = parts.slice(2).join(" ");
+  return [code, text];
 }
 
 /**
@@ -81,11 +99,11 @@ export type WithTimestamps = { createdAt: string; updatedAt: string };
 export type StoredBug = Bug & WithTimestamps;
 
 export function stampBug(bug: Bug, now: string): StoredBug {
-  throw new Error("TODO");
+  return { ...bug, createdAt: now, updatedAt: now };
 }
 
 export function touchBug(stored: StoredBug, now: string): StoredBug {
-  throw new Error("TODO");
+  return { ...stored, updatedAt: now };
 }
 
 /**
@@ -114,11 +132,11 @@ export type TestCaseDraft = Partial<Omit<TestCase, "id">>;
 export type TestCasePreview = Pick<TestCase, "id" | "title">;
 
 export function applyDraft(base: TestCase, draft: TestCaseDraft): TestCase {
-  throw new Error("TODO");
+  return { ...base, ...draft };
 }
 
 export function toPreview(tc: TestCase): TestCasePreview {
-  throw new Error("TODO");
+  return { id: tc.id, title: tc.title };
 }
 
 /**

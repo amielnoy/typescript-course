@@ -5,92 +5,173 @@
 // אין לו קוד ואין לו קיום בזמן ריצה – הוא קיים רק לבדיקת טיפוסים.
 
 // ---------- interface בסיסי ----------
-interface User {
+interface Customer {
   readonly id: number; // לא ניתן לשינוי אחרי יצירה
-  name: string;
+  fullName: string;
   email: string;
-  phone?: string; // שדה אופציונלי
+  loyaltyPoints?: number; // שדה אופציונלי
 }
 
-const dana: User = { id: 1, name: "Dana", email: "dana@example.com" };
-// dana.id = 2;                                   // ❌ readonly
-// const bad: User = { id: 2, name: "No email" }; // ❌ חסר email
-console.log("User:", dana);
+const noa: Customer = { id: 1, fullName: "Noa Levi", email: "noa@shop.dev" };
+// noa.id = 2;                                          // ❌ readonly
+// const bad: Customer = { id: 2, fullName: "No email" }; // ❌ חסר email
+console.log("Customer:", noa);
+
+// ---------- שדה אופציונלי: חובה לבדוק לפני שימוש ----------
+function pointsLine(c: Customer): string {
+  if (c.loyaltyPoints !== undefined) {
+    return `${c.fullName}: ${c.loyaltyPoints} pts`;
+  }
+  return `${c.fullName}: (not in the club)`;
+}
+console.log(pointsLine(noa));
+console.log(pointsLine({ ...noa, loyaltyPoints: 120 }));
+console.log(noa.loyaltyPoints ?? 0);
+
+// ---------- readonly – גם למערכים ----------
+interface Cart {
+  readonly cartId: string;
+  readonly couponCodes: readonly string[];
+  itemCount: number;
+}
+const cart: Cart = { cartId: "C-301", couponCodes: ["WELCOME10"], itemCount: 2 };
+cart.itemCount = 3; // ✅ שדה רגיל
+// cart.cartId = "C-302";            // ❌ read-only property
+// cart.couponCodes.push("FREESHIP"); // ❌ אין push ב-readonly string[]
+console.log(cart);
+
+// ---------- interface לתשובת API (מקונן) ----------
+interface CatalogItemDto {
+  sku: string;
+  title: string;
+  priceCents: number;
+}
+interface SearchPage {
+  items: CatalogItemDto[];
+  paging: { page: number; totalItems: number };
+}
+const raw = '{"items":[{"sku":"MUG-01","title":"Mug","priceCents":4990},' +
+  '{"sku":"TEE-11","title":"T-shirt","priceCents":8900}],"paging":{"page":1,"totalItems":2}}';
+const body: SearchPage = JSON.parse(raw); // JSON.parse מחזיר any – הטיפוס הוא הבטחה שלנו
+console.log(body.paging.totalItems, body.items.map((i) => i.title));
+// body.items[0].titel;  // ❌ Property 'titel' does not exist on type 'CatalogItemDto'. Did you mean 'title'?
+
+// ---------- interface לנתוני בדיקה (Data-Driven) ----------
+interface SignupCase {
+  title: string;
+  email: string;
+  password: string;
+  expectError?: string;
+}
+const cases: SignupCase[] = [
+  { title: "valid signup", email: "omer@shop.dev", password: "Str0ng!pass" },
+  { title: "short password", email: "omer@shop.dev", password: "123", expectError: "Password too short" },
+  { title: "bad email", email: "omer.shop.dev", password: "Str0ng!pass", expectError: "Invalid email" },
+];
+for (const c of cases) {
+  const expected = c.expectError ?? "account created";
+  console.log(`${c.title.padEnd(15)} -> ${expected}`);
+}
+
+// ---------- Index signature + Record ----------
+interface FeatureFlags {
+  [flag: string]: boolean; // כל מפתח string, כל ערך boolean
+}
+const flags: FeatureFlags = { "new-checkout": true };
+flags["dark-mode"] = false;
+console.log(Object.keys(flags), flags["beta-search"]);
+// flags["max-items"] = 50;  // ❌ Type 'number' is not assignable to type 'boolean'.
+
+interface ProblemDetails {
+  status: number;
+  title: string;
+  errors?: Record<string, string>; // מילון: שם שדה -> הודעת שגיאה
+}
+const problem: ProblemDetails = { status: 422, title: "Unprocessable", errors: { zip: "must be 7 digits" } };
+console.log(`${problem.status} ${problem.title}`, problem.errors);
 
 // ---------- הרחבת interface (extends) ----------
-interface Admin extends User {
-  permissions: string[];
+interface BusinessCustomer extends Customer {
+  companyId: string;
+  seats: number;
 }
-const admin: Admin = { id: 2, name: "Avi", email: "avi@example.com", permissions: ["delete-users"] };
-console.log("Admin permissions:", admin.permissions);
+const acme: BusinessCustomer = { id: 2, fullName: "Acme Ltd", email: "it@acme.dev", companyId: "51-123", seats: 40 };
+function greet(c: Customer): string {
+  return `Hi ${c.fullName}`;
+}
+console.log("Seats:", acme.seats);
+console.log(greet(acme)); // BusinessCustomer הוא גם Customer
 
-// ---------- interface לתשובת API ----------
-interface ApiError {
-  status: number;
-  message: string;
-  details?: Record<string, string>; // מילון: מפתח string -> ערך string
+interface Verified {
+  verifiedAt: string;
 }
-const err: ApiError = { status: 400, message: "Validation failed", details: { email: "is required" } };
-console.log(`Error ${err.status}: ${err.message}`, err.details);
+interface VerifiedBusiness extends BusinessCustomer, Verified {}
+const verified: VerifiedBusiness = { ...acme, verifiedAt: "2026-11-24" };
+console.log(Object.keys(verified));
 
 // ---------- interface עם מתודות + מחלקה שמממשת (implements) ----------
-interface Logger {
-  info(message: string): void;
-  error(message: string): void;
+interface ArtifactStore {
+  save(name: string, content: string): void;
+  list(): string[];
 }
 
-class ConsoleLogger implements Logger {
-  info(message: string): void {
-    console.log(`ℹ️  ${message}`);
+class ConsoleStore implements ArtifactStore {
+  save(name: string, content: string): void {
+    console.log(`💾 ${name} (${content.length} chars)`);
   }
-  error(message: string): void {
-    console.log(`❌ ${message}`);
-  }
-}
-
-class MemoryLogger implements Logger {
-  readonly lines: string[] = [];
-  info(message: string): void {
-    this.lines.push(`INFO ${message}`);
-  }
-  error(message: string): void {
-    this.lines.push(`ERROR ${message}`);
+  list(): string[] {
+    return []; // מדפיס בלבד, לא שומר
   }
 }
 
-// הפונקציה מקבלת "כל דבר שמתנהג כמו Logger"
-function runSmokeTest(logger: Logger): void {
-  logger.info("Opening home page");
-  logger.error("Logo not found");
+class MemoryStore implements ArtifactStore {
+  private files = new Map<string, string>();
+  save(name: string, content: string): void {
+    this.files.set(name, content);
+  }
+  list(): string[] {
+    return [...this.files.keys()];
+  }
 }
 
-runSmokeTest(new ConsoleLogger());
-const mem = new MemoryLogger();
-runSmokeTest(mem);
-console.log("Memory logger captured:", mem.lines);
-
-// ---------- מחלקה יכולה לממש כמה ממשקים ----------
-interface Closable {
-  close(): void;
+// הפונקציה מקבלת "כל דבר שמתנהג כמו ArtifactStore"
+function saveFailure(store: ArtifactStore, test: string): void {
+  store.save(`${test}.log`, "Timeout after 5000ms");
+  store.save(`${test}.html`, "<html>...</html>");
 }
-class BrowserSession implements Logger, Closable {
-  info(m: string) {
-    console.log(`[browser] ${m}`);
-  }
-  error(m: string) {
-    console.log(`[browser] ERROR ${m}`);
-  }
-  close() {
-    console.log("[browser] closed");
-  }
-}
-const session = new BrowserSession();
-session.info("started");
-session.close();
+saveFailure(new ConsoleStore(), "checkout");
+const mem = new MemoryStore();
+saveFailure(mem, "checkout");
+console.log(mem.list());
 
 // ---------- Structural typing ("Duck typing") ----------
-// TS בודק צורה, לא שם: אובייקט עם info+error מתאים ל-Logger גם בלי implements
-const inlineLogger = { info: (m: string) => console.log("inline:", m), error: (m: string) => console.log("inline ERR:", m) };
-runSmokeTest(inlineLogger);
+// TS בודק צורה, לא שם: אובייקט עם save+list מתאים ל-ArtifactStore גם בלי implements
+const inlineStore = {
+  save: (name: string, content: string) => console.log("inline:", name, content.length),
+  list: () => [] as string[],
+};
+saveFailure(inlineStore, "login");
+
+// ---------- מחלקה יכולה לממש כמה ממשקים ----------
+interface Connectable {
+  connect(): void;
+}
+interface Resettable {
+  reset(): void;
+}
+class DbFixture implements Connectable, Resettable {
+  connect(): void {
+    console.log("[db] connected");
+  }
+  reset(): void {
+    console.log("[db] tables truncated");
+  }
+}
+function beforeEachTest(resource: Resettable): void {
+  resource.reset(); // רואה רק את reset()
+}
+const db = new DbFixture();
+db.connect();
+beforeEachTest(db);
 
 export {}; // הופך את הקובץ למודול (משתנים לא "מתנגשים" עם קבצים אחרים)

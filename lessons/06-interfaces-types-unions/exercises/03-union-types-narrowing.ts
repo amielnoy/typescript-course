@@ -26,7 +26,17 @@
 export type CellValue = string | number | boolean | null;
 
 export function formatCell(value: CellValue): string {
-  throw new Error("TODO");
+  if (value === null) {
+    return "—";
+  } else if (typeof value === "boolean") {
+    return value ? "✔" : "✘";
+  } else if (typeof value === "number") {
+    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+  } else if (typeof value === "string") {
+    return value.trim();
+  } else {
+    throw new Error("Invalid CellValue type");
+  }
 }
 
 /**
@@ -45,7 +55,18 @@ export function formatCell(value: CellValue): string {
  * Hint: first turn any input into an array, then work on a single array only.
  */
 export function normalizeTags(input: string | string[] | null | undefined): string[] {
-  throw new Error("TODO");
+  let tags: string[];
+  if (Array.isArray(input)) {
+    tags = input;
+  } else if (typeof input === "string") {
+    tags = [input];
+  } else {
+    tags = [];
+  }
+  return tags
+    .map((tag) => tag.trim().toLowerCase())
+    .filter((tag): tag is string => !!tag)
+    .filter((tag, index, array) => array.indexOf(tag) === index);   
 }
 
 /**

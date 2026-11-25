@@ -88,11 +88,13 @@
 
   // ---------- כותרת תחתונה ומספרי עמודים ----------
   const lesson = document.body.dataset.lesson || "";
+  // data-label (אופציונלי) מחליף את "שיעור N" בכותרת התחתונה, למשל במצגת החזרה למבחן
+  const label = document.body.dataset.label || `שיעור ${lesson}`;
   const slides = [...document.querySelectorAll(".slide")];
   slides.forEach((slide, i) => {
     const footer = document.createElement("div");
     footer.className = "slide-footer";
-    footer.innerHTML = `<span>${COURSE}</span><span dir="rtl">שיעור ${lesson} · ${i + 1}/${slides.length}</span>`;
+    footer.innerHTML = `<span>${COURSE}</span><span dir="rtl">${label} · ${i + 1}/${slides.length}</span>`;
     slide.appendChild(footer);
   });
 

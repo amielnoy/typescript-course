@@ -1,0 +1,3 @@
+# קובצי shell (שיעור 8) חייבים סיומות שורה של Unix גם ב-Windows – אחרת Git Bash נכשל
+*.sh text eol=lf
+* text=auto

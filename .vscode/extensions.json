@@ -1,0 +1,9 @@
+{
+  // VS Code מציע להתקין את התוספים האלה כשפותחים את הפרויקט
+  "recommendations": [
+    "usernamehw.errorlens",
+    "redhat.vscode-yaml",
+    "github.vscode-github-actions",
+    "ms-playwright.playwright"
+  ]
+}

@@ -13,7 +13,7 @@
   <h1>ממשקים וטיפוסים מותאמים</h1>
   <p class="subtitle">Interfaces, Type Aliases, Union Types</p>
   <div class="chips"><span>Interfaces</span><span>implements</span><span>Type Aliases</span><span>Utility Types</span><span>Union Types</span><span>Narrowing</span></div>
-  <div class="meta">26.11 · יום ה' · 09:00–16:00 · ZOOM · תיקייה בפרויקט: lessons/06-interfaces-types-unions</div>
+  <div class="meta">26.11 · יום ה' · 09:00–12:30 · ZOOM · תיקייה בפרויקט: lessons/06-interfaces-types-unions</div>
 </section>
 
 <section class="slide">
@@ -53,24 +53,26 @@
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface User {
-          readonly id: number;    // לא ניתן לשינוי
-          name: string;
+        interface Customer {
+          readonly id: number;      // לא ניתן לשינוי
+          fullName: string;
           email: string;
-          phone?: string;         // אופציונלי
+          loyaltyPoints?: number;   // אופציונלי
         }
 
-        const dana: User = { id: 1, name: "Dana", email: "dana@example.com" };
-        // dana.id = 2;                          ❌ readonly
-        // const bad: User = { id: 2, name: "x" };  ❌ missing email
-        console.log("User:", dana);
+        const noa: Customer = {
+          id: 1, fullName: "Noa Levi", email: "noa@shop.dev",
+        };
+        // noa.id = 2;                                ❌ readonly
+        // const bad: Customer = { id: 2, fullName: "x" };  ❌ missing email
+        console.log("Customer:", noa);
 
-        interface Admin extends User {
-          permissions: string[];
+        interface BusinessCustomer extends Customer {
+          companyId: string;
         }
       </pre>
       <pre class="out sm">
-        User: { id: 1, name: 'Dana', email: 'dana@example.com' }
+        Customer: { id: 1, fullName: 'Noa Levi', email: 'noa@shop.dev' }
       </pre>
     </div>
   </div>
@@ -79,22 +81,22 @@
 <section class="slide">
   <h2>למה זה חשוב? ארבע טעויות שהקומפיילר תופס מיד</h2>
   <pre class="lang-ts sm">
-    const a: User = { id: 2, name: "x" };                               // 1. missing required field
-    // ❌ Property 'email' is missing in type '{ id: number; name: string; }' but required in type 'User'.
+    const a: Customer = { id: 2, fullName: "x" };                                // 1. missing required field
+    // ❌ Property 'email' is missing in type '{ id: number; fullName: string; }' but required in type 'Customer'.
 
-    const b: User = { id: 3, name: "Noa", email: "n@qa.io", age: 30 };  // 2. field not in the contract
-    // ❌ Object literal may only specify known properties, and 'age' does not exist in type 'User'.
+    const b: Customer = { id: 3, fullName: "Omer", email: "o@shop.dev", age: 30 }; // 2. field not in the contract
+    // ❌ Object literal may only specify known properties, and 'age' does not exist in type 'Customer'.
 
-    const c: User = { id: "4", name: "Noa", email: "n@qa.io" };         // 3. wrong field type
+    const c: Customer = { id: "4", fullName: "Omer", email: "o@shop.dev" };       // 3. wrong field type
     // ❌ Type 'string' is not assignable to type 'number'.
 
-    function welcome(user: User) { return `Hi ${user.nmae}`; }          // 4. typo in a field name
-    // ❌ Property 'nmae' does not exist on type 'User'.
+    function greet(c: Customer) { return `Hi ${c.fulName}`; }                      // 4. typo in a field name
+    // ❌ Property 'fulName' does not exist on type 'Customer'. Did you mean 'fullName'?
   </pre>
   <ul>
     <li>כל שורה כאן <b>לא מתקמפלת</b> – <code>npx tsc --noEmit</code> מדפיס בדיוק את ההודעות האלה</li>
     <li>איך קוראים הודעה: <i>"Type X is not assignable to type Y"</i> = "נתת X, אבל החוזה דורש Y"</li>
-    <li>ועם <code>any</code>? אותה שגיאת כתיב (<code>user: any</code> ו-<code>user.nmae</code>) מתקמפלת, רצה ומדפיסה <code>Hi undefined</code> – והבאג מגיע לדוח</li>
+    <li>ועם <code>any</code>? אותה שגיאת כתיב (<code>c: any</code> ו-<code>c.fulName</code>) מתקמפלת, רצה ומדפיסה <code>Hi undefined</code> – והבאג מגיע לדוח</li>
   </ul>
   <div class="tip">טיפוסים הם "בדיקה" שרצה על קוד הבדיקות עצמו – וב-VS Code רואים אותה מיד בקו האדום, בלי להריץ כלום.</div>
 </section>
@@ -104,31 +106,32 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>phone?: string</code> = השדה <b>יכול</b> לא להופיע</li>
-        <li>הטיפוס שלו בפועל: <code>string | undefined</code></li>
+        <li><code>loyaltyPoints?: number</code> = השדה <b>יכול</b> לא להופיע</li>
+        <li>הטיפוס שלו בפועל: <code>number | undefined</code></li>
         <li>לכן TS <b>מחייב</b> לבדוק אותו לפני שימוש</li>
         <li>דרכים לטפל: <code>if</code>, או ברירת מחדל עם <code>??</code></li>
         <li>שימושי לשדות שהשרת מחזיר רק לפעמים</li>
       </ul>
+      <div class="warn small">כאן בודקים <code>!== undefined</code> ולא <code>if (c.loyaltyPoints)</code>: גם <code>0</code> נקודות הוא ערך תקין, אבל הוא falsy.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        function contactLine(user: User): string {
-          // return user.phone.trim();
-          // ❌ 'user.phone' is possibly 'undefined'.
-          if (user.phone) {
-            return `${user.name}: ${user.phone}`;
+        function pointsLine(c: Customer): string {
+          // return c.loyaltyPoints.toFixed(0);
+          // ❌ 'c.loyaltyPoints' is possibly 'undefined'.
+          if (c.loyaltyPoints !== undefined) {
+            return `${c.fullName}: ${c.loyaltyPoints} pts`;
           }
-          return `${user.name}: (no phone)`;
+          return `${c.fullName}: (not in the club)`;
         }
-        console.log(contactLine(dana));
-        console.log(contactLine({ ...dana, phone: "050-1234567" }));
-        console.log(dana.phone ?? "N/A");
+        console.log(pointsLine(noa));
+        console.log(pointsLine({ ...noa, loyaltyPoints: 120 }));
+        console.log(noa.loyaltyPoints ?? 0);
       </pre>
       <pre class="out sm">
-        Dana: (no phone)
-        Dana: 050-1234567
-        N/A
+        Noa Levi: (not in the club)
+        Noa Levi: 120 pts
+        0
       </pre>
     </div>
   </div>
@@ -139,33 +142,33 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li>שדה שנקבע פעם אחת ולא משתנה: <code>id</code> מהשרת, מזהה ריצה</li>
+        <li>שדה שנקבע פעם אחת ולא משתנה: <code>cartId</code> שהשרת יצר</li>
         <li><code>readonly string[]</code> – גם המערך עצמו לא ניתן לשינוי (אין <code>push</code>)</li>
-        <li>שדה רגיל (<code>status</code>) – מותר לשנות</li>
+        <li>שדה רגיל (<code>itemCount</code>) – מותר לשנות</li>
       </ul>
       <div class="note">ההגנה היא בזמן קומפילציה בלבד – ב-JavaScript שנוצר אין שום נעילה.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface TestRun {
-          readonly runId: string;
-          readonly tags: readonly string[];
-          status: string;
+        interface Cart {
+          readonly cartId: string;
+          readonly couponCodes: readonly string[];
+          itemCount: number;
         }
-        const run: TestRun = {
-          runId: "R-17", tags: ["smoke"], status: "running",
+        const cart: Cart = {
+          cartId: "C-301", couponCodes: ["WELCOME10"], itemCount: 2,
         };
-        run.status = "done";     // ✅ מותר
+        cart.itemCount = 3;     // ✅ מותר
 
-        run.runId = "R-18";
-        // ❌ Cannot assign to 'runId' because it is a read-only property.
-        run.tags.push("ui");
+        cart.cartId = "C-302";
+        // ❌ Cannot assign to 'cartId' because it is a read-only property.
+        cart.couponCodes.push("FREESHIP");
         // ❌ Property 'push' does not exist on type 'readonly string[]'.
 
-        console.log(run);
+        console.log(cart);
       </pre>
       <pre class="out sm">
-        { runId: 'R-17', tags: [ 'smoke' ], status: 'done' }
+        { cartId: 'C-301', couponCodes: [ 'WELCOME10' ], itemCount: 3 }
       </pre>
     </div>
   </div>
@@ -184,24 +187,24 @@
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface UserDto {
-          id: number;
-          name: string;
-          email: string;
+        interface CatalogItemDto {
+          sku: string;
+          title: string;
+          priceCents: number;
         }
-        interface UsersPage {
-          data: UserDto[];
-          meta: { page: number; total: number };
+        interface SearchPage {
+          items: CatalogItemDto[];
+          paging: { page: number; totalItems: number };
         }
-        const body: UsersPage = JSON.parse(raw); // raw = response body (text)
-        console.log(body.meta.total, body.data.map((u) =&gt; u.name));
+        const body: SearchPage = JSON.parse(raw); // raw = response body (text)
+        console.log(body.paging.totalItems, body.items.map((i) =&gt; i.title));
 
-        body.data[0].mail;
-        // ❌ Property 'mail' does not exist on type 'UserDto'.
-        //    Did you mean 'email'?
+        body.items[0].titel;
+        // ❌ Property 'titel' does not exist on type 'CatalogItemDto'.
+        //    Did you mean 'title'?
       </pre>
       <pre class="out sm">
-        2 [ 'Dana', 'Avi' ]
+        2 [ 'Mug', 'T-shirt' ]
       </pre>
     </div>
   </div>
@@ -212,7 +215,7 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li>טבלת מקרי בדיקה = מערך של אובייקטים מאותה צורה: <code>LoginCase[]</code></li>
+        <li>טבלת מקרי בדיקה = מערך של אובייקטים מאותה צורה: <code>SignupCase[]</code></li>
         <li>שכחתם שדה במקרה ה-20? הקומפיילר יגיד לכם איפה</li>
         <li>שדה אופציונלי (<code>expectError?</code>) מבדיל בין מקרה חיובי לשלילי</li>
       </ul>
@@ -220,28 +223,29 @@
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface LoginCase {
+        interface SignupCase {
           title: string;
-          username: string;
+          email: string;
           password: string;
           expectError?: string;
         }
-        const cases: LoginCase[] = [
-          { title: "valid user", username: "dana", password: "Secret1!" },
-          { title: "wrong password", username: "dana", password: "x",
-            expectError: "Invalid credentials" },
-          { title: "empty username", username: "", password: "x",
-            expectError: "Username is required" },
+        const cases: SignupCase[] = [
+          { title: "valid signup", email: "omer@shop.dev",
+            password: "Str0ng!pass" },
+          { title: "short password", email: "omer@shop.dev",
+            password: "123", expectError: "Password too short" },
+          { title: "bad email", email: "omer.shop.dev",
+            password: "Str0ng!pass", expectError: "Invalid email" },
         ];
         for (const c of cases) {
-          const expected = c.expectError ?? "login succeeds";
+          const expected = c.expectError ?? "account created";
           console.log(`${c.title.padEnd(15)} -&gt; ${expected}`);
         }
       </pre>
       <pre class="out sm">
-        valid user      -&gt; login succeeds
-        wrong password  -&gt; Invalid credentials
-        empty username  -&gt; Username is required
+        valid signup    -&gt; account created
+        short password  -&gt; Password too short
+        bad email       -&gt; Invalid email
       </pre>
     </div>
   </div>
@@ -252,36 +256,36 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>[name: string]: string</code> – "כל מפתח מסוג string, וכל ערך string"</li>
-        <li>מתאים ל-headers, שגיאות ולידציה, query params</li>
-        <li><code>Record&lt;string, string&gt;</code> – אותו דבר בכתיב קצר</li>
-        <li>גם הערך נבדק: מספר במקום מחרוזת – שגיאה</li>
+        <li><code>[flag: string]: boolean</code> – "כל מפתח מסוג string, וכל ערך boolean"</li>
+        <li>מתאים ל-feature flags, שגיאות ולידציה, headers, query params</li>
+        <li><code>Record&lt;string, string&gt;</code> – אותו רעיון בכתיב קצר</li>
+        <li>גם הערך נבדק: מספר במקום boolean – שגיאה</li>
       </ul>
-      <div class="warn">מפתח שלא קיים מחזיר <code>undefined</code> בזמן ריצה – אף שהטיפוס אומר <code>string</code>.</div>
+      <div class="warn">מפתח שלא קיים מחזיר <code>undefined</code> בזמן ריצה – אף שהטיפוס אומר <code>boolean</code>.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface HttpHeaders {
-          [name: string]: string;
+        interface FeatureFlags {
+          [flag: string]: boolean;
         }
-        const headers: HttpHeaders = { "content-type": "application/json" };
-        headers["x-request-id"] = "abc-123";
-        console.log(Object.keys(headers), headers["x-trace"]);
-        // headers["retries"] = 3;
-        // ❌ Type 'number' is not assignable to type 'string'.
+        const flags: FeatureFlags = { "new-checkout": true };
+        flags["dark-mode"] = false;
+        console.log(Object.keys(flags), flags["beta-search"]);
+        // flags["max-items"] = 50;
+        // ❌ Type 'number' is not assignable to type 'boolean'.
 
-        interface ApiError {
+        interface ProblemDetails {
           status: number;
-          message: string;
-          details?: Record&lt;string, string&gt;; // מילון
+          title: string;
+          errors?: Record&lt;string, string&gt;; // מילון
         }
-        const err: ApiError = { status: 400, message: "Validation failed",
-          details: { email: "is required" } };
-        console.log(`Error ${err.status}: ${err.message}`, err.details);
+        const problem: ProblemDetails = { status: 422, title: "Unprocessable",
+          errors: { zip: "must be 7 digits" } };
+        console.log(`${problem.status} ${problem.title}`, problem.errors);
       </pre>
       <pre class="out sm">
-        [ 'content-type', 'x-request-id' ] undefined
-        Error 400: Validation failed { email: 'is required' }
+        [ 'new-checkout', 'dark-mode' ] undefined
+        422 Unprocessable { zip: 'must be 7 digits' }
       </pre>
     </div>
   </div>
@@ -292,36 +296,35 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>Admin</code> מקבל את כל השדות של <code>User</code> + שדות משלו</li>
-        <li>Admin <b>הוא גם</b> User – אפשר להעביר אותו לכל פונקציה שמצפה ל-User</li>
+        <li><code>BusinessCustomer</code> מקבל את כל השדות של <code>Customer</code> + שדות משלו</li>
+        <li>BusinessCustomer <b>הוא גם</b> Customer – אפשר להעביר אותו לכל פונקציה שמצפה ל-Customer</li>
         <li>אפשר להרחיב כמה ממשקים בבת אחת: <code>extends A, B</code></li>
         <li>שימוש בבדיקות: <code>ApiError</code> בסיסי ו-<code>ValidationError</code> שמוסיף שדות</li>
       </ul>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface Admin extends User {
-          permissions: string[];
+        interface BusinessCustomer extends Customer {
+          companyId: string;
+          seats: number;
         }
-        const admin: Admin = {
-          id: 2, name: "Avi", email: "avi@example.com",
-          permissions: ["delete-users"],
+        const acme: BusinessCustomer = {
+          id: 2, fullName: "Acme Ltd", email: "it@acme.dev",
+          companyId: "51-123", seats: 40,
         };
-        function welcome(user: User): string {
-          return `Hi ${user.name}`;
-        }
-        console.log("Admin permissions:", admin.permissions);
-        console.log(welcome(admin));   // an Admin is also a User
-
-        interface Timestamped { createdAt: string; }
-        interface AuditedAdmin extends Admin, Timestamped {}
-        const audited: AuditedAdmin = { ...admin, createdAt: "2026-11-24" };
-        console.log(Object.keys(audited));
+        function greet(c: Customer): string { return `Hi ${c.fullName}`; }
+        console.log("Seats:", acme.seats);
+        console.log(greet(acme));   // a BusinessCustomer is also a Customer
+        interface Verified { verifiedAt: string; }
+        interface VerifiedBusiness extends BusinessCustomer, Verified {}
+        const verified: VerifiedBusiness =
+          { ...acme, verifiedAt: "2026-11-24" };
+        console.log(Object.keys(verified));
       </pre>
       <pre class="out sm">
-        Admin permissions: [ 'delete-users' ]
-        Hi Avi
-        [ 'id', 'name', 'email', 'permissions', 'createdAt' ]
+        Seats: 40
+        Hi Acme Ltd
+        [ 'id', 'fullName', 'email', 'companyId', 'seats', 'verifiedAt' ]
       </pre>
     </div>
   </div>
@@ -337,29 +340,34 @@
         <li>כל מחלקה מממשת אחרת: אחת מדפיסה, אחת שומרת בזיכרון</li>
         <li>שכחתם מתודה? שגיאה כבר בשורת ה-<code>class</code></li>
       </ul>
+      <div class="note">דוגמה מהעולם שלנו: איפה שומרים "ארטיפקטים" של בדיקה שנכשלה – לוג, HTML, צילום מסך.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface Logger {
-          info(message: string): void;
-          error(message: string): void;
+        interface ArtifactStore {
+          save(name: string, content: string): void;
+          list(): string[];
         }
-        class ConsoleLogger implements Logger {
-          info(message: string) { console.log(`ℹ️  ${message}`); }
-          error(message: string) { console.log(`❌ ${message}`); }
+        class ConsoleStore implements ArtifactStore {
+          save(name: string, content: string) {
+            console.log(`💾 ${name} (${content.length} chars)`);
+          }
+          list() { return []; }   // prints only
         }
-        class MemoryLogger implements Logger {
-          readonly lines: string[] = [];
-          info(message: string) { this.lines.push(`INFO ${message}`); }
-          error(message: string) { this.lines.push(`ERROR ${message}`); }
+        class MemoryStore implements ArtifactStore {
+          private files = new Map&lt;string, string&gt;();
+          save(name: string, content: string) {
+            this.files.set(name, content);
+          }
+          list() { return [...this.files.keys()]; }
         }
 
-        class HalfLogger implements Logger {
-          info(message: string) { console.log(message); }
+        class HalfStore implements ArtifactStore {
+          save(name: string, content: string) { console.log(name); }
         }
-        // ❌ Class 'HalfLogger' incorrectly implements interface 'Logger'.
-        //    Property 'error' is missing in type 'HalfLogger'
-        //    but required in type 'Logger'.
+        // ❌ Class 'HalfStore' incorrectly implements
+        //    interface 'ArtifactStore'. Property 'list' is missing
+        //    in type 'HalfStore' but required in type 'ArtifactStore'.
       </pre>
     </div>
   </div>
@@ -370,35 +378,36 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>runSmokeTest</code> מקבלת <b>כל</b> Logger – פולימורפיזם דרך ממשק, בלי הורשה</li>
-        <li><code>MemoryLogger</code> מצוין לבדיקות של התשתית עצמה: אפשר לבדוק מה נרשם</li>
-        <li>TS בודק <b>צורה</b>, לא שם: כל אובייקט עם <code>info</code> + <code>error</code> מתאים – גם בלי <code>class</code> ו-<code>implements</code> ("Duck typing")</li>
+        <li><code>saveFailure</code> מקבלת <b>כל</b> ArtifactStore – פולימורפיזם דרך ממשק, בלי הורשה</li>
+        <li><code>MemoryStore</code> מצוין לבדיקות של התשתית עצמה: אפשר לבדוק מה נשמר</li>
+        <li>TS בודק <b>צורה</b>, לא שם: כל אובייקט עם <code>save</code> + <code>list</code> מתאים – גם בלי <code>class</code> ו-<code>implements</code> ("Duck typing")</li>
         <li>שימושי מאוד ליצירת אובייקטים מזויפים (fakes) בבדיקות</li>
       </ul>
       <div class="note">אז למה בכלל <code>implements</code>? כדי שהשגיאה תופיע <b>במחלקה</b> עצמה, ולא רק במקום שבו משתמשים בה.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        function runSmokeTest(logger: Logger): void {
-          logger.info("Opening home page");
-          logger.error("Logo not found");
+        function saveFailure(store: ArtifactStore, test: string): void {
+          store.save(`${test}.log`, "Timeout after 5000ms");
+          store.save(`${test}.html`, "&lt;html&gt;...&lt;/html&gt;");
         }
-        runSmokeTest(new ConsoleLogger());
-        const mem = new MemoryLogger();   // great for testing the framework
-        runSmokeTest(mem);
-        console.log(mem.lines);
-        const inlineLogger = {            // no class, no implements
-          info: (m: string) =&gt; console.log("inline:", m),
-          error: (m: string) =&gt; console.log("inline ERR:", m),
+        saveFailure(new ConsoleStore(), "checkout");
+        const mem = new MemoryStore();      // great for testing the framework
+        saveFailure(mem, "checkout");
+        console.log(mem.list());
+        const inlineStore = {               // no class, no implements
+          save: (name: string, content: string) =&gt;
+            console.log("inline:", name, content.length),
+          list: () =&gt; [] as string[],
         };
-        runSmokeTest(inlineLogger);   // ✅ fits Logger
+        saveFailure(inlineStore, "login");  // ✅ fits ArtifactStore
       </pre>
       <pre class="out sm">
-        ℹ️  Opening home page
-        ❌ Logo not found
-        [ 'INFO Opening home page', 'ERROR Logo not found' ]
-        inline: Opening home page
-        inline ERR: Logo not found
+        💾 checkout.log (20 chars)
+        💾 checkout.html (16 chars)
+        [ 'checkout.log', 'checkout.html' ]
+        inline: login.log 20
+        inline: login.html 16
       </pre>
     </div>
   </div>
@@ -409,33 +418,35 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>implements Logger, Closable</code> – מתחייבת לשני החוזים</li>
+        <li><code>implements Connectable, Resettable</code> – מתחייבת לשני החוזים</li>
         <li>בניגוד ל-<code>extends</code> של מחלקות (רק הורה אחד) – ממשקים אפשר לממש כמה שרוצים</li>
-        <li>כל פונקציה רואה רק את ה"חלק" שמעניין אותה: <code>finish</code> רואה רק <code>close()</code></li>
+        <li>כל פונקציה רואה רק את ה"חלק" שמעניין אותה: <code>beforeEachTest</code> רואה רק <code>reset()</code></li>
       </ul>
-      <div class="tip">ממשקים קטנים וממוקדים (Logger, Closable) קלים יותר לשימוש חוזר.</div>
+      <div class="tip">ממשקים קטנים וממוקדים (Connectable, Resettable) קלים יותר לשימוש חוזר.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface Closable {
-          close(): void;
+        interface Connectable {
+          connect(): void;
         }
-        class BrowserSession implements Logger, Closable {
-          info(m: string) { console.log(`[browser] ${m}`); }
-          error(m: string) { console.log(`[browser] ERROR ${m}`); }
-          close() { console.log("[browser] closed"); }
+        interface Resettable {
+          reset(): void;
+        }
+        class DbFixture implements Connectable, Resettable {
+          connect() { console.log("[db] connected"); }
+          reset() { console.log("[db] tables truncated"); }
         }
 
-        function finish(resource: Closable): void {
-          resource.close();
+        function beforeEachTest(resource: Resettable): void {
+          resource.reset();
         }
-        const session = new BrowserSession();
-        session.info("started");
-        finish(session);
+        const db = new DbFixture();
+        db.connect();
+        beforeEachTest(db);
       </pre>
       <pre class="out sm">
-        [browser] started
-        [browser] closed
+        [db] connected
+        [db] tables truncated
       </pre>
     </div>
   </div>
@@ -447,26 +458,26 @@
     <div class="card bad"><h3>❌ any לתשובה – אין הגנה</h3>
       <pre class="lang-ts sm">
         const body: any = await res.json();
-        body.data[0].mail;   // undefined, no warning
+        body.items[0].titel;   // undefined, no warning
       </pre>
     </div>
     <div class="card good"><h3>✅ טיפוס לתשובה</h3>
       <pre class="lang-ts sm">
-        const body: UsersPage = await res.json();
-        body.data[0].email;  // autocomplete + checked
+        const body: SearchPage = await res.json();
+        body.items[0].title;   // autocomplete + checked
       </pre>
     </div>
     <div class="card bad"><h3>❌ instanceof על interface</h3>
       <pre class="lang-ts sm">
-        if (x instanceof Logger) { }
-        // ❌ 'Logger' only refers to a type,
+        if (x instanceof ArtifactStore) { }
+        // ❌ 'ArtifactStore' only refers to a type,
         //    but is being used as a value here.
       </pre>
     </div>
     <div class="card good"><h3>✅ interface לא קיים בזמן ריצה</h3>
       <pre class="lang-ts sm">
-        if (x instanceof ConsoleLogger) { } // a class
-        if ("info" in x) { }  // field check (part 3)
+        if (x instanceof MemoryStore) { }  // a class
+        if ("save" in x) { }  // field check (part 3)
       </pre>
     </div>
   </div>
@@ -520,34 +531,35 @@
     <div class="stack">
       <ul>
         <li><code>type</code> נותן <b>שם</b> לטיפוס – כל טיפוס: פרימיטיבי, אובייקט, פונקציה</li>
-        <li><code>timeout: Milliseconds</code> אומר יותר מ-<code>timeout: number</code></li>
+        <li><code>price: Cents</code> אומר יותר מ-<code>price: number</code> – מיד ברור שזה באגורות</li>
         <li>טיפוס פונקציה: מגדירים פעם אחת את החתימה, ו-TS מסיק את הפרמטרים</li>
       </ul>
-      <div class="note">alias הוא רק <b>שם נוסף</b>: <code>UserId</code> ו-<code>number</code> הם אותו טיפוס – והבדיקה היא של <code>number</code>.</div>
+      <div class="note">alias הוא רק <b>שם נוסף</b>: <code>Cents</code> ו-<code>number</code> הם אותו טיפוס – והבדיקה היא של <code>number</code>.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type UserId = number;
-        type Url = string;
-        type Milliseconds = number;
-        type Point = { x: number; y: number };             // אובייקט
-        type Assertion = (actual: unknown, expected: unknown) =&gt; boolean;
+        type Sku = string;
+        type Cents = number;
+        type Percent = number;
+        type GeoPoint = { lat: number; lng: number };      // אובייקט
+        type Validator = (value: string) =&gt; boolean;       // פונקציה
 
-        function fetchUser(id: UserId, base: Url, timeout: Milliseconds) {
-          return `GET ${base}/users/${id} (timeout ${timeout}ms)`;
+        function priceAfter(sku: Sku, price: Cents, off: Percent) {
+          const final = Math.round((price * (100 - off)) / 100);
+          return `${sku}: ${price} -&gt; ${final} cents`;
         }
-        const click: Point = { x: 120, y: 340 };
-        const strictEquals: Assertion = (a, e) =&gt; a === e;  // a, e: unknown
+        const telAviv: GeoPoint = { lat: 32.08, lng: 34.78 };
+        const isEmail: Validator = (v) =&gt; v.includes("@");  // v: string
 
-        console.log(fetchUser(7, "http://localhost:3000", 5000));
-        console.log("Click at", click, strictEquals(1, "1"));
+        console.log(priceAfter("MUG-01", 4990, 20));
+        console.log("Mock location", telAviv, isEmail("noa.shop.dev"));
 
-        const uid: UserId = "7";
+        const price: Cents = "49.90";
         // ❌ Type 'string' is not assignable to type 'number'.
       </pre>
       <pre class="out sm">
-        GET http://localhost:3000/users/7 (timeout 5000ms)
-        Click at { x: 120, y: 340 } false
+        MUG-01: 4990 -&gt; 3992 cents
+        Mock location { lat: 32.08, lng: 34.78 } false
       </pre>
     </div>
   </div>
@@ -558,34 +570,34 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li>טיפוס יכול להיות <b>ערך מדויק</b>: <code>"GET"</code>, <code>200</code>, <code>true</code></li>
+        <li>טיפוס יכול להיות <b>ערך מדויק</b>: <code>"warn"</code>, <code>200</code>, <code>true</code></li>
         <li>איחוד של literals עם <code>|</code> = רשימה סגורה של ערכים חוקיים</li>
         <li>טעות כתיב נתפסת <b>מיד</b> – גם הבדל של אות גדולה/קטנה</li>
         <li>VS Code משלים אוטומטית את האפשרויות</li>
       </ul>
-      <div class="tip">מתאים ל: שיטות HTTP, דפדפנים, סביבות, סטטוסים של טסט, רמות חומרה.</div>
+      <div class="tip">מתאים ל: רמות לוג, שפות, סביבות, שיטות HTTP, סטטוסים של טסט, רמות חומרה.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-        type Browser = "chromium" | "firefox" | "webkit";
+        type LogLevel = "debug" | "info" | "warn" | "error";
+        type Locale = "he-IL" | "en-US" | "ar-IL";
 
-        function request(method: HttpMethod, path: string): string {
-          return `${method} ${path}`;
+        function log(level: LogLevel, msg: string): string {
+          return `[${level.toUpperCase()}] ${msg}`;
         }
-        console.log(request("POST", "/users"));
-        console.log(request("DELETE", "/users/7"));
+        console.log(log("warn", "Low stock: MUG-01"));
+        console.log(log("error", "Payment declined"));
 
-        request("FETCH", "/users");     // טעות כתיב נתפסת מיד
-        // ❌ Argument of type '"FETCH"' is not assignable
-        //    to parameter of type 'HttpMethod'.
-        request("get", "/users");
-        // ❌ Argument of type '"get"' is not assignable
-        //    to parameter of type 'HttpMethod'.
+        log("fatal", "x");     // טעות נתפסת מיד
+        // ❌ Argument of type '"fatal"' is not assignable
+        //    to parameter of type 'LogLevel'.
+        log("Info", "x");
+        // ❌ Argument of type '"Info"' is not assignable
+        //    to parameter of type 'LogLevel'.
       </pre>
       <pre class="out sm">
-        POST /users
-        DELETE /users/7
+        [WARN] Low stock: MUG-01
+        [ERROR] Payment declined
       </pre>
     </div>
   </div>
@@ -597,33 +609,33 @@
     <div class="stack">
       <table>
         <tr><th>הצהרה</th><th>הטיפוס ש-TS מסיק</th></tr>
-        <tr><td style="white-space:nowrap"><code>let m = "GET"</code></td><td><code>string</code> (אפשר לשנות לכל מחרוזת)</td></tr>
-        <tr><td><code>const m = "GET"</code></td><td><code>"GET"</code> (לא ישתנה לעולם)</td></tr>
-        <tr><td style="white-space:nowrap"><code>let m: HttpMethod = "GET"</code></td><td><code>HttpMethod</code></td></tr>
+        <tr><td style="white-space:nowrap"><code>let level = "info"</code></td><td><code>string</code> (אפשר לשנות לכל מחרוזת)</td></tr>
+        <tr><td><code>const level = "info"</code></td><td><code>"info"</code> (לא ישתנה לעולם)</td></tr>
+        <tr><td style="white-space:nowrap"><code>let level: LogLevel = "info"</code></td><td><code>LogLevel</code></td></tr>
       </table>
       <ul>
-        <li><code>let</code> בלי טיפוס = "מחרוזת כלשהי" – ולכן לא מתאים ל-<code>HttpMethod</code></li>
+        <li><code>let</code> בלי טיפוס = "מחרוזת כלשהי" – ולכן לא מתאים ל-<code>LogLevel</code></li>
         <li>הפתרון: <code>const</code>, או טיפוס מפורש</li>
       </ul>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        let method = "GET";
-        request(method, "/users");
+        let level = "info";
+        log(level, "x");
         // ❌ Argument of type 'string' is not
-        //    assignable to parameter of type 'HttpMethod'.
+        //    assignable to parameter of type 'LogLevel'.
 
-        const m2 = "GET";              // ✅ type is "GET"
-        let m3: HttpMethod = "GET";    // ✅ explicit type
-        m3 = "PUT";                    // ✅ still HttpMethod
-        console.log(request(m2, "/a"), request(m3, "/b"));
+        const l2 = "info";             // ✅ type is "info"
+        let l3: LogLevel = "info";     // ✅ explicit type
+        l3 = "debug";                  // ✅ still LogLevel
+        console.log(log(l2, "a"), log(l3, "b"));
 
-        m3 = "OPTIONS";
-        // ❌ Type '"OPTIONS"' is not assignable
-        //    to type 'HttpMethod'.
+        l3 = "trace";
+        // ❌ Type '"trace"' is not assignable
+        //    to type 'LogLevel'.
       </pre>
       <pre class="out sm">
-        GET /a PUT /b
+        [INFO] a [DEBUG] b
       </pre>
     </div>
   </div>
@@ -634,34 +646,35 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>Record&lt;Browser, number&gt;</code> = אובייקט עם <b>בדיוק</b> מפתח לכל דפדפן</li>
-        <li>שכחתם דפדפן? שגיאה. הוספתם מפתח שלא קיים? שגיאה</li>
-        <li>הוספתם <code>"edge"</code> ל-<code>Browser</code>? TS יראה לכם כל מקום שצריך לעדכן</li>
+        <li><code>Record&lt;Locale, string&gt;</code> = אובייקט עם <b>בדיוק</b> מפתח לכל שפה</li>
+        <li>שכחתם שפה? שגיאה. הוספתם מפתח שלא קיים? שגיאה</li>
+        <li>הוספתם <code>"ru-RU"</code> ל-<code>Locale</code>? TS יראה לכם כל מקום שצריך לעדכן</li>
       </ul>
+      <div class="tip small">מושלם לבדיקות לוקליזציה: לכל שפה – הפורמט שהמסך אמור להציג.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        const timeouts: Record&lt;Browser, number&gt; = {
-          chromium: 30_000,
-          firefox: 45_000,
-          webkit: 60_000,
+        const dateFormats: Record&lt;Locale, string&gt; = {
+          "he-IL": "dd/mm/yyyy",
+          "en-US": "mm/dd/yyyy",
+          "ar-IL": "dd/mm/yyyy",
         };
-        function timeoutFor(browser: Browser): string {
-          return `${browser}: ${timeouts[browser] / 1000}s`;
+        function dateFormatFor(locale: Locale): string {
+          return `${locale}: ${dateFormats[locale]}`;
         }
-        console.log(timeoutFor("webkit"));
-        const all: Browser[] = ["chromium", "firefox", "webkit"];
-        console.log(all.map(timeoutFor).join(" | "));
+        console.log(dateFormatFor("en-US"));
+        const locales: Locale[] = ["he-IL", "en-US", "ar-IL"];
+        console.log(locales.map(dateFormatFor).join(" | "));
 
-        const t1: Record&lt;Browser, number&gt; = {
-          chromium: 30_000, firefox: 45_000 };
-        // ❌ Property 'webkit' is missing in type
-        //    '{ chromium: number; firefox: number; }'
-        //    but required in type 'Record&lt;Browser, number&gt;'.
+        const f2: Record&lt;Locale, string&gt; = {
+          "he-IL": "dd/mm/yyyy", "en-US": "mm/dd/yyyy" };
+        // ❌ Property '"ar-IL"' is missing in type
+        //    '{ "he-IL": string; "en-US": string; }'
+        //    but required in type 'Record&lt;Locale, string&gt;'.
       </pre>
       <pre class="out sm">
-        webkit: 60s
-        chromium: 30s | firefox: 45s | webkit: 60s
+        en-US: mm/dd/yyyy
+        he-IL: dd/mm/yyyy | en-US: mm/dd/yyyy | ar-IL: dd/mm/yyyy
       </pre>
     </div>
   </div>
@@ -672,34 +685,34 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>[code: number, text: string]</code> – בדיוק 2 איברים, בסדר הזה</li>
-        <li>השמות (<code>code</code>, <code>text</code>) רק לתיעוד – מופיעים בהשלמה האוטומטית</li>
-        <li>נוח להחזרת <b>כמה ערכים</b> מפונקציה + פירוק (destructuring)</li>
+        <li><code>[min: number, max: number]</code> – בדיוק 2 איברים, בסדר הזה</li>
+        <li>השמות (<code>min</code>, <code>max</code>) רק לתיעוד – מופיעים בהשלמה האוטומטית</li>
+        <li>נוח להעברה או החזרה של <b>כמה ערכים</b> יחד + פירוק (destructuring)</li>
         <li>אורך שגוי או סדר הפוך – נתפסים</li>
       </ul>
+      <div class="note">ניתוח ערכי גבול (Boundary Value Analysis): בודקים בדיוק על הגבול ומעט מחוץ לו.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type StatusLine = [code: number, text: string];
-        const ok: StatusLine = [200, "OK"];
-        const [code, text] = ok;
-        console.log(`Status ${code} ${text}`);
+        type Boundary = [min: number, max: number];
+        const qty: Boundary = [1, 10];
+        const [min, max] = qty;
+        console.log(`Quantity allowed: ${min}..${max}`);
 
-        function minMax(durations: number[]): [min: number, max: number] {
-          return [Math.min(...durations), Math.max(...durations)];
+        function boundaryValues([low, high]: Boundary): number[] {
+          return [low - 1, low, high, high + 1];
         }
-        const [fastest, slowest] = minMax([820, 310, 1450, 640]);
-        console.log(`fastest ${fastest}ms, slowest ${slowest}ms`);
+        console.log("Test with:", boundaryValues(qty));
 
-        const a: StatusLine = [200];
-        // ❌ Type '[number]' is not assignable to type 'StatusLine'.
+        const a: Boundary = [1];
+        // ❌ Type '[number]' is not assignable to type 'Boundary'.
         //    Source has 1 element(s) but target requires 2.
-        const b: StatusLine = ["OK", 200];
+        const b: Boundary = ["1", 10];
         // ❌ Type 'string' is not assignable to type 'number'.
       </pre>
       <pre class="out sm">
-        Status 200 OK
-        fastest 310ms, slowest 1450ms
+        Quantity allowed: 1..10
+        Test with: [ 0, 1, 10, 11 ]
       </pre>
     </div>
   </div>
@@ -711,35 +724,33 @@
     <div class="stack">
       <ul>
         <li><code>A &amp; B</code> = אובייקט שיש בו <b>גם</b> את כל השדות של A <b>וגם</b> של B</li>
-        <li>בונים טיפוסים מ"חלקים" קטנים לשימוש חוזר: <code>WithTimestamps</code>, <code>WithAuth</code></li>
+        <li>בונים טיפוסים מ"חלקים" קטנים לשימוש חוזר: <code>Audited</code>, <code>WithTrace</code></li>
         <li>זה ה"<code>extends</code>" של <code>type</code></li>
       </ul>
       <div class="note">אל תתבלבלו: <code>|</code> = <b>אחד מ</b>-, <code>&amp;</code> = <b>כולם יחד</b>.</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type WithTimestamps = { createdAt: string; updatedAt: string };
-        type Bug = { id: number; title: string };
-        type StoredBug = Bug &amp; WithTimestamps;
-
-        const stored: StoredBug = {
-          id: 1, title: "Broken link",
-          createdAt: "2026-11-01", updatedAt: "2026-11-02",
-        };
-        type WithAuth = { token: string };
-        type AuthedRequest = { method: HttpMethod; path: string } &amp; WithAuth;
-        const req: AuthedRequest = {
-          method: "GET", path: "/me", token: "t0k3n" };
+        type Audited = { createdBy: string; createdAt: string };
+        type Coupon = { code: string; percentOff: number };
+        type StoredCoupon = Coupon &amp; Audited;
+        const stored: StoredCoupon = { code: "WELCOME10", percentOff: 10,
+          createdBy: "admin", createdAt: "2026-11-01" };
+        type WithTrace = { traceId: string };
+        type TracedCall =
+          { method: "GET" | "POST"; path: string } &amp; WithTrace;
+        const call: TracedCall = {
+          method: "POST", path: "/cart", traceId: "tr-81" };
         console.log(Object.keys(stored));
-        console.log(Object.keys(req));
-
-        const s: StoredBug = { id: 1, title: "x", createdAt: "2026-11-01" };
-        // ❌ Property 'updatedAt' is missing in type '{ ... }'
-        //    but required in type 'WithTimestamps'.
+        console.log(Object.keys(call));
+        const s: StoredCoupon =
+          { code: "X", percentOff: 5, createdAt: "2026-11-01" };
+        // ❌ Property 'createdBy' is missing in type '{ ... }'
+        //    but required in type 'Audited'.
       </pre>
       <pre class="out sm">
-        [ 'id', 'title', 'createdAt', 'updatedAt' ]
-        [ 'method', 'path', 'token' ]
+        [ 'code', 'percentOff', 'createdBy', 'createdAt' ]
+        [ 'method', 'path', 'traceId' ]
       </pre>
     </div>
   </div>
@@ -750,12 +761,12 @@
   <p>"פונקציות" שמקבלות טיפוס ומחזירות טיפוס חדש – בלי להעתיק שדות ידנית:</p>
   <table>
     <tr><th>Utility</th><th>מה הוא עושה</th><th>שימוש בבדיקות</th></tr>
-    <tr><td><code>Partial&lt;T&gt;</code></td><td>כל השדות אופציונליים</td><td>עדכון חלקי: <code>PATCH /users/1</code></td></tr>
+    <tr><td><code>Partial&lt;T&gt;</code></td><td>כל השדות אופציונליים</td><td>עדכון חלקי: <code>PATCH /campaigns/1</code></td></tr>
     <tr><td><code>Required&lt;T&gt;</code></td><td>כל השדות חובה</td><td>ולידציה של אובייקט מלא</td></tr>
-    <tr><td><code>Pick&lt;T, K&gt;</code></td><td>רק השדות שנבחרו</td><td><code>Pick&lt;User, "id" | "name"&gt;</code></td></tr>
-    <tr><td><code>Omit&lt;T, K&gt;</code></td><td>בלי השדות שנבחרו</td><td>Body ליצירה: <code>Omit&lt;User, "id"&gt;</code></td></tr>
+    <tr><td><code>Pick&lt;T, K&gt;</code></td><td>רק השדות שנבחרו</td><td><code>Pick&lt;Customer, "id" | "fullName"&gt;</code></td></tr>
+    <tr><td><code>Omit&lt;T, K&gt;</code></td><td>בלי השדות שנבחרו</td><td>Body ליצירה: <code>Omit&lt;Campaign, "id"&gt;</code></td></tr>
     <tr><td><code>Readonly&lt;T&gt;</code></td><td>הכול readonly</td><td>נתוני בדיקה קבועים</td></tr>
-    <tr><td><code>Record&lt;K, V&gt;</code></td><td>מילון עם מפתחות ידועים</td><td><code>Record&lt;Browser, number&gt;</code></td></tr>
+    <tr><td><code>Record&lt;K, V&gt;</code></td><td>מילון עם מפתחות ידועים</td><td><code>Record&lt;Locale, number&gt;</code></td></tr>
   </table>
   <div class="tip">היתרון: משנים את ה-interface המקורי במקום אחד – וכל הטיפוסים הנגזרים מתעדכנים לבד.</div>
 </section>
@@ -765,7 +776,7 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li>ב-POST אין <code>id</code> – השרת מייצר אותו → <code>Omit&lt;TestCase, "id"&gt;</code></li>
+        <li>ב-POST אין <code>id</code> – השרת מייצר אותו → <code>Omit&lt;Campaign, "id"&gt;</code></li>
         <li>ב-PATCH שולחים רק את מה שמשתנה → <code>Partial&lt;...&gt;</code></li>
         <li>אפשר לשרשר: <code>Partial&lt;Omit&lt;T, "id"&gt;&gt;</code></li>
         <li>שלחתם <code>id</code> ב-POST בטעות? נתפס</li>
@@ -773,28 +784,28 @@
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface TestCase {
-          id: string; title: string; steps: string[]; owner: string;
+        interface Campaign {
+          id: string; name: string; channels: string[]; budget: number;
         }
-        type NewTestCase = Omit&lt;TestCase, "id"&gt;;        // POST body
-        type TestCasePatch = Partial&lt;NewTestCase&gt;;      // PATCH body
-
-        function createCase(body: NewTestCase): TestCase {
-          return { id: "TC-1", ...body };
+        type NewCampaign = Omit&lt;Campaign, "id"&gt;;        // POST body
+        type CampaignPatch = Partial&lt;NewCampaign&gt;;      // PATCH body
+        function createCampaign(body: NewCampaign): Campaign {
+          return { id: "CMP-1", ...body };
         }
-        function describePatch(patch: TestCasePatch): string {
+        function describePatch(patch: CampaignPatch): string {
           return `PATCH fields: ${Object.keys(patch).join(", ")}`;
         }
-        console.log(createCase({ title: "Login", steps: [], owner: "dana" }));
-        console.log(describePatch({ title: "Login v2", steps: [] }));
-        const bad: NewTestCase =
-          { id: "TC-1", title: "x", steps: [], owner: "d" };
+        console.log(createCampaign(
+          { name: "Sale", channels: [], budget: 500 }));
+        console.log(describePatch({ budget: 800, channels: [] }));
+        const bad: NewCampaign =
+          { id: "CMP-1", name: "x", channels: [], budget: 0 };
         // ❌ Object literal may only specify known properties,
-        //    and 'id' does not exist in type 'NewTestCase'.
+        //    and 'id' does not exist in type 'NewCampaign'.
       </pre>
       <pre class="out sm">
-        { id: 'TC-1', title: 'Login', steps: [], owner: 'dana' }
-        PATCH fields: title, steps
+        { id: 'CMP-1', name: 'Sale', channels: [], budget: 500 }
+        PATCH fields: budget, channels
       </pre>
     </div>
   </div>
@@ -807,33 +818,32 @@
       <ul>
         <li><code>Pick</code> – תצוגה מקוצרת (למשל שורה בטבלת דוח)</li>
         <li><code>Readonly</code> – נתוני בדיקה שאסור שטסט אחד ישנה לטסט אחר</li>
-        <li><code>Record</code> – ספירת תוצאות לפי דפדפן</li>
+        <li><code>Record</code> – ספירת הרשמות לפי שפה</li>
         <li>גם שמות השדות ב-<code>Pick</code>/<code>Omit</code> נבדקים!</li>
       </ul>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type TestCasePreview = Pick&lt;TestCase, "id" | "title"&gt;;
-        const preview: TestCasePreview = { id: "TC-1", title: "Login" };
-        type P2 = Pick&lt;TestCase, "id" | "titel"&gt;;
-        // ❌ Type '"titel"' is not assignable to type 'keyof TestCase'.
-        //    Did you mean '"title"'?
+        type CampaignPreview = Pick&lt;Campaign, "id" | "name"&gt;;
+        const preview: CampaignPreview = { id: "CMP-1", name: "Sale" };
+        type P2 = Pick&lt;Campaign, "id" | "nmae"&gt;;
+        // ❌ Type '"nmae"' is not assignable to type 'keyof Campaign'.
 
-        const frozen: Readonly&lt;TestCase&gt; =
-          { id: "TC-3", title: "x", steps: [], owner: "dana" };
-        frozen.owner = "avi";
-        // ❌ Cannot assign to 'owner' because it is a read-only property.
+        const frozen: Readonly&lt;Campaign&gt; =
+          { id: "CMP-2", name: "Summer", channels: [], budget: 0 };
+        frozen.budget = 100;
+        // ❌ Cannot assign to 'budget' because it is a read-only property.
 
-        type ResultsByBrowser = Record&lt;Browser, number&gt;;
-        const results: ResultsByBrowser =
-          { chromium: 40, firefox: 38, webkit: 37 };
-        const total = results.chromium + results.firefox + results.webkit;
-        console.log(preview);
-        console.log(results, total);
+        type SignupsByLocale = Record&lt;Locale, number&gt;;
+        const signups: SignupsByLocale =
+          { "he-IL": 40, "en-US": 25, "ar-IL": 12 };
+        const total = signups["he-IL"] + signups["en-US"] + signups["ar-IL"];
+        console.log(preview, frozen.name);
+        console.log(signups, total);
       </pre>
       <pre class="out sm">
-        { id: 'TC-1', title: 'Login' }
-        { chromium: 40, firefox: 38, webkit: 37 } 115
+        { id: 'CMP-1', name: 'Sale' } Summer
+        { 'he-IL': 40, 'en-US': 25, 'ar-IL': 12 } 77
       </pre>
     </div>
   </div>
@@ -883,27 +893,28 @@
         <li><b>Narrowing</b> – צמצום הטיפוס בתוך תנאי: אחרי <code>typeof</code>, TS יודע בדיוק מה יש ביד</li>
         <li>הקוד לא משתנה בזמן ריצה – רק ההבנה של הקומפיילר</li>
       </ul>
+      <div class="note small">כמות יכולה להגיע כמספר מה-API, או כטקסט משדה בטופס (<code>"3"</code>).</div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type Id = string | number;
+        type Quantity = number | string;
 
-        function shout(id: Id): string {
-          return id.toUpperCase();
+        function label(q: Quantity): string {
+          return q.toFixed(0);
         }
-        // ❌ Property 'toUpperCase' does not exist on type 'Id'.
-        //    Property 'toUpperCase' does not exist on type 'number'.
+        // ❌ Property 'toFixed' does not exist on type 'Quantity'.
+        //    Property 'toFixed' does not exist on type 'string'.
 
-        function normalizeId(id: Id): string {
-          if (typeof id === "number") {
-            return `ID-${id.toFixed(0)}`;   // here id: number
+        function toQuantity(q: Quantity): number {
+          if (typeof q === "string") {
+            return Number.parseInt(q, 10);   // here q: string
           }
-          return id.toUpperCase();          // here id: string
+          return Math.floor(q);              // here q: number
         }
-        console.log(normalizeId(42), normalizeId("tc-7"));
+        console.log(toQuantity("3"), toQuantity(2.7));
       </pre>
       <pre class="out sm">
-        ID-42 TC-7
+        3 2
       </pre>
     </div>
   </div>
@@ -914,34 +925,34 @@
   <div class="cols">
     <div class="stack">
       <pre class="lang-ts sm">
-        function describeValue(v: string | number | null): string {
-          // ① v: string | number | null
-          if (v === null) {
-            return "(empty)";     // ② v: null
+        function formatPrice(p: string | number | null): string {
+          // ① p: string | number | null
+          if (p === null) {
+            return "(no price)";       // ② p: null
           }
-          // ③ v: string | number
-          if (typeof v === "number") {
-            return v.toFixed(2);  // ④ v: number
+          // ③ p: string | number
+          if (typeof p === "number") {
+            return `₪${p.toFixed(2)}`;  // ④ p: number
           }
-          return v.trim();        // ⑤ v: string
+          return p.trim();             // ⑤ p: string
         }
-        console.log(describeValue(null),
-          describeValue(3.14159), describeValue("  ok  "));
+        console.log(formatPrice(null),
+          formatPrice(49.9), formatPrice("  ₪12.00 "));
       </pre>
       <pre class="out sm">
-        (empty) 3.14 ok
+        (no price) ₪49.90 ₪12.00
       </pre>
     </div>
     <div class="stack">
       <table>
-        <tr><th>נקודה</th><th>הטיפוס של v</th><th>למה</th></tr>
+        <tr><th>נקודה</th><th>הטיפוס של p</th><th>למה</th></tr>
         <tr><td>①</td><td><code>string | number | null</code></td><td>כל האפשרויות</td></tr>
         <tr><td>②</td><td><code>null</code></td><td>עבר <code>=== null</code></td></tr>
         <tr><td>③</td><td><code>string | number</code></td><td>null כבר "יצא" ב-return</td></tr>
         <tr><td>④</td><td><code>number</code></td><td>עבר <code>typeof</code></td></tr>
         <tr><td>⑤</td><td><code>string</code></td><td>רק זה נשאר</td></tr>
       </table>
-      <div class="tip">ב-VS Code: עמדו עם העכבר על <code>v</code> בכל שורה – ותראו את הטיפוס משתנה.</div>
+      <div class="tip">ב-VS Code: עמדו עם העכבר על <code>p</code> בכל שורה – ותראו את הטיפוס משתנה.</div>
     </div>
   </div>
 </section>
@@ -961,24 +972,24 @@
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        function findUserName(id: number): string | null {
-          return id === 1 ? "Dana" : null;
+        function findCouponCode(customerId: number): string | null {
+          return customerId === 1 ? "VIP20" : null;
         }
 
-        const name = findUserName(2);
-        name.toUpperCase();
-        // ❌ 'name' is possibly 'null'.
+        const code = findCouponCode(2);
+        code.toLowerCase();
+        // ❌ 'code' is possibly 'null'.
 
-        console.log(name?.toUpperCase() ?? "user not found");
+        console.log(code?.toLowerCase() ?? "no coupon");
 
-        const n1 = findUserName(1);
-        if (n1 !== null) {
-          console.log(n1.toUpperCase());   // n1: string
+        const c1 = findCouponCode(1);
+        if (c1 !== null) {
+          console.log(c1.toLowerCase());   // c1: string
         }
       </pre>
       <pre class="out sm">
-        user not found
-        DANA
+        no coupon
+        vip20
       </pre>
     </div>
   </div>
@@ -989,34 +1000,35 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li>API-ים רבים מקבלים "אחד או כמה": נמען אחד או רשימת נמענים</li>
+        <li>API-ים רבים מקבלים "אחד או כמה": מוצר אחד או רשימת מוצרים</li>
         <li><code>typeof</code> לא עוזר כאן – <code>typeof []</code> הוא <code>"object"</code></li>
         <li><code>Array.isArray(x)</code> מצמצם ל-מערך, וה-else ל-שאר</li>
       </ul>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        function countItems(input: string | string[]): number {
+        function countSkus(input: string | string[]): number {
           return Array.isArray(input) ? input.length : 1;
         }
-        console.log(countItems("one"), countItems(["a", "b", "c"]));
+        console.log(countSkus("MUG-01"),
+                    countSkus(["MUG-01", "CAP-07", "TEE-11"]));
 
-        function joinRecipients(to: string | string[]): string {
-          if (Array.isArray(to)) {
-            return to.join("; ");   // to: string[]
+        function cartLine(skus: string | string[]): string {
+          if (Array.isArray(skus)) {
+            return skus.join(" + ");   // skus: string[]
           }
-          return to;                // to: string
+          return skus;                 // skus: string
         }
-        console.log(joinRecipients("qa@shop.test"));
-        console.log(joinRecipients(["dana@shop.test", "avi@shop.test"]));
+        console.log(cartLine("MUG-01"));
+        console.log(cartLine(["MUG-01", "CAP-07"]));
 
-        // without the check: to.join(...)
+        // without the check: skus.join(...)
         // ❌ Property 'join' does not exist on type 'string | string[]'.
       </pre>
       <pre class="out sm">
         1 3
-        qa@shop.test
-        dana@shop.test; avi@shop.test
+        MUG-01
+        MUG-01 + CAP-07
       </pre>
     </div>
   </div>
@@ -1027,41 +1039,42 @@
   <div class="cols wide-code">
     <div class="stack">
       <ul>
-        <li><code>"token" in auth</code> – האם יש לאובייקט שדה בשם הזה?</li>
+        <li><code>"apiKey" in auth</code> – האם יש לאובייקט שדה בשם הזה?</li>
         <li>מתאים כששתי הצורות שונות לגמרי ואין שדה "סוג" משותף</li>
         <li>אחרי ה-if – TS יודע איזו צורה נשארה</li>
       </ul>
       <pre class="lang-ts sm">
-        type Cat = { meow: () =&gt; string };
-        type Dog = { bark: () =&gt; string };
-        function speak(a: Cat | Dog): string {
-          return "meow" in a ? a.meow() : a.bark();
+        type SmsTarget = { phone: string };
+        type PushTarget = { deviceToken: string };
+        function channel(t: SmsTarget | PushTarget) {
+          return "phone" in t ? "sms" : "push";
         }
-        speak({ bark: () =&gt; "woof" });  // "woof"
+        channel({ deviceToken: "d-81" });  // "push"
       </pre>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type TokenAuth = { token: string };
-        type BasicAuth = { username: string; password: string };
-        function authHeader(auth: TokenAuth | BasicAuth): string {
-          if ("token" in auth) {
-            return `Bearer ${auth.token}`;       // TokenAuth
+        type ApiKeyAuth = { apiKey: string };
+        type ClientCredentials = { clientId: string; clientSecret: string };
+        function authHeader(auth: ApiKeyAuth | ClientCredentials): string {
+          if ("apiKey" in auth) {
+            return `X-Api-Key ${auth.apiKey}`;    // ApiKeyAuth
           }
-          const encoded = Buffer.from(`${auth.username}:${auth.password}`)
-            .toString("base64");                 // BasicAuth
-          return `Basic ${encoded}`;
+          const pair = `${auth.clientId}:${auth.clientSecret}`;
+          const encoded = Buffer.from(pair).toString("base64");
+          return `Basic ${encoded}`;               // ClientCredentials
         }
-        console.log(authHeader({ token: "t0k3n" }));
-        console.log(authHeader({ username: "qa", password: "123" }));
+        console.log(authHeader({ apiKey: "k-42" }));
+        console.log(authHeader({ clientId: "shop", clientSecret: "s3" }));
 
-        // without the check: return auth.token;
-        // ❌ Property 'token' does not exist on type 'TokenAuth | BasicAuth'.
-        //    Property 'token' does not exist on type 'BasicAuth'.
+        // without the check: return auth.apiKey;
+        // ❌ Property 'apiKey' does not exist on type
+        //    'ApiKeyAuth | ClientCredentials'.
+        //    Property 'apiKey' does not exist on type 'ClientCredentials'.
       </pre>
       <pre class="out sm">
-        Bearer t0k3n
-        Basic cWE6MTIz
+        X-Api-Key k-42
+        Basic c2hvcDpzMw==
       </pre>
     </div>
   </div>
@@ -1074,33 +1087,35 @@
       <ul>
         <li><code>x instanceof Class</code> – האם האובייקט נוצר מהמחלקה (או מתת-מחלקה שלה)?</li>
         <li>הכי שימושי ב-<code>catch</code>: השגיאה היא <code>unknown</code>, ואין לדעת מה נזרק</li>
-        <li>סוגי שגיאות שונים ← טיפול שונה (retry מול fail)</li>
-        <li>הסדר חשוב: הספציפי (<code>TimeoutError</code>) לפני הכללי (<code>Error</code>)</li>
+        <li>סוגי שגיאות שונים ← טיפול שונה (לחכות ולנסות שוב מול להיכשל)</li>
+        <li>הסדר חשוב: הספציפי (<code>RateLimitError</code>) לפני הכללי (<code>Error</code>)</li>
       </ul>
       <div class="warn">בלי בדיקה, גישה ל-<code>err.message</code> נכשלת:<br /><code>'err' is of type 'unknown'.</code></div>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        class TimeoutError extends Error {
-          constructor(readonly ms: number) { super(`Timed out after ${ms}ms`); }
+        class RateLimitError extends Error {
+          constructor(readonly retryAfterMs: number) {
+            super(`Rate limited, retry after ${retryAfterMs}ms`);
+          }
         }
         function explain(err: unknown): string {
-          if (err instanceof TimeoutError) {
-            return `retry (waited ${err.ms}ms)`;   // err: TimeoutError
+          if (err instanceof RateLimitError) {
+            return `retry later (wait ${err.retryAfterMs}ms)`;
           }
           if (err instanceof Error) {
-            return `fail: ${err.message}`;         // err: Error
+            return `fail: ${err.message}`;        // err: Error
           }
-          return `unknown: ${String(err)}`;        // still unknown
+          return `unknown: ${String(err)}`;       // still unknown
         }
-        console.log(explain(new TimeoutError(5000)));
-        console.log(explain(new Error("Button not found")));
-        console.log(explain("oops"));
+        console.log(explain(new RateLimitError(2000)));
+        console.log(explain(new Error("Element not visible")));
+        console.log(explain(503));
       </pre>
       <pre class="out sm">
-        retry (waited 5000ms)
-        fail: Button not found
-        unknown: oops
+        retry later (wait 2000ms)
+        fail: Element not visible
+        unknown: 503
       </pre>
     </div>
   </div>
@@ -1114,31 +1129,31 @@
         <li>השוואה ל-literal מצמצמת את ה-union לערך הזה</li>
         <li>ב-else נשארות רק שאר האפשרויות</li>
         <li><code>switch</code> הוא בעצם אותו דבר – סדרה של <code>===</code></li>
-        <li>בונוס: השוואה לערך שבכלל לא אפשרי (302) נתפסת כטעות</li>
+        <li>בונוס: השוואה לערך שבכלל לא אפשרי (10) נתפסת כטעות</li>
       </ul>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type StatusCode = 200 | 201 | 404 | 500;
+        type Rating = 1 | 2 | 3 | 4 | 5;
 
-        function category(code: StatusCode): string {
-          if (code === 200 || code === 201) {
-            return `${code} ok`;               // code: 200 | 201
+        function sentiment(r: Rating): string {
+          if (r === 1 || r === 2) {
+            return `${r}★ negative`;    // r: 1 | 2
           }
-          if (code === 404) {
-            return `${code} client error`;     // code: 404
+          if (r === 3) {
+            return `${r}★ neutral`;     // r: 3
           }
-          return `${code} server error`;       // code: 500
+          return `${r}★ positive`;      // r: 4 | 5
         }
-        const codes: StatusCode[] = [201, 404, 500];
-        console.log(codes.map(category));
+        const ratings: Rating[] = [2, 3, 5];
+        console.log(ratings.map(sentiment));
 
-        const isRedirect = (code: StatusCode) =&gt; code === 302;
+        const isPerfect = (r: Rating) =&gt; r === 10;
         // ❌ This comparison appears to be unintentional because
-        //    the types 'StatusCode' and '302' have no overlap.
+        //    the types 'Rating' and '10' have no overlap.
       </pre>
       <pre class="out sm">
-        [ '201 ok', '404 client error', '500 server error' ]
+        [ '2★ negative', '3★ neutral', '5★ positive' ]
       </pre>
     </div>
   </div>
@@ -1150,37 +1165,39 @@
     <div class="stack">
       <ul>
         <li>שדה משותף (<code>kind</code>) עם ערך קבוע לכל אפשרות</li>
-        <li><code>switch</code> על <code>kind</code> ← TS יודע אילו שדות קיימים (<code>data</code> רק בהצלחה)</li>
+        <li><code>switch</code> על <code>kind</code> ← TS יודע אילו שדות קיימים (<code>file</code> רק כשההעלאה הצליחה)</li>
         <li><code>never</code> ב-default – מקרה שלא טופל? שגיאת קומפילציה</li>
-        <li>גישה ל-<code>r.data</code> <b>לפני</b> בדיקת <code>kind</code> – נחסמת:<br /><code class="small wrap">Property 'data' does not exist on type 'ApiResult'.</code></li>
+        <li>גישה ל-<code>u.file</code> <b>לפני</b> בדיקת <code>kind</code> – נחסמת:<br /><code class="small wrap">Property 'file' does not exist on type 'Upload'.</code></li>
       </ul>
       <pre class="out sm">
-        ✔ 200: got user Dana
-        ⚠ 404: User not found
-        ✘ network: ECONNREFUSED
+        ✔ 201: avatar.png (84KB)
+        ⚠ 413: File too large
+        ✘ aborted at 60%
       </pre>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        type ApiResult =
-          | { kind: "success"; status: 200 | 201;
-              data: { id: number; name: string } }
-          | { kind: "client-error"; status: 400 | 401 | 404; message: string }
-          | { kind: "network-error"; reason: string };
-        function describe(r: ApiResult): string {
-          switch (r.kind) {
-            case "success": return `✔ ${r.status}: got user ${r.data.name}`;
-            case "client-error": return `⚠ ${r.status}: ${r.message}`;
-            case "network-error": return `✘ network: ${r.reason}`;
-            default: { const never: never = r; return never; }
+        type Upload =
+          | { kind: "done"; status: 200 | 201;
+              file: { name: string; sizeKb: number } }
+          | { kind: "rejected"; status: 413 | 415; reason: string }
+          | { kind: "aborted"; afterPercent: number };
+        function report(u: Upload): string {
+          switch (u.kind) {
+            case "done":
+              return `✔ ${u.status}: ${u.file.name} (${u.file.sizeKb}KB)`;
+            case "rejected": return `⚠ ${u.status}: ${u.reason}`;
+            case "aborted": return `✘ aborted at ${u.afterPercent}%`;
+            default: { const never: never = u; return never; }
           }
         }
-        const samples: ApiResult[] = [
-          { kind: "success", status: 200, data: { id: 1, name: "Dana" } },
-          { kind: "client-error", status: 404, message: "User not found" },
-          { kind: "network-error", reason: "ECONNREFUSED" },
+        const uploads: Upload[] = [
+          { kind: "done", status: 201,
+            file: { name: "avatar.png", sizeKb: 84 } },
+          { kind: "rejected", status: 413, reason: "File too large" },
+          { kind: "aborted", afterPercent: 60 },
         ];
-        samples.forEach((s) =&gt; console.log(describe(s)));
+        uploads.forEach((u) =&gt; console.log(report(u)));
       </pre>
     </div>
   </div>
@@ -1189,29 +1206,29 @@
 <section class="slide">
   <h2>Exhaustive check עם <code>never</code> – אף מקרה לא נשכח</h2>
   <div class="flow">
-    <div class="step"><b>1. מוסיפים מקרה</b>מישהו מוסיף <code>"timeout"</code> ל-ApiResult</div><div class="arrow">←</div>
+    <div class="step"><b>1. מוסיפים מקרה</b>מישהו מוסיף <code>"quarantined"</code> ל-Upload</div><div class="arrow">←</div>
     <div class="step r"><b>2. שגיאת קומפילציה</b>בשורת ה-<code>never</code> שבתוך ה-default</div><div class="arrow">←</div>
-    <div class="step g"><b>3. מתקנים</b>מוסיפים <code>case "timeout"</code> – והשגיאה נעלמת</div>
+    <div class="step g"><b>3. מתקנים</b>מוסיפים <code>case "quarantined"</code> – והשגיאה נעלמת</div>
   </div>
   <div class="cols">
     <pre class="lang-ts sm">
-      type ApiResult =
-        | { kind: "success"; ... }
-        | { kind: "client-error"; ... }
-        | { kind: "network-error"; reason: string }
-        | { kind: "timeout"; ms: number };      // new!
+      type Upload =
+        | { kind: "done"; ... }
+        | { kind: "rejected"; ... }
+        | { kind: "aborted"; afterPercent: number }
+        | { kind: "quarantined"; scanner: string };   // new!
 
-      // in describe(): same switch, no new case
+      // in report(): same switch, no new case
       default: {
-        const never: never = r;
-        // ❌ Type '{ kind: "timeout"; ms: number; }'
+        const never: never = u;
+        // ❌ Type '{ kind: "quarantined"; scanner: string; }'
         //    is not assignable to type 'never'.
       }
     </pre>
     <div class="stack">
       <ul>
         <li><code>never</code> = "טיפוס שאין לו אף ערך"</li>
-        <li>אם טיפלנו בכל המקרים – ב-<code>default</code> לא נשאר כלום, ולכן <code>r</code> הוא <code>never</code></li>
+        <li>אם טיפלנו בכל המקרים – ב-<code>default</code> לא נשאר כלום, ולכן <code>u</code> הוא <code>never</code></li>
         <li>נשאר מקרה? הוא "נופל" ל-default – ו-TS צועק <b>ומראה איזה</b></li>
         <li>גם בלי <code>default</code> (כשטיפוס ההחזרה <code>string</code>) TS מתריע:<br /><code class="small wrap">Function lacks ending return statement and return type does not include 'undefined'.</code></li>
       </ul>
@@ -1225,33 +1242,33 @@
     <div class="stack">
       <ul>
         <li><code>value is T</code> – פונקציה שמלמדת את TS על טיפוס</li>
-        <li>שימושי לנתונים שמגיעים מבחוץ: API, קבצים, JSON</li>
+        <li>שימושי לנתונים שמגיעים מבחוץ: API, קבצים, localStorage, JSON</li>
         <li>ככה בודקים <code>unknown</code> בצורה בטוחה</li>
         <li>הפונקציה מחזירה <code>boolean</code> רגיל – וה-<code>if</code> מצמצם את הטיפוס</li>
       </ul>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface TestFailure {
-          test: string;
-          error: string;
+        interface CartItem {
+          sku: string;
+          qty: number;
         }
 
-        function isFailure(value: unknown): value is TestFailure {
+        function isCartItem(value: unknown): value is CartItem {
           return typeof value === "object" &amp;&amp; value !== null
-            &amp;&amp; "test" in value &amp;&amp; "error" in value;
+            &amp;&amp; "sku" in value &amp;&amp; "qty" in value;
         }
 
-        const fromReport: unknown =
-          JSON.parse('{"test":"login","error":"timeout"}');
+        const fromStorage: unknown =
+          JSON.parse('{"sku":"MUG-01","qty":2}');
 
-        if (isFailure(fromReport)) {
-          console.log(`Failure in ${fromReport.test}: ${fromReport.error}`);
+        if (isCartItem(fromStorage)) {
+          console.log(`${fromStorage.qty} x ${fromStorage.sku}`);
         }
-        console.log(isFailure(JSON.parse('{"test":"login"}')));
+        console.log(isCartItem(JSON.parse('{"sku":"MUG-01"}')));
       </pre>
       <pre class="out sm">
-        Failure in login: timeout
+        2 x MUG-01
         false
       </pre>
     </div>
@@ -1263,27 +1280,27 @@
   <div class="grid2">
     <div class="card bad"><h3>❌ גישה ישירה / <code>as</code></h3>
       <pre class="lang-ts sm">
-        fromReport.test;
-        // ❌ 'fromReport' is of type 'unknown'.
+        fromStorage.sku;
+        // ❌ 'fromStorage' is of type 'unknown'.
 
-        const f = fromReport as TestFailure;
-        f.error.length;  // compiles... and crashes
-                         // at runtime if it is missing
+        const item = fromStorage as CartItem;
+        item.sku.length;  // compiles... and crashes
+                          // at runtime if it is missing
       </pre>
       <p><code>as</code> רק "משתיק" את הקומפיילר – אין שום בדיקה.</p>
     </div>
     <div class="card good"><h3>✅ type guard גם ב-filter</h3>
       <pre class="lang-ts sm">
         const mixed: (string | number)[] =
-          ["TC-1", 7, "TC-9", 12];
-        const numbers = mixed.filter(
+          ["MUG-01", 2, "CAP-07", 3];
+        const quantities = mixed.filter(
           (x): x is number =&gt; typeof x === "number",
-        );   // numbers: number[]
-        console.log(numbers,
-          numbers.reduce((a, b) =&gt; a + b, 0));
+        );   // quantities: number[]
+        console.log(quantities,
+          quantities.reduce((a, b) =&gt; a + b, 0));
       </pre>
       <pre class="out sm">
-        [ 7, 12 ] 19
+        [ 2, 3 ] 5
       </pre>
     </div>
   </div>
@@ -1293,14 +1310,14 @@
   <h2>ארגז הכלים של Narrowing</h2>
   <table>
     <tr><th>כלי</th><th>מתי משתמשים</th><th>דוגמה</th></tr>
-    <tr><td><code>typeof</code></td><td>פרימיטיבים: string / number / boolean</td><td><code>typeof id === "number"</code></td></tr>
-    <tr><td><code>=== null</code> / <code>?.</code> / <code>??</code></td><td>"אולי אין ערך"</td><td><code>name ?? "N/A"</code></td></tr>
-    <tr><td><code>Array.isArray</code></td><td>אחד או רשימה</td><td><code>Array.isArray(to)</code></td></tr>
-    <tr><td><code>in</code></td><td>צורות שונות בלי שדה סוג</td><td><code>"token" in auth</code></td></tr>
-    <tr><td><code>instanceof</code></td><td>מופעים של מחלקות (שגיאות)</td><td><code>err instanceof TimeoutError</code></td></tr>
-    <tr><td><code>===</code> על literal</td><td>ערכים מדויקים</td><td><code>code === 404</code></td></tr>
-    <tr><td><code>switch</code> על <code>kind</code></td><td>Discriminated union + <code>never</code></td><td><code>case "success":</code></td></tr>
-    <tr><td><code>x is T</code></td><td>נתונים מבחוץ (<code>unknown</code>)</td><td><code>isFailure(value)</code></td></tr>
+    <tr><td><code>typeof</code></td><td>פרימיטיבים: string / number / boolean</td><td><code>typeof q === "string"</code></td></tr>
+    <tr><td><code>=== null</code> / <code>?.</code> / <code>??</code></td><td>"אולי אין ערך"</td><td><code>code ?? "no coupon"</code></td></tr>
+    <tr><td><code>Array.isArray</code></td><td>אחד או רשימה</td><td><code>Array.isArray(skus)</code></td></tr>
+    <tr><td><code>in</code></td><td>צורות שונות בלי שדה סוג</td><td><code>"apiKey" in auth</code></td></tr>
+    <tr><td><code>instanceof</code></td><td>מופעים של מחלקות (שגיאות)</td><td><code>err instanceof RateLimitError</code></td></tr>
+    <tr><td><code>===</code> על literal</td><td>ערכים מדויקים</td><td><code>r === 3</code></td></tr>
+    <tr><td><code>switch</code> על <code>kind</code></td><td>Discriminated union + <code>never</code></td><td><code>case "done":</code></td></tr>
+    <tr><td><code>x is T</code></td><td>נתונים מבחוץ (<code>unknown</code>)</td><td><code>isCartItem(value)</code></td></tr>
   </table>
 </section>
 
@@ -1343,42 +1360,42 @@
   <div class="grid2">
     <div class="card"><h3>interface</h3>
       <pre class="lang-ts sm">
-        interface UserI {
+        interface ShopperI {
           name: string;
         }
-        interface AdminI extends UserI {
-          level: number;
+        interface VipI extends ShopperI {
+          tier: number;
         }
       </pre>
     </div>
     <div class="card"><h3>type</h3>
       <pre class="lang-ts sm">
-        type UserT = { name: string };
-        type AdminT = UserT &amp; { level: number };
+        type ShopperT = { name: string };
+        type VipT = ShopperT &amp; { tier: number };
       </pre>
     </div>
   </div>
   <div class="cols">
     <pre class="lang-ts sm">
-      const x: AdminI = { name: "Avi", level: 2 };
-      const y: AdminT = x;    // ✅ same shape = compatible
+      const x: VipI = { name: "Noa", tier: 2 };
+      const y: VipT = x;    // ✅ same shape = compatible
       console.log(y);
     </pre>
     <pre class="out sm">
-      { name: 'Avi', level: 2 }
+      { name: 'Noa', tier: 2 }
     </pre>
   </div>
   <p><b>הבדל אחד:</b> מה קורה כששדה "מתנגש"? <code>extends</code> מתריע מיד, <code>&amp;</code> יוצר בשקט <code>never</code>:</p>
   <div class="grid2">
     <pre class="lang-ts sm">
-      interface Base { id: number; }
-      interface Wrong extends Base { id: string; }
-      // ❌ Interface 'Wrong' incorrectly extends
-      //    interface 'Base'. Types of property
+      interface Entity { id: number; }
+      interface BadSku extends Entity { id: string; }
+      // ❌ Interface 'BadSku' incorrectly extends
+      //    interface 'Entity'. Types of property
       //    'id' are incompatible.
     </pre>
     <pre class="lang-ts sm">
-      type W2 = Base &amp; { id: string };  // id: never
+      type W2 = Entity &amp; { id: string };  // id: never
       const w: W2 = { id: 1 };
       // ❌ Type 'number' is not assignable
       //    to type 'never'.
@@ -1396,31 +1413,33 @@
         <li><code>type</code> עם אותו שם פעמיים – שגיאה</li>
       </ul>
       <pre class="lang-ts sm">
-        type EnvT = { baseUrl: string };
-        type EnvT = { apiKey: string };
-        // ❌ Duplicate identifier 'EnvT'.
+        type ConfigT = { baseUrl: string };
+        type ConfigT = { locale: string };
+        // ❌ Duplicate identifier 'ConfigT'.
       </pre>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        interface Env {
+        interface RunConfig {
           baseUrl: string;
         }
-        interface Env {              // אותו שם – מתמזג
-          apiKey: string;
+        interface RunConfig {        // אותו שם – מתמזג
+          locale: string;
         }
-        const env: Env = {           // שני השדות נדרשים
-          baseUrl: "http://localhost:3000",
-          apiKey: "xyz",
+        const config: RunConfig = {  // שני השדות נדרשים
+          baseUrl: "https://staging.shop.dev",
+          locale: "he-IL",
         };
-        console.log(env);
+        console.log(config);
 
-        const partial: Env = { baseUrl: "http://localhost:3000" };
-        // ❌ Property 'apiKey' is missing in type
-        //    '{ baseUrl: string; }' but required in type 'Env'.
+        const partial: RunConfig =
+          { baseUrl: "https://staging.shop.dev" };
+        // ❌ Property 'locale' is missing in type
+        //    '{ baseUrl: string; }' but required
+        //    in type 'RunConfig'.
       </pre>
       <pre class="out sm">
-        { baseUrl: 'http://localhost:3000', apiKey: 'xyz' }
+        { baseUrl: 'https://staging.shop.dev', locale: 'he-IL' }
       </pre>
     </div>
   </div>
@@ -1436,32 +1455,32 @@
         <li>ולהפך: <code>interface</code> לא יכול להיות union / literal / tuple</li>
       </ul>
       <pre class="lang-ts sm">
-        type Status =
-          "passed" | "failed" | "skipped";
-        // interface Status = ...  ❌
+        type Tier =
+          "basic" | "gold" | "platinum";
+        // interface Tier = ...  ❌
       </pre>
     </div>
     <div class="stack">
       <pre class="lang-ts sm">
-        class Tester implements UserI {
+        class Shopper implements ShopperI {
           constructor(public name: string) {}
         }
-        class Lead implements AdminT {            // a type works too
-          constructor(public name: string, public level: number) {}
+        class VipShopper implements VipT {       // a type works too
+          constructor(public name: string, public tier: number) {}
         }
-        const s: Status = "passed";
-        console.log({ s, tester: new Tester("Noa"),
-          lead: new Lead("Dana", 3) });
+        const t: Tier = "gold";
+        console.log({ t, shopper: new Shopper("Omer"),
+          vip: new VipShopper("Noa", 3) });
 
-        class Bad implements Status {}
+        class Bad implements Tier {}
         // ❌ A class can only implement an object type or intersection
         //    of object types with statically known members.
       </pre>
       <pre class="out sm">
         {
-          s: 'passed',
-          tester: Tester { name: 'Noa' },
-          lead: Lead { name: 'Dana', level: 3 }
+          t: 'gold',
+          shopper: Shopper { name: 'Omer' },
+          vip: VipShopper { name: 'Noa', tier: 3 }
         }
       </pre>
     </div>
@@ -1543,7 +1562,7 @@
     <li><b>Union</b> + <b>Narrowing</b> – עבודה בטוחה עם ערכים מכמה סוגים</li>
     <li><b>Discriminated unions</b> + <code>never</code> – אף מקרה לא נשכח</li>
     <li>הקומפיילר הוא "בודק" נוסף: טעויות כתיב, שדות חסרים ו-null נתפסים <b>לפני</b> הריצה</li>
-    <li>בשיעור הבא: <b>Generics</b> ותרגול OOP מסכם</li>
+    <li>אחרי ההפסקה: <b>Generics</b> (שיעור 7)</li>
   </ul>
 </section>
 

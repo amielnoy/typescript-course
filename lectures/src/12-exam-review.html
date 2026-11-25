@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>חזרה למבחן – TypeScript (שיעורים 1–8)</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body data-lesson="12" data-label="חזרה למבחן">
+
+<!-- ============================================================ פתיחה -->
+<section class="slide title">
+  <div class="badge">חזרה למבחן</div>
+  <h1>חזרה למבחן – TypeScript</h1>
+  <p class="subtitle">כל מה שלמדנו בשיעורים 1–8, בשלוש שעות</p>
+  <div class="chips"><span>Types &amp; Flow</span><span>Functions</span><span>OOP</span><span>Interfaces &amp; Unions</span><span>Generics</span><span>Async</span><span>Errors</span></div>
+  <div class="meta">3.12 · יום ה' · 09:00–12:00 · ZOOM · דוגמאות בפרויקט: review/examples</div>
+</section>
+
+<section class="slide">
+  <h2>מה בתוכנית היום</h2>
+  <table class="small">
+    <tr><th>שעה</th><th>נושא</th><th>קובץ דוגמאות</th></tr>
+    <tr><td>09:00–09:10</td><td>מבנה המבחן ואיך עובדים בו</td><td></td></tr>
+    <tr><td>09:10–09:30</td><td>יסודות: טיפוסים, זרימה, מערכים, פונקציות</td><td><code>review/examples/01-basics.ts</code></td></tr>
+    <tr><td>09:30–10:05</td><td>OOP: מחלקות, Encapsulation, ירושה, פולימורפיזם, Abstract</td><td><code>review/examples/02-oop.ts</code></td></tr>
+    <tr><td>10:05–10:15</td><td>הפסקה</td><td></td></tr>
+    <tr><td>10:15–10:40</td><td>Interfaces, Type Aliases, Union Types (דוגמאות חדשות)</td><td><code>review/examples/03-interfaces-types-unions.ts</code></td></tr>
+    <tr><td>10:40–11:00</td><td>Generics</td><td><code>review/examples/04-generics.ts</code></td></tr>
+    <tr><td>11:00–11:25</td><td>קוד אסינכרוני וטיפול בשגיאות</td><td><code>review/examples/05-async-errors.ts</code></td></tr>
+    <tr><td>11:25–12:00</td><td>תרגול OOP מסכם: מיני-תשתית בדיקות API</td><td><code>npm run exercise -- 07 03</code></td></tr>
+  </table>
+  <div class="note small">בסוף כל חלק יש שקף "שאלות חזרה" בסגנון המבחן, והתשובות בשקף שאחריו.</div>
+</section>
+
+<section class="slide">
+  <h2>מבנה המבחן – 12:30–14:30</h2>
+  <div class="grid2">
+    <div class="card"><h3>חלק א' · 30 נקודות</h3><p>10 שאלות אמריקאיות, 3 נקודות לשאלה: מה יודפס? איזו שורה לא מתקמפלת? מה הטיפוס בשורה מסוימת? באיזה סדר רצים השורות?</p></div>
+    <div class="card"><h3>חלק ב' · 70 נקודות</h3><p>7 משימות קוד בקובץ <code>exam.ts</code>: פונקציות, מחלקה עם Encapsulation, מחלקה אבסטרקטית, Generics, async ושגיאות.</p></div>
+  </div>
+  <ul>
+    <li>מקבלים קובץ אחד, <code>exam.ts</code>, ושמים אותו בתיקייה <code>exam/</code> בפרויקט</li>
+    <li>מריצים בכל שלב: <code>npx tsx exam/exam.ts</code>. הפלט מראה אילו שאלות עוד לא ענינו ומריץ את הדוגמאות הפומביות</li>
+    <li><b>לא משנים</b> שמות של פונקציות ומחלקות ולא חתימות, כי המבחן נבדק אוטומטית</li>
+    <li>המשימות <b>לא תלויות</b> זו בזו: נתקעתם? עברו למשימה הבאה</li>
+    <li>כל משימה נבדקת בכמה בדיקות, כך <b>שגם פתרון חלקי מקבל נקודות</b></li>
+  </ul>
+  <div class="tip">חלוקת זמן מומלצת: כ-25 דקות לחלק א', כ-90 דקות לחלק ב', ו-5 דקות לבדיקה ולהגשה.</div>
+</section>
+
+<!-- ============================================================ חלק 1 -->
+<section class="slide section">
+  <div class="badge">חלק 1</div>
+  <h1>יסודות</h1>
+  <p class="subtitle">טיפוסים, זרימת תוכנית, מערכים ופונקציות · שיעורים 1–2</p>
+</section>
+
+<section class="slide">
+  <h2>טיפוסים והסקה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>const</code> – הטיפוס הוא ה-<b>literal</b> עצמו (<code>"staging"</code>)</li>
+        <li><code>let</code> – הטיפוס הרחב (<code>number</code>)</li>
+        <li><b>union של literals</b> – רק הערכים המותרים</li>
+        <li><code>unknown</code> – חייבים לבדוק לפני שימוש. <code>any</code> מכבה את הבדיקות</li>
+      </ul>
+      <pre class="out">
+        id: 7
+        string number passed
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      const env = "staging";               // type: "staging"
+      let retries = 3;                     // type: number
+      let status: "passed" | "failed" = "passed";
+
+      const data: unknown = JSON.parse('{"id":7}');
+      if (typeof data === "object" &amp;&amp; data !== null &amp;&amp; "id" in data) {
+        console.log("id:", data.id);
+      }
+      console.log(typeof env, typeof retries, status);
+
+      // status = "broken";  ❌ not assignable to '"passed" | "failed"'
+      // retries = "3";      ❌ string is not assignable to number
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>השוואות וזרימה: <span dir="ltr">||</span> מול <span dir="ltr">??</span>, truthy ו-continue</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <table class="small">
+        <tr><th>אופרטור</th><th>מחליף כש...</th></tr>
+        <tr><td><code>a || b</code></td><td>a הוא <b>falsy</b>: ‏<code>0</code>, <code>""</code>, <code>false</code>, <code>null</code>, <code>undefined</code>, <code>NaN</code></td></tr>
+        <tr><td><code>a ?? b</code></td><td>a הוא רק <code>null</code> או <code>undefined</code></td></tr>
+        <tr><td><code>===</code></td><td>תמיד. TS לא מאפשר להשוות <code>5 === "5"</code></td></tr>
+      </table>
+      <pre class="out">
+        200 0
+        false true
+        run on chrome
+        run on webkit
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      const code: number = 0;
+      console.log(code || 200, code ?? 200);
+      console.log(Boolean(""), Boolean("0"));
+
+      for (const browser of ["chrome", "firefox", "webkit"]) {
+        if (browser === "firefox") continue;
+        console.log("run on", browser);
+      }
+    </pre>
+  </div>
+  <div class="warn small"><code>"0"</code> היא מחרוזת לא ריקה, ולכן truthy. רק המחרוזת הריקה <code>""</code> היא falsy.</div>
+</section>
+
+<section class="slide">
+  <h2>מתודות מערך</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <table class="small">
+        <tr><th>מתודה</th><th>מחזירה</th></tr>
+        <tr><td><code>filter</code></td><td>מערך חדש עם האיברים שעברו את התנאי</td></tr>
+        <tr><td><code>map</code></td><td>מערך חדש באותו אורך, אחרי המרה</td></tr>
+        <tr><td><code>reduce</code></td><td>ערך אחד (סכום, ספירה, אובייקט)</td></tr>
+        <tr><td><code>find</code></td><td>האיבר <b>הראשון</b> שמתאים, או <code>undefined</code></td></tr>
+        <tr><td><code>some</code> / <code>every</code></td><td><code>boolean</code></td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const durations = [120, 80, 300, 45];
+        const slow = durations.filter((d) =&gt; d &gt; 100);
+        const total = durations.reduce((sum, d) =&gt; sum + d, 0);
+        console.log(slow, total, Math.round(total / durations.length));
+        console.log(durations.map((d) =&gt; `${d}ms`).join(" | "));
+        console.log(durations.find((d) =&gt; d &lt; 50),
+                    durations.some((d) =&gt; d &gt; 250));
+      </pre>
+      <pre class="out sm">
+        [ 120, 300 ] 545 136
+        120ms | 80ms | 300ms | 45ms
+        45 true
+      </pre>
+    </div>
+  </div>
+  <div class="tip small">אחוז מתוך סך הכול: <code>Math.round((part / total) * 100)</code>. לפני כן בודקים ש-<code>total</code> הוא לא 0.</div>
+</section>
+
+<section class="slide">
+  <h2>פונקציות: ברירת מחדל, אופציונלי ו-arrow</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>password = "1234"</code> – ערך ברירת מחדל. גם <b>כשמעבירים <code>undefined</code></b> מקבלים אותו</li>
+        <li><code>remember?</code> – פרמטר אופציונלי, הטיפוס שלו <code>boolean | undefined</code></li>
+        <li>פרמטרים אופציונליים באים <b>אחרי</b> הפרמטרים החובה</li>
+        <li>arrow function: <code>(x) =&gt; expr</code>, וה-return מובלע</li>
+      </ul>
+      <pre class="out">
+        dana:1234:false
+        dana:1234:true
+        Hello QA
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      function login(user: string, password = "1234",
+                     remember?: boolean): string {
+        return `${user}:${password}:${remember ?? false}`;
+      }
+      const greet = (name: string): string =&gt; `Hello ${name}`;
+
+      console.log(login("dana"));
+      console.log(login("dana", undefined, true));
+      console.log(greet("QA"));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שאלות חזרה – יסודות</h2>
+  <div class="grid2">
+    <div class="card"><h3>שאלה 1 – מה יודפס?</h3>
+      <pre class="lang-ts sm">
+        const values = [0, "", "qa", null, 5];
+        console.log(values.filter(Boolean).length);
+      </pre>
+      <p>א) 5 &nbsp; ב) 3 &nbsp; ג) 2 &nbsp; ד) 0</p>
+    </div>
+    <div class="card"><h3>שאלה 2 – מה יודפס?</h3>
+      <pre class="lang-ts sm">
+        const add = (a: number, b = 10) =&gt; a + b;
+        console.log(add(5), add(5, 1));
+      </pre>
+      <p>א) 15 6 &nbsp; ב) 15 15 &nbsp; ג) NaN 6 &nbsp; ד) שגיאת קומפילציה</p>
+    </div>
+  </div>
+  <div class="note small">חשבו לבד דקה, ואחר כך נעבור על התשובות.</div>
+</section>
+
+<section class="slide">
+  <h2>תשובות – יסודות</h2>
+  <div class="grid2">
+    <div class="card good"><h3>שאלה 1 → ג) 2</h3>
+      <p><code>filter(Boolean)</code> משאיר רק ערכים truthy. ‏<code>0</code>, <code>""</code> ו-<code>null</code> הם falsy, ולכן נשארים <code>"qa"</code> ו-<code>5</code>.</p>
+      <pre class="out sm">
+        2
+      </pre>
+    </div>
+    <div class="card good"><h3>שאלה 2 → א) 15 6</h3>
+      <p>בלי ארגומנט שני, <code>b</code> מקבל את ערך ברירת המחדל 10. כשמעבירים 1, הוא מחליף את ברירת המחדל.</p>
+      <pre class="out sm">
+        15 6
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 2 -->
+<section class="slide section">
+  <div class="badge">חלק 2</div>
+  <h1>OOP</h1>
+  <p class="subtitle">מחלקות, Encapsulation, ירושה, פולימורפיזם ו-Abstract · שיעורים 3–5</p>
+</section>
+
+<section class="slide">
+  <h2>מחלקה, constructor ו-parameter properties</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>constructor(public readonly baseUrl: string)</code> מצהיר על שדה <b>וגם</b> מאתחל אותו</li>
+        <li><code>private requests</code> – מצב פנימי שרק המחלקה רואה</li>
+        <li><code>this</code> – האובייקט הנוכחי</li>
+      </ul>
+      <pre class="out sm">
+        GET https://qa.dev/users (#1, token 6 chars)
+        GET https://qa.dev/orders (#2, token 6 chars)
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class ApiClient {
+        private requests = 0;
+        constructor(public readonly baseUrl: string,
+                    private token: string) {}
+
+        get(path: string): string {
+          this.requests++;
+          return `GET ${this.baseUrl}${path}` +
+            ` (#${this.requests}, token ${this.token.length} chars)`;
+        }
+      }
+      const api = new ApiClient("https://qa.dev", "secret");
+      console.log(api.get("/users"));
+      console.log(api.get("/orders"));
+
+      // api.baseUrl = "x";  ❌ read-only
+      // api.token;          ❌ private
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מי רואה מה – Access Modifiers</h2>
+  <table>
+    <tr><th>מילה</th><th>בתוך המחלקה</th><th>במחלקה יורשת</th><th>מבחוץ</th><th>שימוש טיפוסי</th></tr>
+    <tr><td><code>public</code> (ברירת מחדל)</td><td>✅</td><td>✅</td><td>✅</td><td>ה-API של המחלקה</td></tr>
+    <tr><td><code>protected</code></td><td>✅</td><td>✅</td><td>❌</td><td>כלים למחלקות היורשות, למשל <code>url</code> ב-BasePage</td></tr>
+    <tr><td><code>private</code> / <code>#field</code></td><td>✅</td><td>❌</td><td>❌</td><td>מצב פנימי: מערך תוצאות, מונה, token</td></tr>
+    <tr><td><code>readonly</code></td><td colspan="3">אפשר לקרוא בכל מקום שמותר לפי ה-modifier, ולכתוב רק ב-constructor</td><td><code>id</code>, <code>name</code>, <code>baseUrl</code></td></tr>
+  </table>
+  <div class="warn">מלכודת נפוצה בשאלות "איזו שורה לא מתקמפלת": שדה <code>private</code> לא נגיש גם דרך אובייקט של מחלקה יורשת, ושדה <code>protected</code> לא נגיש מבחוץ.</div>
+</section>
+
+<section class="slide">
+  <h2>getter/setter עם ולידציה והחזרת עותק</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>get</code> / <code>set</code> – נראים מבחוץ כמו שדה, אבל מריצים קוד</li>
+        <li>ה-setter הוא המקום לולידציה ולזריקת שגיאה</li>
+        <li><b>לא מחזירים את המערך הפנימי עצמו</b>, אלא עותק: <code>[...this.results]</code></li>
+      </ul>
+      <pre class="out">
+        [ 'login' ]
+        2
+        retries must be &gt;= 0
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class TestRun {
+        private results: string[] = [];
+        private _retries = 0;
+
+        get retries(): number { return this._retries; }
+        set retries(value: number) {
+          if (value &lt; 0) throw new Error("retries must be &gt;= 0");
+          this._retries = value;
+        }
+        add(name: string): void { this.results.push(name); }
+        getResults(): string[] { return [...this.results]; }
+      }
+      const run = new TestRun();
+      run.add("login");
+      run.getResults().push("hacked");   // changes only the copy
+      console.log(run.getResults());
+      run.retries = 2;
+      console.log(run.retries);
+      try { run.retries = -1; }
+      catch (e) { console.log((e as Error).message); }
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>ירושה: extends, super ו-override</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>super(...)</code> מריץ את ה-constructor של ההורה, <b>ראשון</b> ולפני כל שימוש ב-<code>this</code></li>
+        <li><code>override</code> – מחליפים מתודה של ההורה. TS בודק שהיא באמת קיימת אצלו</li>
+        <li><code>super.open()</code> – קריאה לגרסה של ההורה מתוך ה-override</li>
+      </ul>
+      <pre class="out">
+        BasePage ctor
+        CartPage ctor
+        open /cart + wait for items
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class BasePage {
+        constructor(protected url: string) {
+          console.log("BasePage ctor");
+        }
+        open(): string { return `open ${this.url}`; }
+      }
+
+      class CartPage extends BasePage {
+        constructor() {
+          super("/cart");
+          console.log("CartPage ctor");
+        }
+        override open(): string {
+          return super.open() + " + wait for items";
+        }
+      }
+      console.log(new CartPage().open());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>פולימורפיזם – אותה קריאה, התנהגות לפי האובייקט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>המערך מוגדר כ-<code>Notifier[]</code>, אבל כל אובייקט מריץ את ה-<code>send</code> <b>שלו</b></li>
+        <li>הקוד שקורא ל-<code>send</code> לא יודע מה הסוג המדויק של כל אובייקט, וגם לא צריך לדעת</li>
+        <li>הוספה של סוג חדש = מחלקה חדשה. הלולאה לא משתנה</li>
+      </ul>
+      <pre class="out">
+        log: build failed
+        slack: build failed
+        mail: build failed
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class Notifier {
+        send(msg: string): string { return `log: ${msg}`; }
+      }
+      class SlackNotifier extends Notifier {
+        override send(msg: string): string { return `slack: ${msg}`; }
+      }
+      class MailNotifier extends Notifier {
+        override send(msg: string): string { return `mail: ${msg}`; }
+      }
+
+      const notifiers: Notifier[] = [
+        new Notifier(), new SlackNotifier(), new MailNotifier(),
+      ];
+      for (const n of notifiers) console.log(n.send("build failed"));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Abstract class + Template Method</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>abstract class</code> – אי אפשר ליצור ממנה אובייקט עם <code>new</code></li>
+        <li><code>abstract body()</code> – כל מחלקה יורשת <b>חייבת</b> לממש</li>
+        <li>מחלקה אבסטרקטית <b>יכולה</b> להכיל גם מתודות רגילות, כמו <code>run()</code> כאן</li>
+        <li><b>Template Method</b>: ההורה קובע את הסדר (setup → body → teardown), והילד ממלא רק את החלק שמשתנה</li>
+      </ul>
+      <pre class="out">
+        setup → fill form + submit → teardown
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      abstract class UiTest {
+        run(): string {
+          const steps = ["setup", this.body(), "teardown"];
+          return steps.join(" → ");
+        }
+        protected abstract body(): string;
+      }
+
+      class LoginTest extends UiTest {
+        protected body(): string { return "fill form + submit"; }
+      }
+      console.log(new LoginTest().run());
+
+      // new UiTest();
+      // ❌ Cannot create an instance of an abstract class.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שאלות חזרה – OOP</h2>
+  <div class="grid2">
+    <div class="card"><h3>שאלה 3 – איזו שורה לא מתקמפלת?</h3>
+      <pre class="lang-ts sm">
+        class Driver {
+          protected timeout = 30;
+          constructor(public readonly name: string) {}
+        }
+        class ChromeDriver extends Driver {
+          info() {
+            return `${this.name} ${this.timeout}`; // A
+          }
+        }
+        const d = new ChromeDriver("chrome");
+        d.name = "firefox";      // B
+        console.log(d.info());   // C
+      </pre>
+      <p>א) A &nbsp; ב) B &nbsp; ג) C &nbsp; ד) כולן מתקמפלות</p>
+    </div>
+    <div class="card"><h3>שאלה 4 – מה יודפס?</h3>
+      <pre class="lang-ts sm">
+        abstract class Step {
+          run() { return `[${this.label()}]`; }
+          protected abstract label(): string;
+        }
+        class Click extends Step {
+          protected label() { return "click"; }
+        }
+        class Type extends Step {
+          protected label() { return "type"; }
+        }
+        const steps: Step[] = [new Click(), new Type()];
+        const out = steps.map((s) =&gt; s.run());
+        console.log(out.join(" "));
+      </pre>
+      <p>א) [click] [type] &nbsp; ב) [label] [label] &nbsp; ג) שגיאה: label הוא protected</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תשובות – OOP</h2>
+  <div class="grid2">
+    <div class="card good"><h3>שאלה 3 → ב) שורה B</h3>
+      <p><code>name</code> הוא <code>readonly</code>, ולכן אפשר להציב בו ערך רק ב-constructor. שורה A תקינה כי <code>protected</code> נגיש במחלקה היורשת.</p>
+      <pre class="out sm">
+        ❌ Cannot assign to 'name' because
+           it is a read-only property.
+      </pre>
+    </div>
+    <div class="card good"><h3>שאלה 4 → א) [click] [type]</h3>
+      <p>זה Template Method יחד עם פולימורפיזם: <code>run()</code> של ההורה קורא ל-<code>label()</code> של האובייקט עצמו. ‏<code>protected</code> מאפשר את הקריאה מתוך המחלקה.</p>
+      <pre class="out sm">
+        [click] [type]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 3 -->
+<section class="slide section">
+  <div class="badge">חלק 3</div>
+  <h1>Interfaces, Type Aliases, Union Types</h1>
+  <p class="subtitle">שיעור 6 · עם דוגמאות חדשות: מכשירים, צילומי מסך, Selectors, תשלומים והזמנות</p>
+</section>
+
+<section class="slide">
+  <h2>interface – חוזה לצורה של אובייקט</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>readonly serial</code> – אי אפשר לשנות אחרי היצירה</li>
+        <li><code>osVersion?</code> – שדה אופציונלי, הטיפוס שלו <code>string | undefined</code></li>
+        <li><code>extends</code> – interface שמרחיב interface אחר</li>
+        <li><code>implements</code> – מחלקה <b>מתחייבת</b> לחוזה. אם חסרה מתודה, זו שגיאת קומפילציה</li>
+      </ul>
+      <pre class="out sm">
+        adb -s PX-81 install shop.apk
+        os unknown
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      interface Device {
+        readonly serial: string;
+        model: string;
+        osVersion?: string;
+      }
+      interface MobileDevice extends Device {
+        platform: "android" | "ios";
+      }
+      interface Installer {
+        install(app: string, on: MobileDevice): string;
+      }
+      class AdbInstaller implements Installer {
+        install(app: string, on: MobileDevice): string {
+          return `adb -s ${on.serial} install ${app}`;
+        }
+      }
+      const pixel: MobileDevice = {
+        serial: "PX-81", model: "Pixel 8", platform: "android",
+      };
+      console.log(new AdbInstaller().install("shop.apk", pixel));
+      console.log(pixel.osVersion ?? "os unknown");
+      // pixel.serial = "X";  ❌ read-only property
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>type – שם לכל טיפוס: literal, tuple, &amp; ופונקציה</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <table class="small">
+        <tr><th></th><th><code>interface</code></th><th><code>type</code></th></tr>
+        <tr><td>צורה של אובייקט</td><td>✅</td><td>✅</td></tr>
+        <tr><td>union / literal / tuple</td><td>❌</td><td>✅</td></tr>
+        <tr><td>הרחבה</td><td><code>extends</code></td><td><code>&amp;</code></td></tr>
+        <tr><td><code>implements</code> במחלקה</td><td>✅</td><td>✅ (לצורת אובייקט)</td></tr>
+      </table>
+      <pre class="out sm">
+        /checkout @ 820x1180 [ 'visual' ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      type Viewport = "mobile" | "tablet" | "desktop";
+      type Size = [width: number, height: number];
+      type Tagged = { tags: string[] };
+      type ScreenshotJob = { page: string; viewport: Viewport } &amp; Tagged;
+      type SizeFor = (v: Viewport) =&gt; Size;
+
+      const sizeFor: SizeFor = (v) =&gt;
+        v === "mobile" ? [390, 844]
+        : v === "tablet" ? [820, 1180] : [1440, 900];
+
+      const job: ScreenshotJob = {
+        page: "/checkout", viewport: "tablet", tags: ["visual"],
+      };
+      const [w, h] = sizeFor(job.viewport);
+      console.log(`${job.page} @ ${w}x${h}`, job.tags);
+
+      // const bad: Viewport = "tv";
+      // ❌ Type '"tv"' is not assignable to type 'Viewport'.
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Union + Narrowing: typeof, Array.isArray ו-in</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>Union הוא "אחד מכמה". לפני שמשתמשים בערך <b>מצמצמים</b> אותו לטיפוס אחד</li>
+        <li><code>typeof</code> לטיפוסים פרימיטיביים, ו-<code>Array.isArray</code> למערכים</li>
+        <li><code>"field" in obj</code> – כשלצורות אין שדה משותף</li>
+        <li>אחרי כל <code>return</code>, TS יודע מה <b>נשאר</b></li>
+      </ul>
+      <pre class="out sm">
+        css=#pay
+        css=form &gt;&gt; css=button
+        role=button[name="Pay"]
+        retry in 250ms
+        stop: quota exceeded
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      type Selector = string | string[] | { role: string; name: string };
+
+      function toLocator(s: Selector): string {
+        if (typeof s === "string") return `css=${s}`;
+        if (Array.isArray(s)) return s.map((x) =&gt; "css=" + x).join(" &gt;&gt; ");
+        // only the object is left
+        return `role=${s.role}[name="${s.name}"]`;
+      }
+      console.log(toLocator("#pay"));
+      console.log(toLocator(["form", "button"]));
+      console.log(toLocator({ role: "button", name: "Pay" }));
+
+      type Retry = { retryAfterMs: number };
+      type GiveUp = { reason: string };
+      function nextStep(r: Retry | GiveUp): string {
+        return "retryAfterMs" in r
+          ? `retry in ${r.retryAfterMs}ms` : `stop: ${r.reason}`;
+      }
+      console.log(nextStep({ retryAfterMs: 250 }));
+      console.log(nextStep({ reason: "quota exceeded" }));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Discriminated Union + switch + never</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>לכל צורה יש שדה משותף עם ערך literal שונה (<code>method</code>)</li>
+        <li><code>switch (p.method)</code>: בכל <code>case</code>, TS יודע אילו שדות קיימים</li>
+        <li><code>never</code> ב-<code>default</code>: אם תתווסף צורה חדשה ולא נטפל בה, נקבל <b>שגיאת קומפילציה</b></li>
+      </ul>
+      <pre class="out sm">
+        card •••• 4242
+        PayPal (dana@shop.dev)
+        voucher WELCOME: ₪50
+      </pre>
+      <div class="warn small">אם נוסיף <code>| { method: "bit"; phone: string }</code> בלי case מתאים, נקבל:<br /><code class="wrap">Type '{ method: "bit"; ... }' is not assignable to type 'never'.</code></div>
+    </div>
+    <pre class="lang-ts sm">
+      type Payment =
+        | { method: "card"; last4: string }
+        | { method: "paypal"; email: string }
+        | { method: "voucher"; code: string; amount: number };
+
+      function receipt(p: Payment): string {
+        switch (p.method) {
+          case "card":    return `card •••• ${p.last4}`;
+          case "paypal":  return `PayPal (${p.email})`;
+          case "voucher": return `voucher ${p.code}: ₪${p.amount}`;
+          default: {
+            const unhandled: never = p;
+            return unhandled;
+          }
+        }
+      }
+      const payments: Payment[] = [
+        { method: "card", last4: "4242" },
+        { method: "paypal", email: "dana@shop.dev" },
+        { method: "voucher", code: "WELCOME", amount: 50 },
+      ];
+      payments.forEach((p) =&gt; console.log(receipt(p)));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Utility Types – טיפוסים חדשים מטיפוס קיים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <table class="small">
+        <tr><th>Utility</th><th>מה הוא עושה</th></tr>
+        <tr><td><code>Omit&lt;T, K&gt;</code></td><td>כל השדות חוץ מ-K</td></tr>
+        <tr><td><code>Pick&lt;T, K&gt;</code></td><td>רק השדות K</td></tr>
+        <tr><td><code>Partial&lt;T&gt;</code></td><td>כל השדות הופכים לאופציונליים</td></tr>
+        <tr><td><code>Readonly&lt;T&gt;</code></td><td>כל השדות הופכים ל-readonly</td></tr>
+        <tr><td><code>Record&lt;K, V&gt;</code></td><td>אובייקט עם מפתח מסוג K וערך מסוג V</td></tr>
+      </table>
+      <pre class="out sm">
+        { customer: 'Noa', total: 120, status: 'new' }
+        { status: 'paid' } 7
+        { new: 3, paid: 5, shipped: 1 }
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      interface Order {
+        id: number;
+        customer: string;
+        total: number;
+        status: "new" | "paid" | "shipped";
+      }
+      type OrderDraft = Omit&lt;Order, "id"&gt;;
+      type OrderUpdate = Partial&lt;Pick&lt;Order, "status" | "total"&gt;&gt;;
+      type CountByStatus = Record&lt;Order["status"], number&gt;;
+      type FrozenOrder = Readonly&lt;Order&gt;;
+
+      const draft: OrderDraft = {
+        customer: "Noa", total: 120, status: "new",
+      };
+      const update: OrderUpdate = { status: "paid" };
+      const counts: CountByStatus = { new: 3, paid: 5, shipped: 1 };
+      const frozen: FrozenOrder = { id: 7, ...draft };
+      console.log(draft);
+      console.log(update, frozen.id);
+      console.log(counts);
+      // frozen.total = 0;  ❌ read-only property
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שאלות חזרה – Interfaces, Types, Unions</h2>
+  <div class="grid2">
+    <div class="card"><h3>שאלה 5 – מה הטיפוס של s בשורה HERE?</h3>
+      <pre class="lang-ts sm">
+        type Shape =
+          | { kind: "circle"; r: number }
+          | { kind: "square"; size: number };
+
+        function area(s: Shape) {
+          if (s.kind === "square") return s.size ** 2;
+          // HERE
+          return Math.PI * s.r ** 2;
+        }
+      </pre>
+      <p>א) Shape &nbsp; ב) { kind: "square"; size: number }<br />ג) { kind: "circle"; r: number } &nbsp; ד) never</p>
+    </div>
+    <div class="card"><h3>שאלה 6 – אילו שורות מתקמפלות?</h3>
+      <pre class="lang-ts sm">
+        interface Flight {
+          code: string;
+          seats: number;
+          gate?: "A" | "B";
+        }
+        const a: Flight = { code: "LY1", seats: 9 }; // 1
+        const b: Flight = { code: "LY2" };           // 2
+        const c: Partial&lt;Flight&gt; = { seats: 9 };     // 3
+        const d: Flight =                            // 4
+          { code: "LY4", seats: 9, gate: "C" };
+      </pre>
+      <p>א) רק 1 &nbsp; ב) 1 ו-3 &nbsp; ג) 1, 3 ו-4 &nbsp; ד) כולן</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תשובות – Interfaces, Types, Unions</h2>
+  <div class="grid2">
+    <div class="card good"><h3>שאלה 5 → ג) circle</h3>
+      <p>הענף של <code>"square"</code> כבר החזיר ערך, ולכן ב-HERE נשארה רק הצורה השנייה. זו הסיבה שמותר לגשת ל-<code>s.r</code>.</p>
+    </div>
+    <div class="card good"><h3>שאלה 6 → ב) 1 ו-3</h3>
+      <p>בשורה 2 חסר השדה החובה <code>seats</code>. ‏<code>Partial</code> בשורה 3 הופך את כל השדות לאופציונליים. בשורה 4, <code>"C"</code> הוא לא אחד הערכים המותרים.</p>
+      <pre class="out sm">
+        (2) ❌ Property 'seats' is missing ...
+        (4) ❌ Type '"C"' is not assignable
+            to type '"A" | "B" | undefined'.
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 4 -->
+<section class="slide section">
+  <div class="badge">חלק 4</div>
+  <h1>Generics</h1>
+  <p class="subtitle">קוד אחד לכל טיפוס, בלי לאבד בטיחות · שיעור 7</p>
+</section>
+
+<section class="slide">
+  <h2>פונקציה גנרית והסקת טיפוסים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>&lt;T&gt;</code> – פרמטר טיפוס. TS <b>מסיק</b> אותו מהארגומנטים</li>
+        <li>הטיפוס "זורם" מהקלט לפלט: <code>number[]</code> נכנס ו-<code>number</code> יוצא</li>
+        <li>אפשר כמה פרמטרי טיפוס: <code>&lt;T, R&gt;</code>. ‏R נקבע לפי מה שה-callback מחזיר</li>
+        <li>ההבדל מ-<code>any</code>: עם T הטיפוס <b>לא הולך לאיבוד</b></li>
+      </ul>
+      <pre class="out">
+        3 cart
+        [ 1, 2, 3 ]
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      function last&lt;T&gt;(items: T[]): T | undefined {
+        return items[items.length - 1];
+      }
+      const n = last([1, 2, 3]);           // number | undefined
+      const s = last(["login", "cart"]);   // string | undefined
+      console.log(n, s);
+
+      function mapAll&lt;T, R&gt;(items: T[], fn: (item: T) =&gt; R): R[] {
+        return items.map(fn);
+      }
+      // T = string, R = number
+      console.log(mapAll(["a", "bb", "ccc"], (x) =&gt; x.length));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>Constraints: extends ו-keyof</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>K extends keyof T</code> – K יכול להיות רק שם של שדה ב-T</li>
+        <li><code>T[K]</code> – הטיפוס של השדה הזה</li>
+        <li><code>T extends { length: number }</code> – כל טיפוס, בתנאי שיש לו <code>length</code></li>
+      </ul>
+      <pre class="out">
+        [ 'a@qa.dev', 'b@qa.dev' ]
+        3 2
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      function pluck&lt;T, K extends keyof T&gt;(items: T[], key: K): T[K][] {
+        return items.map((item) =&gt; item[key]);
+      }
+      const users = [
+        { id: 1, email: "a@qa.dev" },
+        { id: 2, email: "b@qa.dev" },
+      ];
+      console.log(pluck(users, "email"));   // string[]
+      // pluck(users, "name");
+      // ❌ '"name"' is not assignable to '"id" | "email"'
+
+      function lengthOf&lt;T extends { length: number }&gt;(x: T): number {
+        return x.length;
+      }
+      console.log(lengthOf("abc"), lengthOf([1, 2]));
+      // lengthOf(42);  ❌ number has no 'length'
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>interface ומחלקה גנריים</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>ApiResponse&lt;T&gt;</code> – אותה מעטפת לכל סוג של body</li>
+        <li><code>Store&lt;T extends { id: number }&gt;</code> – מחלקה שעובדת עם כל טיפוס שיש לו <code>id</code></li>
+        <li>אתם כבר מכירים טיפוסים גנריים מובנים: <code>Array&lt;T&gt;</code>, <code>Promise&lt;T&gt;</code>, <code>Map&lt;K, V&gt;</code>, <code>Record&lt;K, V&gt;</code></li>
+      </ul>
+      <pre class="out">
+        200 pen undefined
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      interface ApiResponse&lt;T&gt; { status: number; body: T }
+      type Product = { id: number; name: string };
+
+      class Store&lt;T extends { id: number }&gt; {
+        private items = new Map&lt;number, T&gt;();
+        add(item: T): this { this.items.set(item.id, item); return this; }
+        get(id: number): T | undefined { return this.items.get(id); }
+      }
+
+      const res: ApiResponse&lt;Product[]&gt; = {
+        status: 200, body: [{ id: 1, name: "pen" }],
+      };
+      const store = new Store&lt;Product&gt;().add(res.body[0]!);
+      console.log(res.status, store.get(1)?.name, store.get(9));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שאלות חזרה – Generics</h2>
+  <div class="grid2">
+    <div class="card"><h3>שאלה 7 – מה הטיפוס של w.value?</h3>
+      <pre class="lang-ts sm">
+        function wrap&lt;T&gt;(value: T): { value: T } {
+          return { value };
+        }
+        const w = wrap(["a", "b"]);
+      </pre>
+      <p>א) T &nbsp; ב) any &nbsp; ג) string[] &nbsp; ד) unknown</p>
+    </div>
+    <div class="card"><h3>שאלה 8 – איזו קריאה לא מתקמפלת?</h3>
+      <pre class="lang-ts sm">
+        type HasLength = { length: number };
+        function longest&lt;T extends HasLength&gt;(a: T, b: T) {
+          return a.length &gt;= b.length ? a : b;
+        }
+        longest("abc", "de");    // 1
+        longest([1, 2], [3]);    // 2
+        longest(10, 20);         // 3
+      </pre>
+      <p>א) 1 &nbsp; ב) 2 &nbsp; ג) 3 &nbsp; ד) כולן מתקמפלות</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תשובות – Generics</h2>
+  <div class="grid2">
+    <div class="card good"><h3>שאלה 7 → ג) string[]</h3>
+      <p>TS מסיק T = <code>string[]</code> מהארגומנט ומציב אותו בטיפוס ההחזרה, ולכן <code>w.value.length</code> מתקמפל ומחזיר 2.</p>
+    </div>
+    <div class="card good"><h3>שאלה 8 → ג) קריאה 3</h3>
+      <p>ל-<code>number</code> אין <code>length</code>, ולכן הוא לא עומד ב-constraint. קריאות 1 ו-2 מחזירות את הארוך מבין השניים:</p>
+      <pre class="out sm">
+        abc [ 1, 2 ]
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 5 -->
+<section class="slide section">
+  <div class="badge">חלק 5</div>
+  <h1>קוד אסינכרוני וטיפול בשגיאות</h1>
+  <p class="subtitle">סדר ריצה, async/await, סדרתי מול מקבילי, try/catch ושגיאות מותאמות · שיעור 8</p>
+</section>
+
+<section class="slide">
+  <h2>סדר ריצה – Event Loop</h2>
+  <div class="flow">
+    <div class="step"><b>1. קוד סינכרוני</b>רץ עד הסוף</div><div class="arrow">←</div>
+    <div class="step y"><b>2. Microtasks</b>then, הקוד שאחרי await</div><div class="arrow">←</div>
+    <div class="step g"><b>3. Macrotasks</b>setTimeout</div>
+  </div>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li>גם <code>setTimeout(..., 0)</code> רץ <b>אחרי</b> כל ה-Promise-ים שכבר מוכנים</li>
+        <li>הקוד שאחרי <code>await</code> ממשיך כ-microtask</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        console.log("1 sync");
+        setTimeout(() =&gt; console.log("4 timeout (macrotask)"), 0);
+        Promise.resolve().then(() =&gt; console.log("3 then (microtask)"));
+        console.log("2 sync");
+      </pre>
+      <pre class="out sm">
+        1 sync
+        2 sync
+        3 then (microtask)
+        4 timeout (macrotask)
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>async תמיד מחזירה Promise</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>async function</code> מחזירה <code>Promise&lt;T&gt;</code>, גם כשכתוב <code>return 200</code></li>
+        <li><code>throw</code> בתוך async <b>לא</b> נזרק מיד. הוא מחזיר Promise דחוי</li>
+        <li>מקבלים את הערך עם <code>await</code> או עם <code>.then</code></li>
+      </ul>
+      <pre class="out">
+        true
+        then: 200
+        await: 200
+      </pre>
+    </div>
+    <pre class="lang-ts">
+      async function getStatus(): Promise&lt;number&gt; {
+        return 200;
+      }
+      const p = getStatus();
+      console.log(p instanceof Promise);
+      p.then((s) =&gt; console.log("then:", s));
+      console.log("await:", await getStatus());
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סדרתי מול מקבילי</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><b>סדרתי</b>: <code>await</code> בתוך לולאת <code>for...of</code>. כל פעולה מתחילה אחרי שהקודמת הסתיימה</li>
+        <li><b>מקבילי</b>: מתחילים את כולן עם <code>map</code> ומחכים עם <code>Promise.all</code></li>
+        <li><code>Promise.all</code> מחזיר את התוצאות <b>בסדר של המערך</b>, לא בסדר שבו הן הסתיימו</li>
+      </ul>
+      <table class="small">
+        <tr><th></th><th>אם אחד נכשל</th></tr>
+        <tr><td><code>Promise.all</code></td><td>נדחה מיד עם השגיאה הראשונה</td></tr>
+        <tr><td><code>Promise.allSettled</code></td><td>מחכה לכולם ומחזיר status לכל אחד</td></tr>
+        <tr><td><code>Promise.race</code></td><td>מחזיר את הראשון שהסתיים (שימושי ל-timeout)</td></tr>
+      </table>
+    </div>
+    <div class="stack">
+      <pre class="lang-ts sm">
+        const delayed = (ms: number, v: string) =&gt;
+          new Promise&lt;string&gt;((r) =&gt; setTimeout(() =&gt; r(v), ms));
+
+        let t = Date.now();
+        const ms = () =&gt; Math.round((Date.now() - t) / 100) * 100;
+
+        const a = await delayed(100, "a");
+        const b = await delayed(100, "b");
+        console.log("serial  ", a, b, ms(), "ms");
+
+        t = Date.now();
+        const [c, d] = await Promise.all([
+          delayed(100, "c"), delayed(100, "d"),
+        ]);
+        console.log("parallel", c, d, ms(), "ms");
+      </pre>
+      <pre class="out sm">
+        serial   a b 200 ms
+        parallel c d 100 ms
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>try/catch תופס שגיאה אסינכרונית רק עם await</h2>
+  <div class="grid2">
+    <div class="card good"><h3>✅ עם await – השגיאה נתפסת</h3>
+      <pre class="lang-ts sm">
+        async function good() {
+          try {
+            return await fetchUser(0);
+          } catch (e) {
+            return `caught: ${(e as Error).message}`;
+          }
+        }
+        console.log(await good());
+      </pre>
+    </div>
+    <div class="card bad"><h3>❌ בלי await – השגיאה בורחת</h3>
+      <pre class="lang-ts sm">
+        async function bad() {
+          try {
+            return fetchUser(0);   // no await!
+          } catch {
+            return "never here";
+          }
+        }
+        await bad().catch((e: Error) =&gt;
+          console.log("escaped:", e.message));
+      </pre>
+    </div>
+  </div>
+  <div class="cols">
+    <pre class="lang-ts sm">
+      async function fetchUser(id: number) {
+        if (id &lt;= 0) throw new Error(`invalid id ${id}`);
+        return { id };
+      }
+    </pre>
+    <pre class="out sm">
+      caught: invalid id 0
+      escaped: invalid id 0
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>מחלקת שגיאה מותאמת ו-catch עם unknown</h2>
+  <div class="cols wide-code">
+    <div class="stack">
+      <ul>
+        <li><code>extends Error</code>, קריאה ל-<code>super(message)</code>, וקביעת <code>this.name</code></li>
+        <li>אפשר להוסיף לשגיאה שדות משלה (<code>status</code>)</li>
+        <li>ב-<code>catch</code> הטיפוס של השגיאה הוא <code>unknown</code>. מצמצמים אותו עם <code>instanceof</code></li>
+        <li>אפשר לזרוק גם ערך שהוא לא Error, ולכן משתמשים ב-<code>String(e)</code> כגיבוי</li>
+      </ul>
+      <pre class="out sm">
+        HttpError 503 – HTTP 503: unavailable
+        x is undefined
+        socket hang up
+      </pre>
+    </div>
+    <pre class="lang-ts sm">
+      class HttpError extends Error {
+        constructor(public readonly status: number, message: string) {
+          super(`HTTP ${status}: ${message}`);
+          this.name = "HttpError";
+        }
+      }
+
+      function describeError(e: unknown): string {
+        if (e instanceof HttpError)
+          return `${e.name} ${e.status} – ${e.message}`;
+        if (e instanceof Error) return e.message;
+        return String(e);
+      }
+      console.log(describeError(new HttpError(503, "unavailable")));
+      console.log(describeError(new TypeError("x is undefined")));
+      console.log(describeError("socket hang up"));
+    </pre>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>שאלות חזרה – Async ושגיאות</h2>
+  <div class="grid2">
+    <div class="card"><h3>שאלה 9 – באיזה סדר יודפס?</h3>
+      <pre class="lang-ts sm">
+        console.log("A");
+        setTimeout(() =&gt; console.log("B"), 0);
+        (async () =&gt; {
+          console.log("C");
+          await null;
+          console.log("D");
+        })();
+        console.log("E");
+      </pre>
+      <p>א) A B C D E &nbsp; ב) A C E D B<br />ג) A C D E B &nbsp; ד) A E C D B</p>
+    </div>
+    <div class="card"><h3>שאלה 10 – מה יודפס?</h3>
+      <pre class="lang-ts sm">
+        async function check(n: number) {
+          if (n &gt; 2) throw new Error(`bad ${n}`);
+          return n;
+        }
+        const r = await Promise.allSettled(
+          [check(1), check(3)]);
+        console.log(r.map((x) =&gt; x.status));
+        try {
+          await Promise.all([check(1), check(3)]);
+        } catch (e) {
+          console.log((e as Error).message);
+        }
+      </pre>
+    </div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>תשובות – Async ושגיאות</h2>
+  <div class="grid2">
+    <div class="card good"><h3>שאלה 9 → ב) A C E D B</h3>
+      <p>גוף ה-async רץ באופן סינכרוני עד ה-<code>await</code> הראשון, ולכן C מודפס מיד. ‏D הוא microtask, ו-B הוא macrotask שרץ אחרון.</p>
+      <pre class="out sm">
+        A
+        C
+        E
+        D
+        B
+      </pre>
+    </div>
+    <div class="card good"><h3>שאלה 10</h3>
+      <p><code>allSettled</code> לא נדחה לעולם ומחזיר סטטוס לכל Promise. ‏<code>all</code> נדחה עם השגיאה הראשונה, והיא נתפסת ב-catch.</p>
+      <pre class="out sm">
+        [ 'fulfilled', 'rejected' ]
+        bad 3
+      </pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ חלק 6 -->
+<section class="slide section">
+  <div class="badge">חלק 6</div>
+  <h1>תרגול OOP מסכם</h1>
+  <p class="subtitle">מיני-תשתית בדיקות API שמשלבת את כל העקרונות · שיעור 7, נושא 03</p>
+</section>
+
+<section class="slide">
+  <h2>כל העקרונות במקום אחד</h2>
+  <table class="small">
+    <tr><th>עיקרון</th><th>במשפט אחד</th><th>דוגמה בשורה אחת</th><th>שיעור</th></tr>
+    <tr><td><b>Encapsulation</b></td><td>מסתירים מצב פנימי וחושפים מתודות</td><td><code>private results: string[]</code></td><td>3</td></tr>
+    <tr><td><b>Inheritance</b></td><td>מחלקה יורשת התנהגות ומרחיבה אותה</td><td><code>class CartPage extends BasePage</code></td><td>3</td></tr>
+    <tr><td><b>Polymorphism</b></td><td>אותה קריאה, והתנהגות לפי האובייקט</td><td><code>notifiers.map((n) =&gt; n.send(msg))</code></td><td>4</td></tr>
+    <tr><td><b>Abstract class</b></td><td>תבנית חלקית שאי אפשר ליצור ממנה אובייקט</td><td><code>protected abstract body(): string</code></td><td>5</td></tr>
+    <tr><td><b>Interface</b></td><td>חוזה לצורה של אובייקט</td><td><code>class AdbInstaller implements Installer</code></td><td>6</td></tr>
+    <tr><td><b>Union type</b></td><td>אחד מכמה מצבים מוגדרים</td><td><code>"card" | "paypal" | "voucher"</code></td><td>6</td></tr>
+    <tr><td><b>Generics</b></td><td>קוד אחד לכל טיפוס, בבטיחות</td><td><code>pluck&lt;T, K extends keyof T&gt;</code></td><td>7</td></tr>
+    <tr><td><b>Async + Errors</b></td><td>מחכים לתוצאה ומטפלים בכישלון</td><td><code>try { await ... } catch (e) {}</code></td><td>8</td></tr>
+  </table>
+</section>
+
+<section class="slide practice">
+  <h2>תרגול – מיני-תשתית בדיקות API (35 דקות)</h2>
+  <div class="cols">
+    <div class="stack">
+      <ul>
+        <li class="small">פתחו את <code>lessons/07-generics-oop-summary/exercises/03-oop-summary-mini-framework.ts</code></li>
+        <li><code>formatResult</code> – union ו-narrowing</li>
+        <li><code>Result&lt;T,E&gt;</code> – <code>mapResult</code> ו-<code>combineResults</code></li>
+        <li><code>MockHttpClient</code> – מממש את <code>HttpClient</code> ושומר יומן קריאות</li>
+        <li><code>ApiCheck&lt;T&gt;</code> אבסטרקטית, ו-<code>StatusCheck</code></li>
+        <li><code>TestRunner</code> – מריץ כל <code>Runnable</code>, כולל <code>grep</code></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <pre class="lang-bash">
+        npm run exercise -- 07 03    # run + self-check
+        npm run solution -- 07 03    # the solution
+      </pre>
+      <div class="tip">פתרו לפי הסדר. אם נשאר זמן, חזרו על הדוגמאות ב-<code>review/examples/</code> ונסו לשנות בהן משהו ולנחש מה יקרה.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ סיום -->
+<section class="slide">
+  <h2>טעויות נפוצות שעולות נקודות</h2>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ מחזירים את המערך הפנימי</h3><pre class="lang-ts sm">getResults() { return this.results; }</pre></div>
+    <div class="card good"><h3>✅ מחזירים עותק</h3><pre class="lang-ts sm">getResults() { return [...this.results]; }</pre></div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ try בלי await</h3><pre class="lang-ts sm">try { return fetchUser(id); } catch { ... }</pre></div>
+    <div class="card good"><h3>✅ await בתוך try</h3><pre class="lang-ts sm">try { return await fetchUser(id); } catch (e) { ... }</pre></div>
+  </div>
+  <div class="grid2">
+    <div class="card bad"><h3>❌ חילוק באפס</h3><pre class="lang-ts sm">Math.round((part / total) * 100) // NaN</pre></div>
+    <div class="card good"><h3>✅ בודקים קודם</h3><pre class="lang-ts sm">total === 0 ? 0 : Math.round((part / total) * 100)</pre></div>
+  </div>
+  <div class="warn small">ועוד: הודעת שגיאה שלא בדיוק בפורמט שנדרש (רווח, נקודתיים), ו-<code>(e as Error).message</code> על ערך שהוא לא Error. במקרה כזה משתמשים ב-<code>e instanceof Error ? e.message : String(e)</code>.</div>
+</section>
+
+<section class="slide">
+  <h2>טיפים לזמן המבחן</h2>
+  <div class="grid3">
+    <div class="card"><h3>📖 קוראים</h3><p>קוראים את כל ה-JSDoc של משימה <b>לפני</b> שכותבים קוד. הדוגמאות בו הן חלק מהדרישות.</p></div>
+    <div class="card"><h3>▶️ מריצים</h3><p>מריצים <code>npx tsx exam/exam.ts</code> אחרי כל משימה. ✋ TODO אומר שעוד לא מימשתם אותה.</p></div>
+    <div class="card"><h3>⏭️ מדלגים</h3><p>נתקעתם יותר מ-10 דקות? עברו למשימה הבאה. המשימות לא תלויות זו בזו.</p></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>🔤 פורמט מדויק</h3><p>מחרוזות והודעות שגיאה נבדקות תו אחרי תו: רווחים, נקודתיים ו-<code>ms</code>.</p></div>
+    <div class="card"><h3>🧪 מקרי קצה</h3><p>מערך ריק, אפס בדיקות שרצו, שדה אופציונלי חסר, וזריקה של ערך שהוא לא Error.</p></div>
+    <div class="card"><h3>💾 שומרים</h3><p>שומרים את הקובץ ומגישים את <code>exam.ts</code>. גם קוד חלקי מקבל נקודות.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <h2>סיכום</h2>
+  <ul>
+    <li><b>יסודות</b>: literal ו-union, ‏<code>??</code> מול <code>||</code>, ‏filter, map, reduce, find, ערכי ברירת מחדל</li>
+    <li><b>OOP</b>: private, protected ו-readonly, ‏getter/setter, ‏super ו-override, פולימורפיזם, abstract ו-Template Method</li>
+    <li><b>Interfaces ו-Types</b>: interface מול type, ‏narrowing, ‏discriminated union עם never, ‏Utility Types</li>
+    <li><b>Generics</b>: ‏<code>&lt;T&gt;</code>, הסקת טיפוסים, ‏<code>K extends keyof T</code>, מחלקות גנריות</li>
+    <li><b>Async</b>: סדר ריצה, ‏await בתוך try, סדרתי מול מקבילי, מחלקות שגיאה ו-<code>unknown</code></li>
+    <li>המבחן ב-<b>12:30</b>: שעתיים, חלק א' 30 נקודות וחלק ב' 70 נקודות</li>
+  </ul>
+  <div class="tip">בהצלחה! 🍀</div>
+</section>
+
+<script src="deck.js"></script>
+</body>
+</html>
